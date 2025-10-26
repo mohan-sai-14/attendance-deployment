@@ -10,7 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Camera, CheckCircle, XCircle, Loader2, MapPin } from 'lucide-react';
-import { getCurrentPosition, verifyLocation, formatDistance } from '../../lib/location';
+import { getCurrentPosition, verifyLocation, formatDistance } from '@/lib/location';
+import { getApiUrl } from '@/lib/config';
 
 
 // Simple link component instead of using React Router
@@ -588,7 +589,7 @@ const StudentScannerPage: React.FC = () => {
     queryFn: async () => {
       if (!activeSession?.id) return null;
       try {
-        const response = await axios.get(`/api/sessions/code/${activeSession.id}`);
+        const response = await axios.get(getApiUrl(`/api/sessions/code/${activeSession.id}`));
         return response.data.attendanceCode;
       } catch (error) {
         console.error('Error fetching session code:', error);

@@ -881,6 +881,103 @@ router.get('/debug/schema/:table', (req: express.Request, res: express.Response)
     });
 });
 
+// Session code routes for QR scanner fallback
+router.get('/sessions/code/:id', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const sessionId = parseInt(req.params.id);
+    const session = await storage.getSession(sessionId);
+    
+    if (!session) {
+      return res.status(404).json({ 
+        message: "Session not found" 
+      });
+    }
+    
+    if (!session.is_active) {
+      return res.status(400).json({ 
+        message: "Session is not active" 
+      });
+    }
+    
+    // Generate a simple attendance code for the session
+    const attendanceCode = `${session.name.substring(0, 3).toUpperCase()}${sessionId}${new Date(session.created_at).getDate()}`;
+    
+    res.json({ 
+      attendanceCode,
+      expiresAt: session.expires_at
+    });
+  } catch (error) {
+    console.error("Error generating attendance code:", error);
+    res.status(500).json({ 
+      message: "Failed to generate attendance code" 
+    });
+  }
+});
+
+// Verify attendance code
+router.post('/attendance/code', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const requestWithUser = req as RequestWithUser;
+    const user = requestWithUser.session.user;
+    const { code } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({ message: "Attendance code is required" });
+    }
+    
+    // Get all active sessions
+    const sessions = await storage.getAllSessions();
+    const activeSessions = sessions.filter((s: any) => s.is_active);
+    
+    if (activeSessions.length === 0) {
+      return res.status(404).json({ message: "No active sessions found" });
+    }
+    
+    // Try to match the code with any active session
+    let matchedSession = null;
+    for (const session of activeSessions) {
+      const sessionCode = `${session.name.substring(0, 3).toUpperCase()}${session.id}${new Date(session.created_at).getDate()}`;
+      if (sessionCode === code) {
+        matchedSession = session;
+        break;
+      }
+    }
+    
+    if (!matchedSession) {
+      return res.status(400).json({ message: "Invalid attendance code" });
+    }
+    
+    // Check if session has expired
+    const expiryTime = new Date(matchedSession.expires_at).getTime();
+    const currentTime = Date.now();
+    
+    if (currentTime > expiryTime) {
+      await storage.expireSession(matchedSession.id);
+      return res.status(400).json({ message: "Session has expired" });
+    }
+    
+    // Check if user has already marked attendance
+    const existingAttendance = await storage.getAttendanceBySessionAndUser(matchedSession.id, user.id);
+    if (existingAttendance) {
+      return res.status(409).json({ message: "Attendance already marked for this session" });
+    }
+    
+    // Mark attendance
+    const attendanceData = {
+      user_id: user.id,
+      session_id: matchedSession.id,
+      check_in_time: new Date().toISOString(),
+      status: "present",
+    };
+    
+    const attendance = await storage.markAttendance(attendanceData);
+    res.status(201).json(attendance);
+  } catch (error) {
+    console.error("Error marking attendance with code:", error);
+    res.status(500).json({ message: "Failed to mark attendance" });
+  }
+});
+
 // Append this at the very end of the file
 router.get('/debug/login-test', async (req: Request, res: Response) => {
   try {
