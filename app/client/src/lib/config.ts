@@ -1,5 +1,6 @@
-export const getApiUrl = () => {
-  return import.meta.env.VITE_API_URL || 'https://attendance-backend-00pc.onrender.com';
+export const getApiUrl = (path: string = '') => {
+  const baseUrl = import.meta.env.VITE_API_URL || 'https://attendance-backend-00pc.onrender.com';
+  return `${baseUrl}${path}`;
 };
 
 export const config = {

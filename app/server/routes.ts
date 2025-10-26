@@ -54,6 +54,20 @@ export async function registerRoutes(app: Express): Promise<void> {
     next();
   };
 
+  // Add favicon route to prevent 500 errors
+  app.get('/favicon.ico', (req: Request, res: Response) => {
+    res.status(204).end();
+  });
+
+  // Add root route
+  app.get('/', (req: Request, res: Response) => {
+    res.json({ 
+      message: 'Attendance Backend API', 
+      version: '1.0.0',
+      status: 'running' 
+    });
+  });
+
   // Add global middleware to set JSON content type
   app.use((req: Request, res: Response, next: () => void) => {
     res.setHeader('Content-Type', 'application/json');
@@ -143,7 +157,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         });
       }
       
-      const { username, password } = loginData;
+      const { user_id: username, password } = loginData;
       
       passport.authenticate("local", (err: any, user: any, info: any) => {
         if (err) {

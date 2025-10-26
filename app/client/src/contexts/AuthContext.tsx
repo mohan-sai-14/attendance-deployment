@@ -151,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify({ userId: loginIdentifier, password }),
+        body: JSON.stringify({ user_id: loginIdentifier, password }),
       });
 
       const result = await response.json().catch(() => ({}));
