@@ -1,48 +1,27 @@
 {
-  "buildCommand": "cd app/client && npm install --legacy-peer-deps && npm run build",
-  "outputDirectory": "app/client/dist",
-  "framework": "vite",
-  "installCommand": "cd app/client && npm install --legacy-peer-deps",
-  "env": {
-    "VITE_API_URL": "https://attendance-backend-00pc.onrender.com"
-  },
-  "redirects": [
+  "version": 2,
+  "name": "attendance-app-frontend",
+  "builds": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://attendance-backend-00pc.onrender.com/api/$1",
-      "permanent": false
+      "src": "app/client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "app/client/dist"
+      }
     }
   ],
-  "headers": [
+  "routes": [
     {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        }
-      ]
+      "src": "/api/(.*)",
+      "dest": "https://your-backend-url.com/api/$1"
     },
     {
-      "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
+      "src": "/(.*)",
+      "dest": "/app/client/dist/$1"
     }
-  ]
+  ],
+  "buildCommand": "cd app/client && npm run build",
+  "outputDirectory": "app/client/dist",
+  "installCommand": "cd app/client && npm install",
+  "framework": "vite"
 }

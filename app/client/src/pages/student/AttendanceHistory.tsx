@@ -16,8 +16,8 @@ import {
   Search
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'od' | 'ml';
 

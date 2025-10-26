@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Sidebar } from '@/components/teacher/sidebar';
-import { Header } from '@/components/teacher/Header';
+import { Sidebar } from '../components/teacher/sidebar';
+import { Header } from '../components/teacher/Header';
 
 export default function TeacherLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);

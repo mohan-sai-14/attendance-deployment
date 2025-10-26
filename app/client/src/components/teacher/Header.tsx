@@ -1,7 +1,7 @@
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '../components/ui/button';
+import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Bell, LogOut, Search, Menu } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {

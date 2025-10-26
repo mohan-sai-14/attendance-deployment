@@ -1,10 +1,10 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Alert, AlertDescription } from '../components/ui/alert';
 import { Camera, CameraOff, Save, RotateCcw } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { detectFaces, generateFaceEmbedding, validateFaceEmbedding, drawFaceBoundingBox } from '@/lib/faceRecognition';
+import { cn } from '../lib/utils';
+import { detectFaces, generateFaceEmbedding, validateFaceEmbedding, drawFaceBoundingBox } from '../lib/faceRecognition';
 
 interface FaceCaptureProps {
   studentId: string;
