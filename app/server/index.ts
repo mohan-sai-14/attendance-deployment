@@ -21,7 +21,8 @@ const corsOptions = {
 
     // In production, allow specific domains or no origin (for mobile apps)
     const allowedOrigins = [
-      'https://tuattendance.netlify.app', // Replace with your actual Netlify domain
+      'https://attendance-deployment-git-main-mohans-projects-0d57f7f8.vercel.app',
+      'https://attendance-deployment.vercel.app',
       'https://tuattendance.netlify.app', // Replace with your actual Netlify domain
       process.env.FRONTEND_URL, // Allow frontend URL from environment variable
       process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [] // Allow multiple origins from env
@@ -32,7 +33,12 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    if (allowedOrigins.some(allowed => origin.includes(allowed.replace('https://', '').replace('http://', '')))) {
+    // Check if origin is in allowed list or is a Vercel deployment
+    const isAllowed = allowedOrigins.some(allowed => origin.includes(allowed.replace('https://', '').replace('http://', ''))) ||
+                     origin.includes('mohans-projects-0d57f7f8.vercel.app') ||
+                     origin.includes('attendance-deployment') && origin.includes('vercel.app');
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
       console.log('Blocked origin:', origin);
