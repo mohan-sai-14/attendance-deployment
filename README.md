@@ -56,7 +56,6 @@ Open another terminal and navigate to the server directory:
 
 ```bash
 cd app
-cd server
 npm install
 ```
 
@@ -68,7 +67,6 @@ Now you need to run both the server and client simultaneously. Open **2 new term
 
 ```bash
 cd app
-cd server
 npm run dev
 ```
 
