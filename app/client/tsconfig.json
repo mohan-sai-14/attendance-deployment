@@ -15,7 +15,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": false,
-    "types": ["vite/client"],
+    "types": [],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": false,
@@ -30,13 +30,17 @@
     "noUncheckedIndexedAccess": false,
     "allowUnusedLabels": true,
     "allowUnreachableCode": true,
-    "exactOptionalPropertyTypes": false
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": false,
+    "noPropertyAccessFromIndexSignature": false
   },
   "include": [
     "src/**/*",
     "vite.config.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "**/*.test.*",
+    "**/*.spec.*"
   ]
 }

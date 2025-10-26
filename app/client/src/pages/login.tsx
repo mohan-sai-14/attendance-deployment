@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { ThemeToggle } from '../components/ui/theme-toggle';
 import { useEffect, useState } from 'react';
-import LoginForm from '@/components/LoginForm';
+import LoginForm from '../components/LoginForm';
 
 type Ball = {
   id: number;

@@ -46,9 +46,9 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react-router-dom', '@tanstack/react-query', 'react-hook-form']
   },
-  // Disable TypeScript checking during build
+  // Disable TypeScript checking by using tsx as jsx
   esbuild: {
     // Drop console logs in production
     drop: ['console', 'debugger']
   }
-}); 
+});
