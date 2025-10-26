@@ -19,7 +19,7 @@ dotenv.config({ path: envPath });
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-export class SupabaseStorage {
+class SupabaseStorage {
   public supabase: SupabaseClient | null;
   private useSupabase: boolean;
 
