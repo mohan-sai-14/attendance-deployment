@@ -3,7 +3,6 @@
   "outputDirectory": "app/client/dist",
   "framework": "vite",
   "installCommand": "cd app/client && npm install --legacy-peer-deps",
-  "nodeVersion": "22.x",
   "env": {
     "VITE_API_URL": "https://attendance-backend-00pc.onrender.com"
   },
