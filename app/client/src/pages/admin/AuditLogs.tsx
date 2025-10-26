@@ -22,7 +22,7 @@ import {
   Clock,
   Database
 } from "lucide-react";
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { toast } from "@/hooks/use-toast";
 
 interface AuditLog {

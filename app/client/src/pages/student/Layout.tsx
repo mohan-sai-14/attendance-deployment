@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Sidebar } from '../components/student/Sidebar';
-import { Header } from '../components/student/Header';
-import BottomNav from '../components/student/BottomNav';
+import { Sidebar } from '../../components/student/Sidebar';
+import { Header } from '../../components/student/Header';
+import BottomNav from '../../components/student/BottomNav';
 
 export default function StudentLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);

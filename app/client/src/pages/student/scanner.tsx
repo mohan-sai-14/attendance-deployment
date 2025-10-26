@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Camera, CheckCircle, XCircle, Loader2, MapPin } from 'lucide-react';
-import { getCurrentPosition, verifyLocation, formatDistance } from '../lib/location';
+import { getCurrentPosition, verifyLocation, formatDistance } from '../../lib/location';
 
 
 // Simple link component instead of using React Router
