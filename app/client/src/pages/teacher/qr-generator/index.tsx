@@ -223,7 +223,7 @@ export default function QRGenerator() {
       setQrValue(qrString);
 
       // Generate QR code URL for download
-      const { generateQRCodeDataURL } = await import('../../lib/qrcode');
+      const { generateQRCodeDataURL } = await import('@/lib/qrcode-utils');
       const url = await generateQRCodeDataURL(qrString);
       setQrUrl(url);
 
