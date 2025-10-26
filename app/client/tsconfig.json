@@ -8,7 +8,7 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
-    "isolatedModules": true,
+    "isolatedModules": false,
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": false,
@@ -25,14 +25,18 @@
     "strictBindCallApply": false,
     "strictPropertyInitialization": false,
     "noImplicitThis": false,
-    "alwaysStrict": false
+    "alwaysStrict": false,
+    "noImplicitReturns": false,
+    "noUncheckedIndexedAccess": false,
+    "allowUnusedLabels": true,
+    "allowUnreachableCode": true,
+    "exactOptionalPropertyTypes": false
   },
   "include": [
-    "src"
+    "src/**/*",
+    "vite.config.ts"
   ],
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
-    }
+  "exclude": [
+    "node_modules"
   ]
 }

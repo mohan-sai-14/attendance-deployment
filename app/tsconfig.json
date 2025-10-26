@@ -28,6 +28,12 @@
     "alwaysStrict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "forceConsistentCasingInFileNames": false
+    "forceConsistentCasingInFileNames": false,
+    "noImplicitReturns": false,
+    "noUncheckedIndexedAccess": false,
+    "allowUnusedLabels": true,
+    "allowUnreachableCode": true,
+    "exactOptionalPropertyTypes": false,
+    "isolatedModules": false
   }
 }

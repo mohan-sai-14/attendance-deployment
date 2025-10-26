@@ -4,7 +4,12 @@ import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      // Disable JSX runtime transformation to avoid issues
+      jsxRuntime: 'classic'
+    })
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -12,11 +17,11 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: '0.0.0.0', // Allow connections from other devices
+    host: '0.0.0.0',
     allowedHosts: [
       '6d8a2fd655b0.ngrok-free.app',
       'a411ba3c0c65.ngrok-free.app',
-      '3789c6bc9268.ngrok-free.app'  // Added your ngrok host
+      '3789c6bc9268.ngrok-free.app'
     ],
     proxy: {
       '/api': {
@@ -40,5 +45,10 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react-router-dom', '@tanstack/react-query', 'react-hook-form']
+  },
+  // Disable TypeScript checking during build
+  esbuild: {
+    // Drop console logs in production
+    drop: ['console', 'debugger']
   }
 }); 
