@@ -25,9 +25,10 @@ export function Sidebar({ isOpen, setIsOpen, activeTab }: SidebarProps) {
   const handleClose = useCallback((e?: React.MouseEvent) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    console.log('Closing sidebar');
+    console.log('Closing sidebar, current state:', isOpen);
     setIsOpen(false);
-  }, [setIsOpen]);
+    console.log('setIsOpen(false) called');
+  }, [setIsOpen, isOpen]);
 
   useEffect(() => {
     console.log("Sidebar isOpen state changed:", isOpen);
@@ -127,7 +128,10 @@ export function Sidebar({ isOpen, setIsOpen, activeTab }: SidebarProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
-            onClick={handleClose}
+            onClick={(e) => {
+              console.log('Backdrop clicked');
+              handleClose(e);
+            }}
           />
           <motion.aside
             ref={sidebarRef}
@@ -159,7 +163,10 @@ export function Sidebar({ isOpen, setIsOpen, activeTab }: SidebarProps) {
                   variant="ghost"
                   size="icon"
                   className="rounded-full hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
-                  onClick={handleClose}
+                  onClick={(e) => {
+                    console.log('X button clicked');
+                    handleClose(e);
+                  }}
                   aria-label="Close Sidebar"
                 >
                   <X className="h-5 w-5" />
