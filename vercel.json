@@ -1,8 +1,8 @@
 {
-  "buildCommand": "cd app/client && npm install && npm run build",
+  "buildCommand": "cd app/client && npm install --legacy-peer-deps && npm run build",
   "outputDirectory": "app/client/dist",
   "framework": "vite",
-  "installCommand": "cd app/client && npm install",
+  "installCommand": "cd app/client && npm install --legacy-peer-deps",
   "env": {
     "VITE_API_URL": "https://attendance-backend-00pc.onrender.com"
   },
