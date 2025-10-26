@@ -19,7 +19,7 @@ import { Download, QrCode as QrCodeIcon, Check, Loader2, MapPin, Calendar, Clock
 import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from "qrcode.react";
 import { useToast } from "@/hooks/use-toast";
-import QRCode from "qrcode";
+// Removed QRCode import - using browser-compatible solution
 import { supabase } from "@/lib/supabase"; // Import Supabase client
 import { useQuery } from "@tanstack/react-query";
 import { format, addMinutes, parseISO } from "date-fns"; // Add this import for date formatting
@@ -223,7 +223,8 @@ export default function QRGenerator() {
       setQrValue(qrString);
 
       // Generate QR code URL for download
-      const url = await QRCode.toDataURL(qrString);
+      const { generateQRCodeDataURL } = await import('@/lib/qrcode-utils');
+      const url = await generateQRCodeDataURL(qrString);
       setQrUrl(url);
 
       // Set expiry time for countdown (use local time for display)

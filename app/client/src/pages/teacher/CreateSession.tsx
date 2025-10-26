@@ -18,7 +18,7 @@ import {
 import { Download, QrCode as QrCodeIcon, Check, Loader2, Clock, Calendar } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useToast } from "@/hooks/use-toast";
-import QRCode from "qrcode";
+// Removed QRCode import - using browser-compatible solution
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { format, addMinutes, parseISO, differenceInSeconds } from "date-fns";
@@ -151,11 +151,8 @@ export default function QRGenerator() {
 
   const generateQRCode = useCallback(async (data: string): Promise<string> => {
     try {
-      return await QRCode.toDataURL(data, { 
-        errorCorrectionLevel: 'H',
-        margin: 1,
-        scale: 8
-      });
+      const { generateQRCodeDataURL } = await import('@/lib/qrcode-utils');
+      return await generateQRCodeDataURL(data, 256);
     } catch (err) {
       console.error('Error generating QR code:', err);
       throw new Error('Failed to generate QR code');
