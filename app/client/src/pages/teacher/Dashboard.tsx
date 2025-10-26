@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { useToast } from '@/components/ui/toast-hook';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { Progress } from '../../components/ui/progress';
+import { useToast } from '../../components/ui/toast-hook';
 import { 
   Calendar,
   Clock,
