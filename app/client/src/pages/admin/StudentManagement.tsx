@@ -30,7 +30,7 @@ import {
   Filter,
   Loader2
 } from "lucide-react";
-import { useToast } from "@/components/ui/toast-hook";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 
 // Types

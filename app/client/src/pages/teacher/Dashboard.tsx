@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
-import { useToast } from '../../components/ui/toast-hook';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Calendar,
   Clock,

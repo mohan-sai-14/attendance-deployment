@@ -86,9 +86,11 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    domain: process.env.NODE_ENV === 'production' ? undefined : undefined // Let browser handle domain
   },
-  name: 'qrattend.sid' // Session ID cookie name
+  name: 'qrattend.sid', // Session ID cookie name
+  proxy: true // Trust first proxy (important for Render)
 }));
 
 // Error handling middleware
