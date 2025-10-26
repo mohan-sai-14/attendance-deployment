@@ -1531,4 +1531,5 @@ class SupabaseStorage {
   }
 }
 
+const storage = new SupabaseStorage();
 module.exports = { storage }; 
