@@ -18,7 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Download, QrCode as QrCodeIcon, Check, Loader2, MapPin, Calendar, Clock, Timer, AlertCircle } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { useToast } from '../../hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 // Removed QRCode import - using browser-compatible solution
 import { supabase } from "@/lib/supabase"; // Import Supabase client
 import { useQuery } from "@tanstack/react-query";
