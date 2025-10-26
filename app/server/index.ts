@@ -18,16 +18,25 @@ const corsOptions = {
     if (process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
-    
-    // In production, only allow specific domains
+
+    // In production, allow specific domains or no origin (for mobile apps)
     const allowedOrigins = [
-      'https://your-production-domain.com',
-      'https://www.your-production-domain.com'
-    ];
-    
-    if (!origin || allowedOrigins.includes(origin)) {
+      'https://your-netlify-site.netlify.app', // Replace with your actual Netlify domain
+      'https://www.your-netlify-site.netlify.app', // Replace with your actual Netlify domain
+      process.env.FRONTEND_URL, // Allow frontend URL from environment variable
+      process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [] // Allow multiple origins from env
+    ].filter(Boolean).flat();
+
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.some(allowed => origin.includes(allowed.replace('https://', '').replace('http://', '')))) {
       callback(null, true);
     } else {
+      console.log('Blocked origin:', origin);
+      console.log('Allowed origins:', allowedOrigins);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -73,7 +82,7 @@ app.use(session({
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    domain: process.env.NODE_ENV === 'production' ? '.your-domain.com' : undefined
+    domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined
   }
 }));
 

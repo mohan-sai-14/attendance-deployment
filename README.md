@@ -171,6 +171,97 @@ The application uses Supabase as the database. The connection is already configu
 3. Verify your browser supports camera access for QR scanning
 4. Check the browser console for any JavaScript errors
 
+## Deployment
+
+This application can be deployed to production using Netlify (frontend) and Render (backend).
+
+### Step 1: Deploy Frontend to Netlify
+
+1. **Create a Netlify account** at [netlify.com](https://netlify.com) if you don't have one
+
+2. **Connect your repository**:
+   - Log in to Netlify
+   - Click "New site from Git"
+   - Connect your GitHub/GitLab repository
+   - Select your repository
+
+3. **Configure build settings**:
+   - **Base directory**: `app/client` (leave empty if Netlify doesn't ask)
+   - **Build command**: `npm run build`
+   - **Publish directory**: `dist`
+
+4. **Set environment variables** in Netlify dashboard:
+   - `VITE_API_URL`: Your Render backend URL (e.g., `https://your-app.onrender.com`)
+
+5. **Deploy**: Click "Deploy site"
+
+### Step 2: Deploy Backend to Render
+
+1. **Create a Render account** at [render.com](https://render.com) if you don't have one
+
+2. **Create a new Web Service**:
+   - Connect your repository
+   - **Name**: `attendance-backend` (or your preferred name)
+   - **Environment**: `Node`
+   - **Build Command**: `cd app && npm install && npm run build:server`
+   - **Start Command**: `cd app && npm run start`
+
+3. **Configure environment variables** in Render dashboard:
+   - `NODE_ENV`: `production`
+   - `DATABASE_URL`: Your database connection string
+   - `SESSION_SECRET`: Generate a secure random string
+   - `FRONTEND_URL`: Your Netlify site URL (e.g., `https://tuattendance.netlify.app`)
+   - `COOKIE_DOMAIN`: Your Netlify site domain (e.g., `tuattendance.netlify.app`)
+
+4. **Deploy**: Click "Create Web Service"
+
+### Step 3: Update Configuration Files
+
+1. **Update server CORS settings** in `app/server/index.ts`:
+   ```typescript
+   const allowedOrigins = [
+     'https://tuattendance.netlify.app', // Your Netlify domain
+     process.env.FRONTEND_URL,
+     // ... other origins
+   ];
+   ```
+
+2. **Update netlify.toml** with your Render backend URL:
+   ```toml
+   VITE_API_URL = "https://your-render-app.onrender.com"
+   ```
+
+3. **Update render.yaml** with your Netlify domain:
+   ```yaml
+   FRONTEND_URL = "https://tuattendance.netlify.app"
+   ```
+
+### Step 4: Database Setup
+
+1. **Set up your database** (if not using the existing setup):
+   - Create a PostgreSQL database
+   - Run the migrations from `app/server/migrations/`
+   - Update `DATABASE_URL` in Render environment variables
+
+2. **Test the deployment**:
+   - Visit your Netlify site
+   - Verify API calls work correctly
+   - Test both admin and student login flows
+
+### Important Notes
+
+- **Environment Variables**: Make sure all required environment variables are set in both Netlify and Render
+- **CORS**: The backend is configured to accept requests from your Netlify domain
+- **Database**: Ensure your database allows connections from Render's IP addresses
+- **HTTPS**: Both Netlify and Render provide HTTPS by default
+
+### Troubleshooting Deployment
+
+1. **Build fails**: Check the build logs in Netlify/Render dashboard
+2. **API not working**: Verify the `VITE_API_URL` environment variable
+3. **CORS errors**: Check that your domain is in the allowed origins list
+4. **Database connection**: Verify the `DATABASE_URL` format and credentials
+
 ## Development
 
 ### Adding New Features
