@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "attendance-app-frontend",
   "builds": [
     {
       "src": "app/client/package.json",
@@ -12,16 +11,11 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "https://your-backend-url.com/api/$1"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/app/client/dist/$1"
+      "dest": "/app/client/dist/index.html"
     }
-  ],
-  "buildCommand": "cd app/client && npm run build",
-  "outputDirectory": "app/client/dist",
-  "installCommand": "cd app/client && npm install",
-  "framework": "vite"
+  ]
 }
