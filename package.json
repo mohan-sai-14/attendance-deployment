@@ -8,7 +8,8 @@
     "build:backend": "cd app && npm run build:server",
     "build:all": "npm run build:frontend && npm run build:backend",
     "start": "NODE_ENV=production node dist/server.js",
-    "deploy:check": "npm run build:all && echo 'Build successful! Ready for deployment.'"
+    "deploy:check": "npm run build:all && echo 'Build successful! Ready for deployment.'",
+    "netlify:build": "cd app/client && npm install && npm run build"
   },
   "engines": {
     "node": ">=16.0.0"
