@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
-import { useToast } from '../ui/toast-hook';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '../ui/button';
 import {
   Form,
