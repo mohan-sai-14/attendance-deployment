@@ -1,8 +1,8 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from '@/components/ui/toaster';
-import { ThemeProvider } from '@/components/ui/theme-toggle';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { Toaster } from './components/ui/toaster';
+import { ThemeProvider } from './components/ui/theme-toggle';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { lazy, Suspense, ReactNode } from 'react';
 
@@ -10,14 +10,14 @@ import { lazy, Suspense, ReactNode } from 'react';
 import { TeacherLayoutWrapper } from './routes/teacher';
 
 // Lazy load teacher pages
-const Dashboard = lazy(() => import('@/pages/teacher/Dashboard'));
-const QRGenerator = lazy(() => import('@/pages/teacher/qr-generator'));
-const ManualAttendance = lazy(() => import('@/pages/teacher/manual-attendance'));
-const AttendanceHistory = lazy(() => import('@/pages/teacher/attendance-history'));
-const Reports = lazy(() => import('@/pages/teacher/reports'));
+const Dashboard = lazy(() => import('./pages/teacher/Dashboard'));
+const QRGenerator = lazy(() => import('./pages/teacher/qr-generator'));
+const ManualAttendance = lazy(() => import('./pages/teacher/manual-attendance'));
+const AttendanceHistory = lazy(() => import('./pages/teacher/attendance-history'));
+const Reports = lazy(() => import('./pages/teacher/reports'));
 
 // Lazy load pages
-const Login = lazy(() => import('./pages/Login'));
+const Login = lazy(() => import('./pages/login'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Admin pages
@@ -27,7 +27,6 @@ const ManageUsers = lazy(() => import('./pages/admin/UserManagement'));
 const SystemSettings = lazy(() => import('./pages/admin/SystemSettings'));
 const Students = lazy(() => import('./pages/admin/students'));
 const AdminAttendance = lazy(() => import('./pages/admin/attendance'));
-
 
 // Faculty pages
 const FacultyLayout = lazy(() => import('./pages/faculty/Layout'));

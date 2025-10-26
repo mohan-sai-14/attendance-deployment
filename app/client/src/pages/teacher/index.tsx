@@ -11,9 +11,9 @@ import {
   X,
   LogOut
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '../../components/ui/button';
+import { cn } from '../../lib/utils';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface TeacherLayoutProps {
   children?: ReactNode;

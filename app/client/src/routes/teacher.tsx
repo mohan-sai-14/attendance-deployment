@@ -3,12 +3,12 @@ import { Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
 // Lazy load teacher pages
-const TeacherLayout = lazy(() => import('@/pages/teacher'));
-const Dashboard = lazy(() => import('@/pages/teacher/Dashboard'));
-const QRGenerator = lazy(() => import('@/pages/teacher/qr-generator'));
-const ManualAttendance = lazy(() => import('@/pages/teacher/manual-attendance'));
-const AttendanceHistory = lazy(() => import('@/pages/teacher/attendance-history'));
-const Reports = lazy(() => import('@/pages/teacher/reports'));
+const TeacherLayout = lazy(() => import('../pages/teacher'));
+const Dashboard = lazy(() => import('../pages/teacher/Dashboard'));
+const QRGenerator = lazy(() => import('../pages/teacher/qr-generator'));
+const ManualAttendance = lazy(() => import('../pages/teacher/manual-attendance'));
+const AttendanceHistory = lazy(() => import('../pages/teacher/attendance-history'));
+const Reports = lazy(() => import('../pages/teacher/reports'));
 
 // Suspense wrapper for lazy loading
 const SuspenseWrapper = ({ children }: { children: ReactNode }) => (
