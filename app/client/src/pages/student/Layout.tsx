@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from '@/components/student/Sidebar';
-import { Header } from '@/components/student/Header';
+import { Header } from '@/components/student/header';
 import BottomNav from '@/components/student/BottomNav';
 
 export default function StudentLayout() {
