@@ -11,6 +11,10 @@
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "https://attendance-backend-00pc.onrender.com/api/$1"
+    },
+    {
       "handle": "filesystem"
     },
     {
