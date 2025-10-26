@@ -89,8 +89,9 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     domain: process.env.NODE_ENV === 'production' ? undefined : undefined // Let browser handle domain
   },
-  name: 'qrattend.sid', // Session ID cookie name
-  proxy: true // Trust first proxy (important for Render)
+  name: 'connect.sid', // Use standard session name
+  proxy: true, // Trust first proxy (important for Render)
+  rolling: true // Reset expiration on each request
 }));
 
 // Error handling middleware

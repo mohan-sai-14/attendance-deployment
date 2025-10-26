@@ -217,6 +217,18 @@ router.post('/login', async (req: Request, res: Response) => {
       console.log('Creating session for user:', userId);
       req.session.user = user;
       
+      // Force session save
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+        } else {
+          console.log('Session saved successfully');
+        }
+      });
+      
+      console.log('Session after login:', req.session);
+      console.log('Session ID:', req.sessionID);
+      
       // Prepare response data (excluding sensitive information)
       const { password: _, ...userData } = user;
       
@@ -976,6 +988,22 @@ router.post('/attendance/code', isAuthenticated, async (req: Request, res: Respo
     console.error("Error marking attendance with code:", error);
     res.status(500).json({ message: "Failed to mark attendance" });
   }
+});
+
+// Debug route to check session
+router.get('/debug/session', (req: Request, res: Response) => {
+  console.log('=== Session Debug ===');
+  console.log('Session ID:', req.sessionID);
+  console.log('Session data:', req.session);
+  console.log('Cookies:', req.headers.cookie);
+  console.log('Headers:', req.headers);
+  
+  res.json({
+    sessionID: req.sessionID,
+    session: req.session,
+    cookies: req.headers.cookie,
+    hasUser: !!req.session.user
+  });
 });
 
 // Append this at the very end of the file
