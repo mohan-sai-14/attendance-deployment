@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import Sidebar from '../components/admin/sidebar';
-import { Button } from '../components/ui/button';
+import Sidebar from '@/components/admin/sidebar';
+import { Button } from '@/components/ui/button';
 import { Menu, LogOut } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
