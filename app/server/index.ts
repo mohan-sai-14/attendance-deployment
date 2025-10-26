@@ -11,41 +11,9 @@ dotenv.config();
 
 const app = express();
 
-// CORS configuration
+// CORS configuration - Temporarily allow all origins for testing
 const corsOptions = {
-  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-    // Allow all origins in development
-    if (process.env.NODE_ENV !== 'production') {
-      return callback(null, true);
-    }
-
-    // In production, allow specific domains or no origin (for mobile apps)
-    const allowedOrigins = [
-      'https://attendance-deployment-git-main-mohans-projects-0d57f7f8.vercel.app',
-      'https://attendance-deployment.vercel.app',
-      'https://tuattendance.netlify.app', // Replace with your actual Netlify domain
-      process.env.FRONTEND_URL, // Allow frontend URL from environment variable
-      process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [] // Allow multiple origins from env
-    ].filter(Boolean).flat();
-
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    // Check if origin is in allowed list or is a Vercel deployment
-    const isAllowed = allowedOrigins.some(allowed => origin.includes(allowed.replace('https://', '').replace('http://', ''))) ||
-                     origin.includes('mohans-projects-0d57f7f8.vercel.app') ||
-                     origin.includes('attendance-deployment') && origin.includes('vercel.app');
-    
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      console.log('Blocked origin:', origin);
-      console.log('Allowed origins:', allowedOrigins);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true, // Allow all origins temporarily
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
