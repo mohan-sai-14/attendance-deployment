@@ -1,8 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from './components/ui/toaster';
-import { ThemeProvider } from './components/ui/theme-toggle';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from '@/components/ui/theme-toggle';
+import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { lazy, Suspense, ReactNode } from 'react';
 
@@ -165,7 +164,6 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
         <AppRouter />
-        <Toaster />
       </ThemeProvider>
     </QueryClientProvider>
   );

@@ -1,16 +1,15 @@
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
-import { ToastProvider } from "@/components/ui/toast-hook";
+import { Toaster } from "@/components/ui/toaster";
 import App from "./App";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
-    <ToastProvider>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </ToastProvider>
+    <AuthProvider>
+      <App />
+      <Toaster />
+    </AuthProvider>
   </BrowserRouter>
 );
