@@ -4,9 +4,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { v4 as uuidv4 } from "uuid"; // Import UUID generator
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
@@ -14,13 +14,13 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "../../components/ui/form";
-import { Badge } from "../../components/ui/badge";
+} from "@/components/ui/form";
+import { Badge } from "@/components/ui/badge";
 import { Download, QrCode as QrCodeIcon, Check, Loader2, MapPin, Calendar, Clock, Timer, AlertCircle } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { useToast } from '../../components/ui/toast-hook';
+import { useToast } from '@/hooks/use-toast';
 // Removed QRCode import - using browser-compatible solution
-import { supabase } from "../../lib/supabase"; // Import Supabase client
+import { supabase } from "@/lib/supabase"; // Import Supabase client
 import { useQuery } from "@tanstack/react-query";
 import { format, addMinutes, parseISO } from "date-fns"; // Add this import for date formatting
 import { getCurrentPosition, formatDistance } from "@/lib/location"; // Import location utilities
