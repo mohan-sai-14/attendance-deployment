@@ -20,10 +20,10 @@ services:
         generateValue: true
       # Frontend URL for CORS
       - key: FRONTEND_URL
-        value: https://tuattendance.netlify.app
+        value: https://attendance-backend-00pc.onrender.com
       # Cookie domain (optional, usually not needed for Render)
       - key: COOKIE_DOMAIN
-        value: tuattendance.netlify.app
+        value: attendance-backend-00pc.onrender.com
       # Add other environment variables as needed
       # - key: YOUR_ENV_VAR
       #   value: your-value
