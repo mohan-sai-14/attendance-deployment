@@ -70,6 +70,34 @@ export async function generateSessionQRCode(sessionData: {
   }
 }
 
+/**
+ * Generate QR code as data URL for download
+ * @param qrString The QR code content string
+ * @param size The size of the QR code (default: 256)
+ * @returns Promise with data URL
+ */
+export async function generateQRCodeDataURL(qrString: string, size: number = 256): Promise<string> {
+  try {
+    // Dynamic import qrcode library to generate data URL
+    const QRCode = (await import('qrcode')).default;
+
+    const dataURL = await QRCode.toDataURL(qrString, {
+      width: size,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      },
+      errorCorrectionLevel: 'H'
+    });
+
+    return dataURL;
+  } catch (error) {
+    console.error('Error generating QR code data URL:', error);
+    throw new Error('Failed to generate QR code image');
+  }
+}
+
 // Mark attendance using QR code
 export async function markAttendanceWithQR(qrContent: string) {
   try {
