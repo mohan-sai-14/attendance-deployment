@@ -4,8 +4,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
-import { useToast } from "@/components/ui/toast-hook";
-import { Button } from '@/components/ui/button';
+import { useToast } from '../ui/toast-hook';
+import { Button } from '../ui/button';
 import {
   Form,
   FormControl,
@@ -13,12 +13,12 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+} from '../ui/form';
+import { Input } from '../ui/input';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/card';
 import { Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '../lib/supabase/client';
+import { useAuth } from '../contexts/AuthContext';
 
 const formSchema = z.object({
   emailOrUsername: z.string().min(1, 'Email or username is required'),

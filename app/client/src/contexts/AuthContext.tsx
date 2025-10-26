@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase/client';
-import { getApiUrl } from '@/lib/config';
+import { supabase } from '../lib/supabase/client';
+import { getApiUrl } from '../lib/config';
 
 type UserRole = 'admin' | 'teacher' | 'student';
 
