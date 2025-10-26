@@ -2,11 +2,11 @@
   "name": "rest-express",
   "version": "1.0.0",
   "license": "MIT",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx server/index.ts",
     "build:client": "vite build",
-    "build:server": "esbuild server/index.ts --platform=node --bundle --external:@google-cloud/* --external:lightningcss --external:@babel/* --format=esm --outfile=dist/server.js",
+    "build:server": "esbuild server/index.ts --platform=node --bundle --external:@google-cloud/* --external:lightningcss --external:@babel/* --format=cjs --outfile=dist/server.js",
     "build": "npm run build:client && npm run build:server",
     "start": "cross-env NODE_ENV=production node dist/server.js",
     "check": "tsc",

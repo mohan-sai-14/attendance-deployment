@@ -1,13 +1,18 @@
-import express, { Request, Response, NextFunction, RequestHandler } from 'express';
-import { storage } from './storage';
-import { User, Session, Attendance } from './types';
-import session from 'express-session';
+const express = require('express');
+const { storage } = require('./storage');
+const { User, Session, Attendance } = require('./types');
+const session = require('express-session');
+
+// Import Express types
+type Request = any;
+type Response = any;
+type NextFunction = any;
+type RequestHandler = any;
 
 // Define a custom request type with our session
 type RequestWithUser = Request & {
-  session: session.Session & {
-    user?: User;
-  };
+  session: any; // Using any for now to avoid type issues
+  user?: any;
 };
 
 const router = express.Router();
@@ -932,4 +937,4 @@ router.get('/debug/login-test', async (req: Request, res: Response) => {
   }
 });
 
-export default router;
+module.exports = router;

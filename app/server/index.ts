@@ -1,10 +1,10 @@
-import express from 'express';
-import session from 'express-session';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import path from 'path';
-import routes from './src/routes';
-import { storage } from './src/storage';
+const express = require('express');
+const session = require('express-session');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const path = require('path');
+const routes = require('./src/routes');
+const { storage } = require('./src/storage');
 
 // Load environment variables
 dotenv.config();
@@ -21,8 +21,8 @@ const corsOptions = {
 
     // In production, allow specific domains or no origin (for mobile apps)
     const allowedOrigins = [
-      'https://your-netlify-site.netlify.app', // Replace with your actual Netlify domain
-      'https://www.your-netlify-site.netlify.app', // Replace with your actual Netlify domain
+      'https://tuattendance.netlify.app', // Replace with your actual Netlify domain
+      'https://tuattendance.netlify.app', // Replace with your actual Netlify domain
       process.env.FRONTEND_URL, // Allow frontend URL from environment variable
       process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [] // Allow multiple origins from env
     ].filter(Boolean).flat();

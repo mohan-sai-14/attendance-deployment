@@ -1,8 +1,8 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
-import { User, Session, Attendance } from './types';
-import fetch from 'node-fetch';
-import path from 'path';
+const { createClient, SupabaseClient } = require('@supabase/supabase-js');
+const dotenv = require('dotenv');
+const { User, Session, Attendance } = require('./types');
+const fetch = require('node-fetch');
+const path = require('path');
 
 // Fix for fetch not being available in some Node environments
 // @ts-ignore
@@ -1531,4 +1531,4 @@ export class SupabaseStorage {
   }
 }
 
-export const storage = new SupabaseStorage(); 
+module.exports = { storage }; 
