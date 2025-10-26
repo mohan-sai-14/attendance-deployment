@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -13,11 +13,11 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '../ui/form';
-import { Input } from '../ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/card';
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
-import { supabase } from '../lib/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 const formSchema = z.object({
