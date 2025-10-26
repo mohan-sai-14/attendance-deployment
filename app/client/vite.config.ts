@@ -6,8 +6,8 @@ import path from 'path';
 export default defineConfig({
   plugins: [
     react({
-      // Disable JSX runtime transformation to avoid issues
-      jsxRuntime: 'classic'
+      // Use automatic JSX runtime (React 17+)
+      jsxRuntime: 'automatic'
     })
   ],
   resolve: {
