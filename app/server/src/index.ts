@@ -43,6 +43,8 @@ const corsMiddleware = (req: express.Request, res: express.Response, next: expre
     'http://127.0.0.1:5173',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    'https://attendance-deployment-git-main-mohans-projects-0d57f7f8.vercel.app',
+    'https://attendance-deployment.vercel.app',
   ];
   
   const origin = req.headers.origin || '';
@@ -57,38 +59,16 @@ const corsMiddleware = (req: express.Request, res: express.Response, next: expre
     'Access-Control-Max-Age': '86400' // 24 hours
   };
   
-  // In development, allow all origins
-  if (process.env.NODE_ENV !== 'production') {
-    Object.entries(corsHeaders).forEach(([key, value]) => {
-      res.header(key, value as string);
-    });
-    
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-      return res.status(204).end();
-    }
-    return next();
-  }
-  
-  // In production, only allow specific origins
-  if (allowedOrigins.includes(origin)) {
-    Object.entries(corsHeaders).forEach(([key, value]) => {
-      res.header(key, key === 'Access-Control-Allow-Origin' ? origin : value);
-    });
-    
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-      return res.status(204).end();
-    }
-    return next();
-  }
-  
-  // Block requests from disallowed origins in production
-  console.warn('Blocked request from origin:', origin);
-  return res.status(403).json({ 
-    success: false, 
-    error: 'Origin not allowed by CORS policy' 
+  // Allow all origins for now (can be restricted later)
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    res.header(key, value as string);
   });
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  return next();
 };
 
 // Apply CORS middleware
