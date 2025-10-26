@@ -1,0 +1,1051 @@
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import { User, Session, Attendance } from './types';
+import fetch from 'node-fetch';
+import path from 'path';
+
+// Fix for fetch not being available in some Node environments
+// @ts-ignore
+if (!globalThis.fetch) {
+  // @ts-ignore
+  globalThis.fetch = fetch;
+}
+
+// Load environment variables using absolute path
+const envPath = path.resolve(__dirname, '../../../.env');
+console.log('Loading environment variables from:', envPath);
+dotenv.config({ path: envPath });
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+export class SupabaseStorage {
+  private supabase: SupabaseClient | null;
+  private useSupabase: boolean;
+
+  /**
+   * Marks a session as expired in the database
+   * @param sessionId The ID of the session to expire
+   * @returns true if the session was successfully expired, false otherwise
+   */
+  async expireSession(sessionId: string): Promise<boolean> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        console.error('Supabase client not initialized');
+        return false;
+      }
+
+      // First, get the current session to check if it's already expired
+      const { data: session, error: fetchError } = await this.supabase
+        .from('sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching session:', fetchError);
+        return false;
+      }
+
+      // If session is already inactive, no need to update
+      if (!session.is_active) {
+        console.log(`Session ${sessionId} is already inactive`);
+        return true;
+      }
+
+      // Update the session to mark as inactive and set expiration time
+      const now = new Date();
+      const { error: updateError } = await this.supabase
+        .from('sessions')
+        .update({ 
+          is_active: false,
+          qr_expires_at: now.toISOString(),
+          updated_at: now.toISOString()
+        })
+        .eq('id', sessionId);
+
+      if (updateError) {
+        console.error('Error expiring session:', updateError);
+        return false;
+      }
+
+      console.log(`Successfully expired session ${sessionId}`);
+      return true;
+    } catch (error) {
+      console.error('Error in expireSession:', error);
+      return false;
+    }
+  }
+
+  constructor() {
+    this.useSupabase = !!(supabaseUrl && supabaseKey);
+    
+    console.log('Initializing Supabase storage:');
+    console.log('- URL available:', !!supabaseUrl);
+    console.log('- API key available:', !!supabaseKey);
+    console.log('- URL:', supabaseUrl);
+    // Only log the first few characters of the key for security
+    console.log('- Key begins with:', supabaseKey?.substring(0, 10) + '...');
+    
+    if (this.useSupabase) {
+      try {
+        this.supabase = createClient(supabaseUrl!, supabaseKey!, {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        });
+        console.log('Supabase client initialized successfully');
+      } catch (error) {
+        console.error('Error initializing Supabase client:', error);
+        this.supabase = null;
+        this.useSupabase = false;
+      }
+    } else {
+      this.supabase = null;
+      console.log('Using mock storage - Supabase credentials not found');
+    }
+  }
+
+  async getUser(userId: string): Promise<User | null> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        // Mock user for development
+        if (userId === 'S1001') {
+          return {
+            id: 1,
+            username: 'S1001',
+            password: 'student123',
+            name: 'Student One',
+            email: 'mohansaireddy54@gmail.com',
+            role: 'student',
+            status: 'active'
+          };
+        } else if (userId === 'admin') {
+          return {
+            id: 2,
+            username: 'admin',
+            password: 'admin123',
+            name: 'mohan',
+            email: 'mohansaireddy22@gmail.com',
+            role: 'admin',
+            status: 'active'
+          };
+        }
+        return null;
+      }
+
+      const supabase = this.supabase;
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', userId)
+        .single();
+
+      if (error) {
+        console.error('Error getting user:', error);
+        return null;
+      }
+
+      return data as User;
+    } catch (error) {
+      console.error('Error in getUser:', error);
+      return null;
+    }
+  }
+
+  async getUserByUsername(username: string): Promise<User | null> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        // Mock user for development
+        if (username === 'S1001') {
+          return {
+            id: 1,
+            username: 'S1001',
+            password: 'student123',
+            name: 'Student One',
+            email: 'mohansaireddy54@gmail.com',
+            role: 'student',
+            status: 'active'
+          };
+        } else if (username === 'admin') {
+          return {
+            id: 2,
+            username: 'admin',
+            password: 'admin123',
+            name: 'mohan',
+            email: 'mohansaireddy22@gmail.com',
+            role: 'admin',
+            status: 'active'
+          };
+        }
+        return null;
+      }
+
+      const supabase = this.supabase;
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .single();
+
+      if (error) {
+        console.error('Error getting user by username:', error);
+        return null;
+      }
+
+      return data as User;
+    } catch (error) {
+      console.error('Error in getUserByUsername:', error);
+      return null;
+    }
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return [];
+      }
+
+      const supabase = this.supabase;
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('username');
+
+      if (error) {
+        console.error('Error getting all users:', error);
+        return [];
+      }
+
+      return data as User[];
+    } catch (error) {
+      console.error('Error in getAllUsers:', error);
+      return [];
+    }
+  }
+
+  async getUsersByRole(role: string): Promise<User[]> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return [];
+      }
+
+      const supabase = this.supabase;
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', role)
+        .order('username');
+
+      if (error) {
+        console.error('Error getting users by role:', error);
+        return [];
+      }
+
+      return data as User[];
+    } catch (error) {
+      console.error('Error in getUsersByRole:', error);
+      return [];
+    }
+  }
+
+  async createUser(userData: any): Promise<User | null> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return null;
+      }
+
+      const supabase = this.supabase;
+      const { data, error } = await supabase
+        .from('users')
+        .insert([userData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating user:', error);
+        return null;
+      }
+
+      return data as User;
+    } catch (error) {
+      console.error('Error in createUser:', error);
+      return null;
+    }
+  }
+
+  async updateUser(userId: number, userData: any): Promise<User | null> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return null;
+      }
+
+      const supabase = this.supabase;
+      const { data, error } = await supabase
+        .from('users')
+        .update(userData)
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating user:', error);
+        return null;
+      }
+
+      return data as User;
+    } catch (error) {
+      console.error('Error in updateUser:', error);
+      return null;
+    }
+  }
+
+  async deleteUser(userId: number): Promise<boolean> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return true;
+      }
+
+      const supabase = this.supabase;
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error deleting user:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in deleteUser:', error);
+      return false;
+    }
+  }
+
+  async validateUser(userId: string, password: string): Promise<boolean> {
+    try {
+      console.log('Validating user:', userId);
+      
+      if (!this.useSupabase || !this.supabase) {
+        console.log('Using mock validation for user:', userId);
+        const mockValid = (userId === 'S1001' && password === 'student123') || 
+                         (userId === 'admin' && password === 'admin123');
+        console.log('Mock validation result:', mockValid);
+        return mockValid;
+      }
+
+      console.log('Querying Supabase for user:', userId);
+      console.log('Query details:');
+      console.log('- Table: users');
+      console.log('- Condition: username =', userId);
+      
+      const supabase = this.supabase;
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', userId)
+        .single();
+
+      if (error) {
+        console.error('Supabase error validating user:', error);
+        console.log('Error details:', JSON.stringify(error));
+        return false;
+      }
+
+      if (!data) {
+        console.log('No user found with username:', userId);
+        return false;
+      }
+
+      // For debugging
+      console.log('Found user in database:', {
+        username: data.username,
+        hasPassword: !!data.password,
+        passwordLength: data.password ? data.password.length : 0,
+        providedPassword: password,
+        providedPasswordLength: password.length,
+        passwordsMatch: data.password === password
+      });
+
+      return data.password === password;
+    } catch (error) {
+      console.error('Error in validateUser:', error);
+      return false;
+    }
+  }
+
+  async checkAndExpireSessions(): Promise<void> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return;
+      }
+
+      const now = new Date().toISOString();
+      
+      // Find all active sessions that have passed their expiration time
+      const { data: expiredSessions, error } = await this.supabase
+        .from('sessions')
+        .select('id')
+        .eq('is_active', true)
+        .lt('qr_expires_at', now);
+
+      if (error) {
+        console.error('Error finding expired sessions:', error);
+        return;
+      }
+
+      // Expire each session
+      for (const session of expiredSessions) {
+        await this.expireSession(session.id);
+      }
+
+      if (expiredSessions.length > 0) {
+        console.log(`Expired ${expiredSessions.length} sessions`);
+      }
+    } catch (error) {
+      console.error('Error in checkAndExpireSessions:', error);
+    }
+  }
+
+  async getActiveSession(userId?: string): Promise<Session | null> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return null;
+      }
+
+      const supabase = this.supabase;
+      let query = supabase
+        .from('sessions')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (userId) {
+        query = query.eq('created_by', userId);
+      }
+
+      // Use .maybeSingle() instead of .single() to prevent errors when multiple rows exist
+      const { data, error } = await query.maybeSingle();
+
+      if (error) {
+        console.error('Error getting active session:', error);
+        return null;
+      }
+
+      return data as Session;
+    } catch (error) {
+      console.error('Error in getActiveSession:', error);
+      return null;
+    }
+  }
+
+  async getAllSessions(): Promise<Session[]> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return [];
+      }
+
+      const supabase = this.supabase;
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error getting all sessions:', error);
+        return [];
+      }
+
+      return data as Session[];
+    } catch (error) {
+      console.error('Error in getAllSessions:', error);
+      return [];
+    }
+  }
+
+  async createSession(sessionData: Partial<Session>): Promise<Session | null> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return null;
+      }
+
+      const supabase = this.supabase;
+      // First, deactivate any existing active sessions for this user
+      if (sessionData.created_by) {
+        await supabase
+          .from('sessions')
+          .update({ is_active: false })
+          .eq('created_by', sessionData.created_by)
+          .eq('is_active', true);
+      }
+
+      // Parse the expiry time if provided, otherwise default to 24 hours
+      let expiresAt: Date;
+      
+      if (sessionData.expires_at) {
+        // If expires_at is provided, use it directly (should be in ISO format)
+        expiresAt = new Date(sessionData.expires_at);
+        console.log(`Using provided expiry time: ${expiresAt.toISOString()}`);
+      } else if (sessionData.date) {
+        // If only date is provided, set expiry to end of that day in local time
+        const [year, month, day] = sessionData.date.split('-').map(Number);
+        expiresAt = new Date(Date.UTC(year, month - 1, day, 23, 59, 59));
+        console.log(`Using end of day expiry: ${expiresAt.toISOString()}`);
+      } else {
+        // Default to 24 hours from now in local time
+        expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24);
+        console.log(`Using default 24h expiry: ${expiresAt.toISOString()}`);
+      }
+      
+      // Ensure the time is stored in UTC
+      const utcExpiresAt = new Date(expiresAt.getTime() - (expiresAt.getTimezoneOffset() * 60000));
+      console.log(`Storing expiry time in UTC: ${utcExpiresAt.toISOString()}`);
+
+      // Create new session
+      const { data, error } = await supabase
+        .from('sessions')
+        .insert([{
+          ...sessionData,
+          created_at: new Date().toISOString(),
+          expires_at: expiresAt.toISOString(),
+          is_active: true
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating session:', error);
+        return null;
+      }
+
+      console.log('Session created successfully:', data);
+      console.log('Expires at (local):', new Date(data.expires_at).toString());
+      return data as Session;
+    } catch (error) {
+      console.error('Error in createSession:', error);
+      return null;
+    }
+  }
+
+  async validateUser(userId: string, password: string): Promise<boolean> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return false;
+      }
+
+      const { data, error } = await this.supabase
+        .from('users')
+        .select('*')
+        .eq('username', userId)
+        .single();
+
+      if (error || !data) {
+        console.error('Error fetching user:', error);
+        return false;
+      }
+
+      // For debugging
+      console.log('Found user in database:', {
+        username: data.username,
+        hasPassword: !!data.password,
+        passwordLength: data.password ? data.password.length : 0,
+        providedPassword: password,
+        providedPasswordLength: password.length,
+        passwordsMatch: data.password === password
+      });
+
+      return data.password === password;
+    } catch (error) {
+      console.error('Error in validateUser:', error);
+      return false;
+    }
+  }
+
+  async getActiveSession(userId?: string): Promise<Session | null> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return null;
+      }
+
+      const now = new Date().toISOString();
+      let query = this.supabase
+        .from('sessions')
+        .select('*')
+        .gt('expires_at', now)
+        .order('created_at', { ascending: false });
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query.limit(1).single();
+
+      if (error) {
+        console.error('Error getting active session:', error);
+        return null;
+      }
+
+      return data as Session;
+    } catch (error) {
+      console.error('Error in getActiveSession:', error);
+      return null;
+    }
+  }
+
+  async getAllAttendance(): Promise<Attendance[]> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return [];
+      }
+
+      const supabase = this.supabase;
+      const { data, error } = await supabase
+        .from('attendance')
+        .select(`
+          *,
+          user:user_id (name)
+        `)
+        .order('check_in_time', { ascending: false });
+
+      if (error) {
+        console.error('Error getting all attendance:', error);
+        return [];
+      }
+
+      // Transform the data to include the user's name directly in the attendance record
+      const attendanceWithNames = data.map(record => ({
+        ...record,
+        name: record.user?.name || 'Unknown'
+      }));
+
+      return attendanceWithNames as unknown as Attendance[];
+    } catch (error) {
+      console.error('Error in getAllAttendance:', error);
+      return [];
+    }
+  }
+
+  async getUserAttendance(username: string): Promise<Attendance[]> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        console.log('Using mock storage - returning empty attendance array');
+        return [];
+      }
+
+      const supabase = this.supabase;
+      console.log(`Fetching attendance for user: ${username}`);
+      
+      // First, get all sessions to ensure we show all sessions, even without attendance
+      const { data: sessions, error: sessionsError } = await supabase
+        .from('sessions')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (sessionsError) {
+        console.error('Error getting sessions:', sessionsError);
+        return [];
+      }
+      console.log(`Found ${sessions.length} sessions in the database`);
+
+      // Get the user's attendance records with session details
+      const { data: attendanceData, error } = await supabase
+        .from('attendance')
+        .select(`
+          id,
+          user_id,
+          session_id,
+          check_in_time,
+          status,
+          session:session_id (
+            id,
+            name,
+            date,
+            time,
+            description
+          )
+        `)
+        .eq('user_id', username);
+
+      if (error) {
+        console.error('Error getting user attendance:', error);
+        return [];
+      }
+      console.log(`Found ${attendanceData?.length || 0} attendance records for user ${username}`);
+
+      // Create a map of session_id to attendance record
+      const attendanceMap = new Map();
+      
+      if (attendanceData) {
+        attendanceData.forEach(record => {
+          // Safely access session data with proper null checks
+          const session = Array.isArray(record.session) ? record.session[0] : record.session;
+          if (session) {
+            attendanceMap.set(record.session_id, {
+              id: record.id,
+              user_id: record.user_id,
+              session_id: record.session_id,
+              check_in_time: record.check_in_time,
+              status: record.status || 'present',
+              session_name: session.name || 'Session',
+              date: session.date || new Date().toISOString().split('T')[0],
+              time: session.time || '00:00',
+              session: {
+                id: session.id,
+                name: session.name || 'Session',
+                date: session.date || new Date().toISOString().split('T')[0],
+                time: session.time || '00:00',
+                description: session.description || ''
+              }
+            });
+          }
+        });
+      }
+
+      // For sessions without attendance, create absent records
+      const allSessionsWithAttendance = sessions.map(session => {
+        const attendance = attendanceMap.get(session.id);
+        if (attendance) {
+          return attendance;
+        }
+        
+        // If no attendance record exists, create an absent record
+        return {
+          id: `session-${session.id}`,
+          user_id: username,
+          session_id: session.id,
+          check_in_time: null,
+          date: session.date || new Date().toISOString().split('T')[0],
+          status: 'absent',
+          session_name: session.name || 'Session',
+          session: {
+            id: session.id,
+            name: session.name || 'Session',
+            date: session.date || new Date().toISOString().split('T')[0],
+            time: session.time || '00:00',
+            description: session.description || ''
+          }
+        };
+      });
+
+      console.log(`Returning ${allSessionsWithAttendance.length} attendance records (including absent sessions)`);
+      return allSessionsWithAttendance as unknown as Attendance[];
+    } catch (error) {
+      console.error('Error in getUserAttendance:', error);
+      return [];
+    }
+  }
+
+  async recordAttendance(username: string, session_id: string): Promise<Attendance | null> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return null;
+      }
+
+      const supabase = this.supabase;
+      // Check if attendance already exists
+      const { data: existing } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('user_id', username)
+        .eq('session_id', session_id)
+        .single();
+
+      if (existing) {
+        console.log('Attendance already recorded');
+        return existing as Attendance;
+      }
+
+      // Record new attendance
+      const { data, error } = await supabase
+        .from('attendance')
+        .insert([{
+          user_id: username,
+          session_id,
+          check_in_time: new Date().toISOString(),
+          date: new Date().toISOString().split('T')[0], // Add date in YYYY-MM-DD format
+          status: 'present'
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error recording attendance:', error);
+        return null;
+      }
+
+      return data as Attendance;
+    } catch (error) {
+      console.error('Error in recordAttendance:', error);
+      return null;
+    }
+  }
+
+  async markAttendance(attendanceData: {
+    user_id: string;
+    session_id: string;
+    check_in_time: string;
+    status: string;
+  }): Promise<Attendance | null> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return null;
+      }
+
+      const supabase = this.supabase;
+      
+      // Check if attendance already exists
+      const { data: existing } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('user_id', attendanceData.user_id)
+        .eq('session_id', attendanceData.session_id)
+        .single();
+
+      if (existing) {
+        console.log('Attendance already recorded');
+        return existing as Attendance;
+      }
+
+      // Record new attendance with date
+      const { data, error } = await supabase
+        .from('attendance')
+        .insert([{
+          ...attendanceData,
+          date: new Date().toISOString().split('T')[0], // Add date in YYYY-MM-DD format
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error marking attendance:', error);
+        return null;
+      }
+
+      return data as Attendance;
+    } catch (error) {
+      console.error('Error in markAttendance:', error);
+      return null;
+    }
+  }
+
+  async getAttendanceBySession(sessionId: string): Promise<Attendance[]> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return [];
+      }
+
+      const supabase = this.supabase;
+      const { data, error } = await supabase
+        .from('attendance')
+        .select(`
+          *,
+          user:user_id (name)
+        `)
+        .eq('session_id', sessionId)
+        .order('check_in_time', { ascending: false });
+
+      if (error) {
+        console.error('Error getting attendance by session:', error);
+        return [];
+      }
+
+      // Transform the data to include the user's name directly in the attendance record
+      const attendanceWithNames = data.map(record => ({
+        ...record,
+        name: record.user?.name || 'Unknown'
+      }));
+
+      return attendanceWithNames as unknown as Attendance[];
+    } catch (error) {
+      console.error('Error in getAttendanceBySession:', error);
+      return [];
+    }
+  }
+
+  async getAttendanceBySessionAndUser(sessionId: string, userId: string): Promise<Attendance | null> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return null;
+      }
+
+      const supabase = this.supabase;
+      const { data, error } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('session_id', sessionId)
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error getting attendance by session and user:', error);
+        return null;
+      }
+
+      return data as Attendance;
+    } catch (error) {
+      console.error('Error in getAttendanceBySessionAndUser:', error);
+      return null;
+    }
+  }
+
+  async getAttendanceByUser(userId: string): Promise<Attendance[]> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return [];
+      }
+
+      const supabase = this.supabase;
+      const { data, error } = await supabase
+        .from('attendance')
+        .select(`
+          *,
+          user:user_id (name)
+        `)
+        .eq('user_id', userId)
+        .order('check_in_time', { ascending: false });
+
+      if (error) {
+        console.error('Error getting attendance by user:', error);
+        return [];
+      }
+
+      // Transform the data to include the user's name directly in the attendance record
+      const attendanceWithNames = data.map(record => ({
+        ...record,
+        name: record.user?.name || 'Unknown'
+      }));
+
+      return attendanceWithNames as unknown as Attendance[];
+    } catch (error) {
+      console.error('Error in getAttendanceByUser:', error);
+      return [];
+    }
+  }
+
+  async testConnection(): Promise<boolean> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        console.log('Cannot test connection - Supabase not initialized');
+        return false;
+      }
+      
+      console.log('Testing Supabase connection...');
+      const supabase = this.supabase;
+      
+      // Try to query the users table
+      const { data, error } = await supabase
+        .from('users')
+        .select('count(*)')
+        .limit(1);
+        
+      if (error) {
+        console.error('Connection test failed:', error);
+        return false;
+      }
+      
+      console.log('Connection test successful. Data:', data);
+      return true;
+    } catch (error) {
+      console.error('Error testing connection:', error);
+      return false;
+    }
+  }
+
+  async getTableInfo(tableName: string): Promise<any> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        console.log(`Cannot get table info for ${tableName} - Supabase not initialized`);
+        return null;
+      }
+      
+      console.log(`Getting table info for ${tableName}...`);
+      const supabase = this.supabase;
+      
+      // Try to get a single row to inspect columns
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .limit(1);
+        
+      if (error) {
+        console.error(`Error getting ${tableName} info:`, error);
+        return null;
+      }
+      
+      if (!data || data.length === 0) {
+        console.log(`No data found in ${tableName}`);
+        return { columns: [] };
+      }
+      
+      // Extract column names from the first row
+      const columns = Object.keys(data[0]).map(column => ({
+        name: column,
+        type: typeof data[0][column]
+      }));
+      
+      console.log(`Table ${tableName} columns:`, columns);
+      return { columns };
+    } catch (error) {
+      console.error(`Error getting ${tableName} info:`, error);
+      return null;
+    }
+  }
+
+  async getSession(sessionId: string): Promise<Session | null> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return null;
+      }
+
+      const supabase = this.supabase;
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
+
+      if (error) {
+        console.error('Error getting session:', error);
+        return null;
+      }
+
+      return data as Session;
+    } catch (error) {
+      console.error('Error in getSession:', error);
+      return null;
+    }
+  }
+
+  async updateSession(sessionId: string, sessionData: any): Promise<Session | null> {
+    try {
+      if (!this.useSupabase || !this.supabase) {
+        return null;
+      }
+
+      const supabase = this.supabase;
+      const { data, error } = await supabase
+        .from('sessions')
+        .update(sessionData)
+        .eq('id', sessionId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating session:', error);
+        return null;
+      }
+
+      return data as Session;
+    } catch (error) {
+      console.error('Error in updateSession:', error);
+      return null;
+    }
+  }
+}
+
+export const storage = new SupabaseStorage(); 

@@ -1,0 +1,24 @@
+{
+  "name": "attendance-app-root",
+  "version": "1.0.0",
+  "description": "Root package for the attendance app",
+  "scripts": {
+    "build": "mkdir -p build-app && ls -la && cp -r app/client build-app/ && cp -r app/server build-app/ && cp app/vite.config.ts build-app/ && cp app/package.json build-app/ && cp app/tsconfig.json build-app/ && cd build-app && npm install --production=false && mkdir -p client/src && cp -r ../app/client/* client/ && mkdir -p node_modules/.vite && npx vite build && npx esbuild server/index.ts --platform=node --bundle --external:@google-cloud/* --external:lightningcss --external:@babel/* --format=cjs --outfile=dist/server.js && cd .. && mkdir -p dist/public && cp -r build-app/dist/public/* dist/public/ || true && cp build-app/dist/server.js dist/server.js || true",
+    "start": "NODE_ENV=production node dist/server.js"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs": "^4.22.0",
+    "axios": "^1.8.4",
+    "express": "^4.18.2",
+    "face-api.js": "^0.22.2",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.0.17"
+  }
+}

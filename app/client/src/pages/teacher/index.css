@@ -1,0 +1,47 @@
+/* Ensure the layout takes full viewport height */
+.site-layout-background {
+  background: #fff;
+  box-shadow: 2px 0 8px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Style for the content area */
+.ant-layout-content {
+  margin: 24px 16px;
+  padding: 24px;
+  min-height: 280px;
+  background: #fff;
+  border-radius: 8px;
+}
+
+/* Ensure the header has proper z-index */
+.ant-layout-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0 24px;
+  background: #fff !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Style for the menu items */
+.ant-menu-item {
+  margin: 8px 0;
+  border-radius: 4px;
+}
+
+.ant-menu-item-selected {
+  font-weight: 500;
+}
+
+/* Ensure the logo area is properly aligned */
+.ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Style for the user profile section */
+.user-profile {
+  padding: 16px;
+  border-top: 1px solid #f0f0f0;
+  margin-top: auto;
+}

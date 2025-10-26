@@ -1,0 +1,441 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Card, 
+  Button, 
+  Statistic, 
+  List, 
+  Avatar, 
+  Badge, 
+  Tabs,
+  message,
+  Progress,
+  Tag,
+  Space,
+  Modal,
+  Input,
+  Select,
+  Form,
+  Row,
+  Col
+} from 'antd';
+import { 
+  UserOutlined, 
+  CalendarOutlined, 
+  ClockCircleOutlined, 
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  PlusOutlined,
+  QrcodeOutlined,
+  TeamOutlined,
+  FileExcelOutlined,
+  ReloadOutlined,
+  ExportOutlined
+} from '@ant-design/icons';
+import { QRCodeSVG } from 'qrcode.react';
+import { format } from 'date-fns';
+import { supabase } from '@/lib/supabase';
+
+const { TabPane } = Tabs;
+const { Option } = Select;
+
+interface Session {
+  id: string;
+  subject: string;
+  location: string;
+  startTime: string;
+  endTime: string;
+  status: 'upcoming' | 'ongoing' | 'completed';
+  attendance: number;
+  totalStudents: number;
+  qrCode?: string;
+}
+
+interface Student {
+  id: string;
+  name: string;
+  rollNumber: string;
+  status: 'present' | 'absent' | 'late';
+  checkInTime?: string;
+  avatar?: string;
+}
+
+interface StatCardProps {
+  title: string;
+  value: number | string;
+  icon: React.ReactNode;
+  color: string;
+  suffix?: string;
+}
+
+export default function TeacherDashboard() {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [isSessionModalVisible, setIsSessionModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [form] = Form.useForm<{ subject: string; duration: number; location: string }>();
+
+  // Mock data - replace with actual API calls
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const mockSessions: Session[] = [
+          {
+            id: '1',
+            subject: 'Advanced Robotics',
+            location: 'Lab 101',
+            startTime: new Date().toISOString(),
+            endTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+            status: 'ongoing',
+            attendance: 28,
+            totalStudents: 30,
+            qrCode: `data:session-1-${Date.now()}`
+          },
+          {
+            id: '2',
+            subject: 'AI Fundamentals',
+            location: 'Room 205',
+            startTime: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+            endTime: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
+            status: 'upcoming',
+            attendance: 0,
+            totalStudents: 35
+          },
+          {
+            id: '3',
+            subject: 'Embedded Systems',
+            location: 'Lab 203',
+            startTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+            endTime: new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString(),
+            status: 'completed',
+            attendance: 32,
+            totalStudents: 35
+          }
+        ];
+
+        const mockStudents: Student[] = Array.from({ length: 28 }, (_, i) => ({
+          id: `s${i + 1}`,
+          name: `Student ${i + 1}`,
+          rollNumber: `STU${1000 + i}`,
+          status: 'present',
+          checkInTime: new Date(Date.now() - i * 60000).toISOString(),
+          avatar: `https://i.pravatar.cc/150?img=${i % 50}`
+        }));
+
+        setSessions(mockSessions);
+        setActiveSession(mockSessions[0]);
+        setStudents(mockStudents);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        message.error('Failed to load data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleStartSession = async (values: { subject: string; duration: number; location: string }) => {
+    try {
+      setIsLoading(true);
+      const newSession: Session = {
+        id: `session-${Date.now()}`,
+        subject: values.subject,
+        location: values.location,
+        startTime: new Date().toISOString(),
+        endTime: new Date(Date.now() + values.duration * 60 * 1000).toISOString(),
+        status: 'ongoing',
+        attendance: 0,
+        totalStudents: 35,
+        qrCode: `data:session-${Date.now()}`
+      };
+
+      setSessions([newSession, ...sessions]);
+      setActiveSession(newSession);
+      setIsSessionModalVisible(false);
+      form.resetFields();
+      message.success('Session started successfully!');
+    } catch (error) {
+      console.error('Error starting session:', error);
+      message.error('Failed to start session');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEndSession = async (sessionId: string) => {
+    try {
+      setIsLoading(true);
+      // In a real app, you would make an API call here
+      setSessions(sessions.map(session => 
+        session.id === sessionId 
+          ? { ...session, status: 'completed', endTime: new Date().toISOString() }
+          : session
+      ));
+      
+      if (activeSession?.id === sessionId) {
+        setActiveSession(null);
+      }
+      
+      message.success('Session ended successfully');
+    } catch (error) {
+      console.error('Error ending session:', error);
+      message.error('Failed to end session');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleViewSession = (sessionId: string) => {
+    navigate(`/teacher/sessions/${sessionId}`);
+  };
+
+  const stats: StatCardProps[] = [
+    { 
+      title: 'Total Students', 
+      value: 35, 
+      icon: <UserOutlined />, 
+      color: '#1890ff' 
+    },
+    { 
+      title: 'Active Sessions', 
+      value: sessions.filter(s => s.status === 'ongoing').length, 
+      icon: <ClockCircleOutlined />, 
+      color: '#52c41a' 
+    },
+    { 
+      title: 'Attendance Rate', 
+      value: sessions.length > 0 
+        ? Math.round(sessions.reduce((acc, s) => acc + s.attendance, 0) / 
+            (sessions.length * 35) * 100) 
+        : 0, 
+      suffix: '%', 
+      icon: <CheckCircleOutlined />, 
+      color: '#722ed1' 
+    },
+    { 
+      title: 'Upcoming Classes', 
+      value: sessions.filter(s => s.status === 'upcoming').length, 
+      icon: <CalendarOutlined />, 
+      color: '#fa8c16' 
+    },
+  ];
+
+  return (
+    <div className="space-y-6 p-4">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold">Teacher Dashboard</h2>
+        <Button 
+          type="primary" 
+          icon={<PlusOutlined />}
+          onClick={() => setIsSessionModalVisible(true)}
+          loading={isLoading}
+        >
+          New Session
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <Row gutter={[16, 16]} className="mb-6">
+        {stats.map((stat, index) => (
+          <Col xs={24} sm={12} lg={6} key={index}>
+            <Card className="h-full shadow-sm">
+              <Statistic
+                title={stat.title}
+                value={stat.value}
+                prefix={stat.icon}
+                suffix={stat.suffix || ''}
+                valueStyle={{ color: stat.color }}
+              />
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      {/* Session Management */}
+      <Row gutter={[16, 16]} className="mb-6">
+        <Col span={24} lg={16}>
+          <Card 
+            title="Active Session" 
+            className="h-full"
+            extra={
+              activeSession && (
+                <Button 
+                  type="primary" 
+                  danger
+                  onClick={() => handleEndSession(activeSession.id)}
+                  loading={isLoading}
+                >
+                  End Session
+                </Button>
+              )
+            }
+          >
+            {activeSession ? (
+              <div className="space-y-4">
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold">{activeSession.subject}</h3>
+                    <div className="space-y-2 mt-2 text-gray-600">
+                      <div className="flex items-center">
+                        <CalendarOutlined className="mr-2" />
+                        {format(new Date(activeSession.startTime), 'MMMM d, yyyy')}
+                      </div>
+                      <div className="flex items-center">
+                        <ClockCircleOutlined className="mr-2" />
+                        {format(new Date(activeSession.startTime), 'h:mm a')} -{' '}
+                        {format(new Date(activeSession.endTime), 'h:mm a')}
+                      </div>
+                      <div className="flex items-center">
+                        <TeamOutlined className="mr-2" />
+                        {activeSession.attendance} / {activeSession.totalStudents} students present
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <Progress 
+                        percent={Math.round((activeSession.attendance / activeSession.totalStudents) * 100)} 
+                        status="active"
+                      />
+                    </div>
+                  </div>
+                  {activeSession.qrCode && (
+                    <div className="flex flex-col items-center">
+                      <QRCodeSVG 
+                        value={activeSession.qrCode}
+                        size={150}
+                        className="border p-2 rounded"
+                      />
+                      <p className="mt-2 text-sm text-gray-500">Scan to mark attendance</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <p>No active session. Start a new session to begin taking attendance.</p>
+              </div>
+            )}
+          </Card>
+        </Col>
+        <Col span={24} lg={8}>
+          <Card title="Recent Sessions" className="h-full">
+            <List<Session>
+              itemLayout="horizontal"
+              dataSource={sessions.slice(0, 3)}
+              renderItem={(session) => (
+                <List.Item
+                  actions={[
+                    <Button 
+                      key="view"
+                      type="link" 
+                      icon={<ExportOutlined />}
+                      onClick={() => handleViewSession(session.id)}
+                    >
+                      View
+                    </Button>
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={
+                      <Avatar 
+                        icon={
+                          session.status === 'ongoing' ? 
+                            <ClockCircleOutlined style={{ color: '#52c41a' }} /> :
+                            session.status === 'completed' ?
+                              <CheckCircleOutlined style={{ color: '#1890ff' }} /> :
+                              <CalendarOutlined style={{ color: '#fa8c16' }} />
+                        }
+                        style={{ 
+                          backgroundColor: session.status === 'ongoing' ? '#f6ffed' : 
+                                         session.status === 'completed' ? '#e6f7ff' : '#fff7e6',
+                          border: `1px solid ${
+                            session.status === 'ongoing' ? '#b7eb8f' : 
+                            session.status === 'completed' ? '#91d5ff' : '#ffd591'
+                          }`
+                        }}
+                      />
+                    }
+                    title={session.subject}
+                    description={
+                      <div className="space-y-1">
+                        <div>{format(new Date(session.startTime), 'MMM d, yyyy h:mm a')}</div>
+                        <div className="flex items-center">
+                          <TeamOutlined className="mr-1" />
+                          {session.attendance} / {session.totalStudents} attended
+                        </div>
+                        <div>
+                          <Tag 
+                            color={
+                              session.status === 'ongoing' ? 'success' : 
+                              session.status === 'completed' ? 'processing' : 'warning'
+                            }
+                          >
+                            {session.status}
+                          </Tag>
+                        </div>
+                      </div>
+                    }
+                  />
+                </List.Item>
+              )}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Session Creation Modal */}
+      <Modal
+        title="Start New Session"
+        open={isSessionModalVisible}
+        onCancel={() => setIsSessionModalVisible(false)}
+        footer={null}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleStartSession}
+        >
+          <Form.Item
+            name="subject"
+            label="Subject"
+            rules={[{ required: true, message: 'Please input the subject!' }]}
+          >
+            <Input placeholder="e.g., Advanced Robotics" />
+          </Form.Item>
+          <Form.Item
+            name="location"
+            label="Location"
+            rules={[{ required: true, message: 'Please input the location!' }]}
+          >
+            <Input placeholder="e.g., Lab 101" />
+          </Form.Item>
+          <Form.Item
+            name="duration"
+            label="Duration (minutes)"
+            rules={[{ required: true, message: 'Please input the duration!' }]}
+          >
+            <Input type="number" min={1} defaultValue={60} />
+          </Form.Item>
+          <Form.Item>
+            <Button 
+              type="primary" 
+              htmlType="submit" 
+              loading={isLoading}
+              block
+            >
+              Start Session
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  );
+}

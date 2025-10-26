@@ -1,0 +1,40 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "clean": "rimraf dist",
+    "prestart": "npm run build",
+    "db:setup": "ts-node scripts/setup-db.ts"
+  },
+  "devDependencies": {
+    "@types/body-parser": "^1.19.5",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.23",
+    "@types/express-session": "^1.18.2",
+    "@types/node": "^20.11.0",
+    "@types/node-fetch": "^2.6.12",
+    "@types/passport": "^1.0.17",
+    "@types/passport-local": "^1.0.38",
+    "rimraf": "^5.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "express-session": "^1.18.0",
+    "node-fetch": "^2.7.0",
+    "passport": "^0.7.0",
+    "passport-local": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

@@ -1,0 +1,65 @@
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Bell, LogOut, Search, Menu } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+export function Header({ onMenuClick }: HeaderProps) {
+  const { user, signOut } = useAuth();
+
+  if (!user) {
+    return null;
+  }
+
+  const displayName = (user.name || `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.username).trim();
+  const initial = displayName.charAt(0).toUpperCase() || 'A';
+
+  return (
+    <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-16 items-center px-4">
+        <div className="flex items-center gap-2">
+          {onMenuClick && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={onMenuClick}
+            >
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Open sidebar</span>
+            </Button>
+          )}
+        </div>
+        <div className="ml-auto flex items-center space-x-4">
+          <Button variant="ghost" size="icon" className="rounded-full">
+            <Search className="h-5 w-5" />
+            <span className="sr-only">Search</span>
+          </Button>
+          <Button variant="ghost" size="icon" className="rounded-full relative">
+            <Bell className="h-5 w-5" />
+            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary"></span>
+            <span className="sr-only">Notifications</span>
+          </Button>
+          <div className="flex items-center gap-2">
+            <Avatar className="h-9 w-9">
+              <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                {initial}
+              </AvatarFallback>
+            </Avatar>
+            <div className="hidden sm:flex flex-col text-left">
+              <span className="text-sm font-medium leading-tight">{displayName}</span>
+              <span className="text-xs text-muted-foreground leading-tight">{user.role.toUpperCase()}</span>
+            </div>
+            <Button variant="ghost" size="icon" className="rounded-full" onClick={signOut}>
+              <LogOut className="h-5 w-5" />
+              <span className="sr-only">Logout</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
