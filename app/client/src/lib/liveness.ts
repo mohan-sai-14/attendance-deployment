@@ -112,7 +112,7 @@ export function generateChallenges(): LivenessChallenge[] {
 }
 
 // EAR thresholds
-export const EAR_BLINK_THRESHOLD = 0.21; // Below this = eyes closed/blinking
+export const EAR_BLINK_THRESHOLD = 0.23; // Below this = eyes closed/blinking
 export const EAR_OPEN_THRESHOLD = 0.25;  // Above this = eyes open (for detecting blink end)
 
 // Head turn thresholds

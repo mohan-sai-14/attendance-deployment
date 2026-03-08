@@ -689,7 +689,7 @@ const StudentScannerPage: React.FC = () => {
       if (!isCameraActive || !videoRef.current || livenessPassed || livenessFailed || livenessChallenges.length === 0) return;
       
       const now = Date.now();
-      if (now - lastProcessTime < 100) { // Limit to 10fps to save CPU
+      if (now - lastProcessTime < 60) { // Limit to ~16fps to save CPU (was 100ms/10fps)
         animationFrameId = requestAnimationFrame(detectLiveness);
         return;
       }
@@ -711,6 +711,9 @@ const StudentScannerPage: React.FC = () => {
           
           if (currentChallenge.type === 'blink') {
             const ear = getEAR(detection.landmarks);
+            // DEBUG: Log EAR values to console for troubleshooting
+            console.log('Liveness - EAR:', ear.toFixed(3), 'Threshold:', EAR_BLINK_THRESHOLD);
+            
             if (ear < EAR_BLINK_THRESHOLD) {
               handleChallengeSuccess();
             }
