@@ -421,6 +421,7 @@ export default function StartAttendance() {
          const { data: newSession, error: sessionError } = await supabase
             .from('sessions')
             .insert({
+               id: sessionId,
                name: data.name,
                date: data.date,
                time: data.time,
