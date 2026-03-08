@@ -37,6 +37,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { getCurrentPosition } from '@/lib/location';
 import { generateQRToken, generateSecret } from '@/lib/qr-token';
+import { LocationPicker } from '@/components/teacher/LocationPicker';
 
 const DEFAULT_TIME_SLOTS = [
    { id: 'p1', label: 'Period 1', start: '09:00', end: '09:50', type: 'period' as const },
@@ -107,6 +108,7 @@ export default function StartAttendance() {
    const [isLoading, setIsLoading] = useState(true);
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [isGettingLocation, setIsGettingLocation] = useState(false);
+   const [manualLocation, setManualLocation] = useState<{ lat: number; lng: number } | null>(null);
    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
    const [qrValue, setQrValue] = useState('');
@@ -116,7 +118,7 @@ export default function StartAttendance() {
    const [timeLeft, setTimeLeft] = useState('');
    const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
    const [showBottomBar, setShowBottomBar] = useState(false);
-   const sessionIdRef = useRef<string>('');
+   const sessionIdRef = useRef<string | null>(null);
 
    const form = useForm<FormValues>({
       resolver: zodResolver(formSchema),
@@ -345,17 +347,22 @@ export default function StartAttendance() {
          setErrorMessage(null);
 
          // Get teacher's current location
-         let teacherCoords = null;
-         try {
-            const coords = await getCurrentPosition();
-            teacherCoords = { lat: coords.latitude, lng: coords.longitude };
-            toast({ title: 'Location Captured', description: 'Your location has been recorded.' });
-         } catch (locErr) {
-            setErrorMessage('Unable to get location. Students need your location to verify attendance.');
-            toast({ variant: 'destructive', title: 'Location Required', description: 'Unable to get location.' });
-            setIsGettingLocation(false);
-            setIsSubmitting(false);
-            return;
+         let teacherCoords = manualLocation;
+         if (!teacherCoords) {
+            try {
+               const coords = await getCurrentPosition();
+               teacherCoords = { lat: coords.latitude, lng: coords.longitude };
+               toast({ title: 'Location Captured', description: 'GPS location has been recorded.' });
+            } catch (locErr) {
+               setErrorMessage('Unable to get automatic location. Please use "Override GPS Location" to drop a pin on the map.');
+               toast({ variant: 'destructive', title: 'Location Required', description: 'Unable to get location.' });
+               setIsGettingLocation(false);
+               setIsSubmitting(false);
+               return;
+            }
+         } else {
+            // Using manual override
+            console.log('Using manual override coordinates:', teacherCoords);
          }
          setIsGettingLocation(false);
 
@@ -644,6 +651,21 @@ export default function StartAttendance() {
                                  </FormItem>
                               )}
                            />
+
+                           <div className="pt-2">
+                             <LocationPicker 
+                                defaultLocation={manualLocation}
+                                onLocationSelect={(lat, lng) => {
+                                  setManualLocation({ lat, lng });
+                                  toast({ title: 'Manual Location Set', description: 'Pin dropped successfully.' });
+                                }}
+                             />
+                             {manualLocation && (
+                               <p className="text-xs text-muted-foreground mt-2 text-center bg-blue-50/50 p-2 rounded-md">
+                                 ✅ Custom override active: {manualLocation.lat.toFixed(4)}, {manualLocation.lng.toFixed(4)}
+                               </p>
+                             )}
+                           </div>
 
                            <Button
                               type="submit"
