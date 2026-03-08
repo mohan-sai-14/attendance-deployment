@@ -14,11 +14,8 @@ import { getCurrentPosition, verifyLocation, formatDistance } from '@/lib/locati
 import { getApiUrl } from '@/lib/config';
 import { validateQRToken } from '@/lib/qr-token';
 import { 
-  getEAR, 
-  getHeadTurn, 
+  getHeadMovement, 
   generateChallenges, 
-  EAR_BLINK_THRESHOLD, 
-  HEAD_TURN_THRESHOLD,
   LivenessChallenge 
 } from '@/lib/liveness';
 
@@ -709,19 +706,11 @@ const StudentScannerPage: React.FC = () => {
         if (detection) {
           const currentChallenge = livenessChallenges[currentChallengeIndex];
           
-          if (currentChallenge.type === 'blink') {
-            const ear = getEAR(detection.landmarks);
-            // DEBUG: Log EAR values to console for troubleshooting
-            console.log('Liveness - EAR:', ear.toFixed(3), 'Threshold:', EAR_BLINK_THRESHOLD);
-            
-            if (ear < EAR_BLINK_THRESHOLD) {
-              handleChallengeSuccess();
-            }
-          } else if (currentChallenge.type === 'turn_left' || currentChallenge.type === 'turn_right') {
-            const turn = getHeadTurn(detection.landmarks);
-            if (turn.direction === currentChallenge.type.replace('turn_', '') && turn.amount > HEAD_TURN_THRESHOLD) {
-              handleChallengeSuccess();
-            }
+          const movement = getHeadMovement(detection.landmarks);
+          const targetDirection = currentChallenge.type.replace('turn_', '');
+          
+          if (movement.direction === targetDirection) {
+            handleChallengeSuccess();
           }
         }
       } catch (e) {
