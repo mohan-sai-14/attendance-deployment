@@ -1,12 +1,11 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, 
-  QrCode, 
-  ClipboardCheck, 
+import {
+  LayoutDashboard,
+  CalendarDays,
+  ClipboardCheck,
   FileText,
-  BarChart2,
   Menu as MenuIcon,
   X,
   LogOut
@@ -40,11 +39,6 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
       href: "/teacher/dashboard",
     },
     {
-      name: "QR Generator",
-      icon: QrCode,
-      href: "/teacher/qr-generator",
-    },
-    {
       name: "Manual Attendance",
       icon: ClipboardCheck,
       href: "/teacher/manual-attendance",
@@ -55,9 +49,9 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
       href: "/teacher/attendance-history",
     },
     {
-      name: "Reports",
-      icon: BarChart2,
-      href: "/teacher/reports",
+      name: "My Timetable",
+      icon: CalendarDays,
+      href: "/teacher/timetable",
     },
   ];
 
@@ -104,7 +98,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
         )}
       >
         <div className="flex items-center justify-between p-4 border-b border-border/40 bg-gradient-to-r from-primary/5 to-transparent">
-          <div 
+          <div
             onClick={() => navigate('/teacher')}
             className="flex items-center gap-3 cursor-pointer"
           >
@@ -147,7 +141,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
                   )}
                 >
                   {isActive(item.href) && (
-                    <motion.div 
+                    <motion.div
                       layoutId="teacherActiveIndicator"
                       className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-primary via-primary/80 to-primary/60 rounded-r-full shadow-lg"
                       transition={{ type: "spring", stiffness: 380, damping: 30 }}
@@ -208,7 +202,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
                   Teacher Dashboard
                 </h1>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium hidden sm:inline">{displayName}</span>
                 <div className="relative">

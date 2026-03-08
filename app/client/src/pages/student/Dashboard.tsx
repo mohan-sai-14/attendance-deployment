@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarUI } from "@/components/ui/calendar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate, Link } from 'react-router-dom';
-import { CheckCircle, QrCode, AlertCircle, Clock, Bell, XCircle, FileText, TrendingUp, Award, BookOpen, Home, Flame } from 'lucide-react';
+import { CheckCircle, QrCode, AlertCircle, Clock, Bell, XCircle, FileText, TrendingUp, Award, BookOpen, Home } from 'lucide-react';
 import { supabase } from "@/lib/supabase";
 import { format, parseISO } from 'date-fns';
 import { useAuth } from "@/contexts/AuthContext";
@@ -56,6 +56,11 @@ export default function StudentDashboard() {
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
   const [activeSessionChecked, setActiveSessionChecked] = useState<{[key: string]: boolean}>({});
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const profileRef = React.useRef<any>(null);
+
+  useEffect(() => {
+    profileRef.current = userProfile;
+  }, [userProfile]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -85,9 +90,28 @@ export default function StudentDashboard() {
 
   const fetchActiveSessions = async () => {
     try {
+      const profile = profileRef.current;
+      if (!profile) return;
+
+      const { data: matchingClasses } = await supabase
+        .from('classes')
+        .select('id')
+        .eq('department', profile.department)
+        .eq('program', profile.program)
+        .eq('year', profile.year)
+        .eq('section', profile.section);
+        
+      const classIds = (matchingClasses || []).map(c => c.id);
+      
+      if (classIds.length === 0) {
+        setTodaySessions([]);
+        return;
+      }
+
       const { data: activeSessionsData, error: sessionsError } = await supabase
         .from('sessions')
         .select('*')
+        .in('class_id', classIds)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
       
@@ -192,18 +216,33 @@ export default function StudentDashboard() {
       setHolidays(holidaysData || []);
 
       // Fetch active sessions
-      const { data: activeSessionsData, error: sessionsError } = await supabase
-        .from('sessions')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-      
-      if (sessionsError) {
-        console.error('Error fetching active sessions:', sessionsError);
+      let activeSessionsData: any[] = [];
+      if (profile) {
+        const { data: matchingClasses } = await supabase
+          .from('classes')
+          .select('id')
+          .eq('department', profile.department)
+          .eq('program', profile.program)
+          .eq('year', profile.year)
+          .eq('section', profile.section);
+          
+        const classIds = (matchingClasses || []).map(c => c.id);
+        
+        if (classIds.length > 0) {
+          const { data, error: sessionsError } = await supabase
+            .from('sessions')
+            .select('*')
+            .in('class_id', classIds)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+            
+          if (sessionsError) console.error('Error fetching active sessions:', sessionsError);
+          activeSessionsData = data || [];
+        }
       }
       
       console.log('Active sessions found:', activeSessionsData);
-      setTodaySessions(activeSessionsData || []);
+      setTodaySessions(activeSessionsData);
 
       // Fetch recent leave requests for activity feed
       const { data: leaveData } = await supabase
@@ -356,9 +395,84 @@ export default function StudentDashboard() {
             </div>
           </div>
         </motion.div>
+    </div>
+
+      {/* Active Sessions Banner — pinned to top */}
+      {todaySessions.length > 0 && (
+        <div className="space-y-4">
+          {todaySessions.map((session: any, index: number) => {
+            const isCheckedIn = activeSessionChecked[session.id] || false;
+            
+            if (isCheckedIn) {
+              return (
+                <motion.div
+                  key={session.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 + index * 0.1 }}
+                  className="bg-green-500/10 border-l-4 border-green-500 p-4 rounded-xl flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-green-800 dark:text-green-400">Attendance Marked</h4>
+                      <p className="text-sm text-green-600 dark:text-green-500/80">You are present for {session.name}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            }
+
+            return (
+              <motion.div
+                key={session.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + index * 0.1 }}
+                className="relative overflow-hidden bg-primary/5 border border-primary/20 p-5 rounded-2xl shadow-lg ring-1 ring-primary/20"
+              >
+                {/* Pulse background effect */}
+                <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 rounded-full bg-primary/20 animate-pulse blur-2xl"></div>
+                
+                <div className="relative flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="relative mt-1">
+                      <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Clock className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="absolute top-0 right-0 h-3 w-3 rounded-full bg-red-500 border-2 border-background animate-ping"></div>
+                      <div className="absolute top-0 right-0 h-3 w-3 rounded-full bg-red-500 border-2 border-background"></div>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                        {session.name}
+                        <Badge className="bg-red-500 hover:bg-red-600 text-white border-0 uppercase text-[10px] px-1.5 py-0">Live</Badge>
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {session.time} • Marked attendance is required
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    size="lg"
+                    className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/20 group shrink-0"
+                    onClick={() => navigate('/student/scanner')}
+                  >
+                    <QrCode className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" />
+                    Scan to Check In
+                  </Button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -397,28 +511,6 @@ export default function StudentDashboard() {
           transition={{ delay: 0.2 }}
           whileHover={{ y: -4, transition: { duration: 0.2 } }}>
           <Card className="border-border/40 bg-gradient-to-br from-background via-background to-background/50 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Current Streak</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <Flame className="h-5 w-5 text-orange-600" />
-              </div>
-            </CardHeader>
-            <CardContent className="relative">
-              <div className="text-3xl font-bold bg-gradient-to-br from-orange-600 to-orange-500 bg-clip-text text-transparent">{stats.currentStreak}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                consecutive days
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          whileHover={{ y: -4, transition: { duration: 0.2 } }}>
-          <Card className="border-border/40 bg-gradient-to-br from-background via-background to-background/50 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative">
               <CardTitle className="text-sm font-medium text-muted-foreground">Classes Today</CardTitle>
@@ -435,108 +527,23 @@ export default function StudentDashboard() {
           </Card>
         </motion.div>
       </div>
-    </div>
 
-    {/* Active Sessions Card */}
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.4 }}>
-      <Card className="border-border/40 bg-gradient-to-br from-background via-background to-background/50 backdrop-blur-sm shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-primary" />
-            Active Sessions
+    {/* Calendar & Details Grid */}
+    <div id="calendarSection" className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+      {/* Calendar Column */}
+      <Card className="lg:col-span-1 shadow-md border-border/40 bg-gradient-to-b from-background to-background/50">
+        <CardHeader className="pb-3 border-b border-border/40">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <CalendarUI className="h-5 w-5 text-primary opacity-0" />
+            Attendance Calendar
           </CardTitle>
-          <CardDescription>Mark your attendance for active sessions</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {todaySessions.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-20 h-20 rounded-full bg-muted/30 flex items-center justify-center mb-4 mx-auto border border-border/40">
-                <Clock className="h-10 w-10 text-muted-foreground" />
-              </div>
-              <p className="text-lg font-semibold text-muted-foreground mb-2">
-                No active sessions
-              </p>
-              <p className="text-sm text-muted-foreground/70 max-w-xs mx-auto">
-                There are no active sessions at the moment. Check back later.
-              </p>
-            </div>
-          ) : (
-            todaySessions.map((session: any, index: number) => {
-              const isCheckedIn = activeSessionChecked[session.id] || false;
-              return (
-                <motion.div
-                  key={session.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="border border-border/40 rounded-xl p-4 bg-gradient-to-r from-background to-background/50 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="font-semibold text-lg">{session.name}</p>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                        <Clock className="h-3 w-3" />
-                        {session.time}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{session.date}</p>
-                    </div>
-
-                    {isCheckedIn ? (
-                      <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 p-4 rounded-xl">
-                        <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                          <CheckCircle className="h-6 w-6 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-green-700 dark:text-green-400">Checked In!</p>
-                          <p className="text-sm text-green-600 dark:text-green-500">Attendance marked</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl">
-                        <div className="flex items-start gap-3 mb-3">
-                          <div className="h-10 w-10 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
-                            <AlertCircle className="h-6 w-6 text-orange-600" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-orange-700 dark:text-orange-400">Attendance Needed!</p>
-                            <p className="text-sm text-muted-foreground">
-                              Mark your attendance for this active session.
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          className="w-full bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg transition-shadow"
-                        onClick={() => navigate('/student/scanner')}
-                      >
-                        <QrCode className="h-4 w-4 mr-2" />
-                        Scan QR Code
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })
-        )}
-      </CardContent>
-    </Card>
-    </motion.div>
-
-    {/* Calendar & Live Sessions */}
-    <div id="calendarSection" className="grid grid-cols-1 gap-6 mt-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Attendance Calendar</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-3 flex flex-wrap gap-2 text-xs">
-            <span className="px-2 py-0.5 rounded bg-green-200 text-green-800">Present</span>
-            <span className="px-2 py-0.5 rounded bg-red-200 text-red-800">Absent</span>
-            <span className="px-2 py-0.5 rounded bg-yellow-200 text-yellow-800">OD</span>
-            <span className="px-2 py-0.5 rounded bg-blue-200 text-blue-800">ML</span>
-            <span className="px-2 py-0.5 rounded bg-amber-200 text-amber-800">Holiday</span>
+        <CardContent className="pt-4 flex flex-col items-center">
+          <div className="mb-4 flex flex-wrap justify-center gap-1.5 text-[10px] w-full max-w-[280px]">
+            <span className="px-1.5 py-0.5 rounded-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">Present</span>
+            <span className="px-1.5 py-0.5 rounded-sm bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400">Absent</span>
+            <span className="px-1.5 py-0.5 rounded-sm bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">Late/OD</span>
+            <span className="px-1.5 py-0.5 rounded-sm bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400">Leave</span>
           </div>
           <CalendarUI
             mode="single"
@@ -544,114 +551,82 @@ export default function StudentDashboard() {
             onSelect={setSelectedDate}
             modifiers={calendarModifiers}
             modifiersClassNames={{
-              present: 'bg-green-200 text-green-900',
-              absent: 'bg-red-200 text-red-900',
-              od: 'bg-yellow-200 text-yellow-900',
-              ml: 'bg-blue-200 text-blue-900',
-              holiday: 'bg-amber-200 text-amber-800'
+              present: 'bg-green-200 text-green-900 dark:bg-green-900 dark:text-green-100 font-bold',
+              absent: 'bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-100 font-bold',
+              od: 'bg-yellow-200 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100 font-bold',
+              late: 'bg-yellow-200 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100 font-bold',
+              ml: 'bg-blue-200 text-blue-900 dark:bg-blue-900 dark:text-blue-100 font-bold',
+              holiday: 'bg-amber-200 text-amber-800 dark:bg-amber-900 dark:text-amber-100 font-bold'
             }}
+            className="w-full max-w-[300px] border-none p-0"
           />
+        </CardContent>
+      </Card>
+
+      {/* Day Details Column */}
+      <Card className="lg:col-span-2 shadow-md border-border/40 bg-card">
+        <CardHeader className="pb-3 border-b border-border/40 flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">
+            {selectedDate ? selectedDate.toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'short', day:'numeric' }) : 'Select a date'}
+          </CardTitle>
+          <Button variant="ghost" size="sm" asChild className="hidden sm:flex">
+            <Link to="/student/attendance-history">View Full History</Link>
+          </Button>
+        </CardHeader>
+        <CardContent className="pt-6">
           {selectedDate && (
-            <div className="mt-4 space-y-3">
-              <h4 className="text-sm font-medium border-b pb-2">
-                {selectedDate.toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'short', day:'numeric' })}
-              </h4>
+            <div className="space-y-4">
               {(() => {
-                // Create date string from local date components to avoid timezone issues
                 const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
-                console.log('Selected date (YYYY-MM-DD):', selectedDateStr);
-
-                // Enhanced debugging for date comparison
-                console.log('=== DATE DEBUGGING ===');
-                console.log('Selected date object:', selectedDate);
-                console.log('Selected date ISO:', selectedDate.toISOString());
-                console.log('Selected date string:', selectedDateStr);
-                console.log('Selected date local:', selectedDate.toLocaleDateString());
-                console.log('Selected date components:', {
-                  year: selectedDate.getFullYear(),
-                  month: selectedDate.getMonth(),
-                  date: selectedDate.getDate(),
-                  hours: selectedDate.getHours(),
-                  timezone: selectedDate.getTimezoneOffset()
-                });
-                console.log('Attendance records count:', attendanceRecords.length);
-
-                // Log all attendance record dates
-                attendanceRecords.forEach((record, index) => {
-                  console.log(`Record ${index}:`, {
-                    id: record.id,
-                    date: record.date,
-                    session_name: record.session_name,
-                    raw_date: record.date
-                  });
-                });
-
-                // Helper function to normalize dates for comparison
+                
                 const normalizeDate = (dateStr: string) => {
                   if (!dateStr) return null;
-
-                  console.log('Normalizing date:', dateStr);
-
-                  // If it's a timestamp like "2025-10-01T20:33:52", extract just the date part
-                  if (dateStr.includes('T')) {
-                    const datePart = dateStr.split('T')[0];
-                    console.log('Extracted date from timestamp:', datePart);
-                    return datePart;
-                  }
-
-                  // If already in YYYY-MM-DD format
-                  if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                    return dateStr;
-                  }
-
-                  // If in DD-MM-YYYY format, convert to YYYY-MM-DD
+                  if (dateStr.includes('T')) return dateStr.split('T')[0];
+                  if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) return dateStr;
                   if (dateStr.match(/^\d{2}-\d{2}-\d{4}$/)) {
                     const parts = dateStr.split('-');
-                    if (parts.length === 3) {
-                      return `${parts[2]}-${parts[1]}-${parts[0]}`;
-                    }
+                    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
                   }
-
-                  // Try parsing as Date object and return YYYY-MM-DD
                   try {
                     const dateObj = new Date(dateStr);
-                    if (!isNaN(dateObj.getTime())) {
-                      return dateObj.toISOString().split('T')[0];
-                    }
-                  } catch (e) {
-                    console.warn('Failed to parse date:', dateStr);
-                  }
-
+                    if (!isNaN(dateObj.getTime())) return dateObj.toISOString().split('T')[0];
+                  } catch (e) {}
                   return null;
                 };
 
-                const dayAttendance = attendanceRecords.filter(r => {
-                  const normalizedRecordDate = normalizeDate(r.date);
-                  const normalizedSelectedDate = selectedDateStr;
-
-                  console.log(`Comparing: ${normalizedRecordDate} vs ${normalizedSelectedDate}`);
-                  return normalizedRecordDate === normalizedSelectedDate;
-                });
-
-                console.log('Final filtered attendance for', selectedDateStr, ':', dayAttendance);
+                const dayAttendance = attendanceRecords.filter(r => normalizeDate(r.date) === selectedDateStr);
                 
                 if (dayAttendance.length === 0) {
                   return (
-                    <div className="text-center py-4">
-                      <p className="text-sm text-muted-foreground">No attendance records for this date.</p>
+                    <div className="flex flex-col items-center justify-center py-12 text-center h-full min-h-[200px]">
+                      <div className="h-16 w-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
+                        <CalendarUI className="h-8 w-8 text-muted-foreground opacity-50" />
+                      </div>
+                      <h3 className="text-base font-medium text-foreground">No Classes Logged</h3>
+                      <p className="text-sm text-muted-foreground mt-1 max-w-[250px]">
+                        There are no attendance records for this specific date.
+                      </p>
                     </div>
                   );
                 }
                 
                 return (
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {dayAttendance.map(r => (
-                      <div key={r.id} className="flex items-center justify-between p-3 border rounded-md bg-card hover:bg-accent/5 transition-colors">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{r.session_name}</p>
-                          <p className="text-xs text-muted-foreground">{r.check_in_time || 'Time not recorded'}</p>
+                      <div key={r.id} className="flex flex-col border border-border/50 rounded-xl bg-background hover:bg-muted/30 transition-colors overflow-hidden">
+                        <div className={`h-1.5 w-full ${r.status === 'present' ? 'bg-green-500' : r.status === 'absent' ? 'bg-red-500' : 'bg-primary'}`}></div>
+                        <div className="p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-semibold text-sm line-clamp-2 pr-2">{r.session_name}</h4>
+                            <Badge variant="outline" className={`${getStatusColor(r.status)} border-0 text-[10px] px-2 py-0 uppercase tracking-widest shrink-0`}>
+                              {r.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center text-xs text-muted-foreground gap-2 mt-3">
+                            <Clock className="h-3 w-3" />
+                            <span>{r.check_in_time ? format(parseISO(r.check_in_time), 'hh:mm a') : 'Time not recorded'}</span>
+                          </div>
                         </div>
-                        <Badge className={getStatusColor(r.status)}>{r.status.toUpperCase()}</Badge>
                       </div>
                     ))}
                   </div>

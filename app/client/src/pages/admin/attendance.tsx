@@ -1,577 +1,584 @@
-import { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+﻿import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Eye, CheckCircle, XCircle, Filter, X, CalendarDays, TrendingUp, Users, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/lib/supabase";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Users, CalendarDays, Clock, ArrowRight, ChevronLeft, AlertCircle, FileText,
+  Lock, Edit3, ShieldAlert
+} from "lucide-react";
+import { format, differenceInHours } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { supabase } from '@/lib/supabase';
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+
+// Types
+interface ClassRow {
+  id: string;
+  department: string;
+  program: string;
+  year: string;
+  section: string;
+  batch: string;
+  totalStudents?: number;
+}
+
+interface StudentRow {
+  id: string;
+  username: string; // roll number
+  name: string;
+}
+
+interface AttendanceRecord {
+  id: string;
+  class_id: string;
+  date: string;
+  period_number: number;
+  student_id: string;
+  status: string;
+  created_at: string;
+  last_edited_at?: string;
+  edit_reason?: string;
+}
+
+interface TimetableRow {
+  id: string;
+  subject_name: string;
+  faculty_id: string;
+  start_time: string;
+  end_time: string;
+  day_of_week: string;
+}
+
+interface PeriodConfig {
+  id: string;
+  period_number: number;
+  start: string;
+  end: string;
+}
+
+// 8-period config
+const PERIODS_CONFIG: PeriodConfig[] = [
+  { id: 'p1', period_number: 1, start: '09:00', end: '09:50' },
+  { id: 'p2', period_number: 2, start: '09:50', end: '10:40' },
+  { id: 'p3', period_number: 3, start: '11:00', end: '11:50' },
+  { id: 'p4', period_number: 4, start: '11:50', end: '12:40' },
+  { id: 'p5', period_number: 5, start: '13:30', end: '14:20' },
+  { id: 'p6', period_number: 6, start: '14:20', end: '15:10' },
+  { id: 'p7', period_number: 7, start: '15:30', end: '16:20' },
+  { id: 'p8', period_number: 8, start: '16:20', end: '17:10' },
+];
 
 export default function Attendance() {
-  const [sessionFilter, setSessionFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("date");
-  const [sessionStats, setSessionStats] = useState<any[]>([]);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [classes, setClasses] = useState<ClassRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedSession, setSelectedSession] = useState<any>(null);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
-  const [presentStudents, setPresentStudents] = useState<any[]>([]);
-  const [absentStudents, setAbsentStudents] = useState<any[]>([]);
 
-  // Fetch all sessions and attendance data
+  const [selectedClass, setSelectedClass] = useState<ClassRow | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  const [classTimetable, setClassTimetable] = useState<TimetableRow[]>([]);
+  const [classAttendance, setClassAttendance] = useState<AttendanceRecord[]>([]);
+  const [classStudents, setClassStudents] = useState<StudentRow[]>([]);
+  const [isLoadingPeriods, setIsLoadingPeriods] = useState(false);
+
+  // Section 4 state
+  const [activePeriod, setActivePeriod] = useState<PeriodConfig | null>(null);
+  const [editRecord, setEditRecord] = useState<{ student: StudentRow, currentStatus: string, attId?: string } | null>(null);
+  const [editReason, setEditReason] = useState("");
+  const [newStatus, setNewStatus] = useState<"present" | "absent">("present");
+  const [isSaving, setIsSaving] = useState(false);
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Fetch all sessions
-        const { data: sessions, error: sessionsError } = await supabase
-          .from('sessions')
-          .select('*')
-          .order('created_at', { ascending: false });
-          
-        if (sessionsError) throw sessionsError;
-        
-        // Fetch all students to get accurate count
-        const { data: allStudents, error: studentsError } = await supabase
-          .from('users')
-          .select('id, username')
-          .eq('role', 'student');
-          
-        if (studentsError) throw studentsError;
-        
-        const studentsCount = allStudents?.length || 0;
-        
-        // Fetch attendance stats for each session
-        const sessionsWithStats = await Promise.all(
-          (sessions || []).map(async (session) => {
-            try {
-              const { data: attendance, error: attendanceError } = await supabase
-                .from('attendance')
-                .select('*')
-                .eq('session_id', session.id);
-                
-              if (attendanceError) throw attendanceError;
-              
-              // Count only records with status 'present' or 'late' as present
-              const presentCount = attendance ? attendance.filter(a => 
-                a.status === 'present' || a.status === 'late'
-              ).length : 0;
-              
-              // Count records with status 'absent' as absent (not total students - present)
-              const absentCount = attendance ? attendance.filter(a => 
-                a.status === 'absent'
-              ).length : 0;
-              
-              const totalRecorded = presentCount + absentCount;
-              const attendanceRate = totalRecorded > 0 ? Math.round((presentCount / totalRecorded) * 100) : 0;
-              
-              return {
-                ...session,
-                present: presentCount,
-                absent: absentCount,
-                percentage: attendanceRate,
-                totalStudents: studentsCount || 0
-              };
-            } catch (error) {
-              console.error(`Error fetching attendance for session ${session.id}:`, error);
-              return {
-                ...session,
-                present: 0,
-                absent: 0,
-                percentage: 0,
-                totalStudents: studentsCount || 0
-              };
-            }
-          })
-        );
-        
-        setSessionStats(sessionsWithStats);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchData();
-    
-    // Set up polling every 30 seconds
-    const interval = setInterval(fetchData, 30000);
-    
-    return () => clearInterval(interval);
+    fetchClasses();
   }, []);
 
-  // Filter and sort sessions
-  const filteredSessions = useMemo(() => {
-    let filtered = [...sessionStats];
-    
-    // Apply filter
-    if (sessionFilter === "active") {
-      filtered = filtered.filter(s => s.is_active);
-    } else if (sessionFilter === "inactive") {
-      filtered = filtered.filter(s => !s.is_active);
+  useEffect(() => {
+    if (selectedClass) {
+      fetchPeriodsData();
+      fetchClassStudents();
+      setActivePeriod(null);
     }
-    
-    // Apply sorting
-    if (sortBy === "date") {
-      filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    } else if (sortBy === "attendance") {
-      filtered.sort((a, b) => b.percentage - a.percentage);
-    } else if (sortBy === "name") {
-      filtered.sort((a, b) => a.name.localeCompare(b.name));
-    }
-    
-    return filtered;
-  }, [sessionStats, sessionFilter, sortBy]);
+  }, [selectedClass, selectedDate]);
 
-  // Calculate overall statistics
-  const overallStats = useMemo(() => {
-    if (!sessionStats.length) return { averageAttendance: 0, totalSessions: 0 };
-    
-    // Calculate weighted average based on total present/absent across all sessions
-    const totalPresent = sessionStats.reduce((acc, s) => acc + s.present, 0);
-    const totalAbsent = sessionStats.reduce((acc, s) => acc + s.absent, 0);
-    const totalRecorded = totalPresent + totalAbsent;
-    
-    const averageRate = totalRecorded > 0 
-      ? Math.round((totalPresent / totalRecorded) * 100)
-      : 0;
-    
-    return {
-      averageAttendance: averageRate,
-      totalSessions: sessionStats.length
-    };
-  }, [sessionStats]);
-
-  // Handle viewing session details
-  const handleViewDetails = async (session: any) => {
+  const fetchClasses = async () => {
+    setIsLoading(true);
     try {
-      setSelectedSession(session);
-      
-      // Fetch all students
-      const { data: allStudents, error: studentsError } = await supabase
+      const { data: classesData, error: classesError } = await supabase.from('classes').select('*').order('program');
+      if (classesError) throw classesError;
+
+      const { data: studentsData, error: studentsError } = await supabase
         .from('users')
-        .select('*')
-        .eq('role', 'student')
-        .order('username');
-        
+        .select('id, department, program, year, section')
+        .eq('role', 'student');
       if (studentsError) throw studentsError;
-      
-      // Fetch attendance for this session
-      const { data: attendance, error: attendanceError } = await supabase
-        .from('attendance')
-        .select('*')
-        .eq('session_id', session.id);
-        
-      if (attendanceError) throw attendanceError;
-      
-      // Separate present and absent students based on status
-      // Consider 'present' and 'late' as present
-      const presentUsernames = new Set(
-        attendance?.filter(a => a.status === 'present' || a.status === 'late')
-          .map(a => a.username) || []
-      );
-      
-      const present = (allStudents || []).filter(s => presentUsernames.has(s.username));
-      const absent = (allStudents || []).filter(s => !presentUsernames.has(s.username));
-      
-      setPresentStudents(present);
-      setAbsentStudents(absent);
-      setShowDetailsDialog(true);
-    } catch (error) {
-      console.error("Error fetching session details:", error);
+
+      const classesWithCounts = (classesData || []).map(cls => {
+        const count = (studentsData || []).filter(s =>
+          s.department === cls.department &&
+          s.program === cls.program &&
+          s.year === cls.year &&
+          s.section === cls.section
+        ).length;
+
+        return { ...cls, totalStudents: count };
+      });
+
+      setClasses(classesWithCounts);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 space-y-6">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-      >
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Attendance Management
-          </h1>
-          <p className="text-muted-foreground mt-1">Monitor and manage attendance across all sessions</p>
+  const fetchClassStudents = async () => {
+    if (!selectedClass) return;
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, username, name')
+        .eq('role', 'student')
+        .eq('department', selectedClass.department)
+        .eq('program', selectedClass.program)
+        .eq('year', selectedClass.year)
+        .eq('section', selectedClass.section)
+        .order('username');
+      if (error) throw error;
+      setClassStudents(data || []);
+    } catch (error) {
+      console.error("Error fetching students:", error);
+    }
+  };
+
+  const fetchPeriodsData = async () => {
+    if (!selectedClass) return;
+    setIsLoadingPeriods(true);
+    try {
+      const dayOfWeek = format(selectedDate, 'EEEE');
+      const dateString = format(selectedDate, 'yyyy-MM-dd');
+
+      const { data: ttData, error: ttError } = await supabase
+        .from('timetables')
+        .select('*')
+        .eq('class_id', selectedClass.id)
+        .eq('day_of_week', dayOfWeek);
+
+      if (ttError) throw ttError;
+      setClassTimetable(ttData || []);
+
+      const { data: attData, error: attError } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('class_id', selectedClass.id)
+        .eq('date', dateString);
+
+      if (attError) console.error("Attendance fetch error:", attError);
+
+      setClassAttendance(attData || []);
+    } catch (error: any) {
+      console.error("Fetch Periods Error", error);
+      toast({ title: "Check Console", description: "Could not fetch periods data.", variant: "destructive" });
+    } finally {
+      setIsLoadingPeriods(false);
+    }
+  };
+
+  const handleSaveAttendance = async () => {
+    if (!editRecord || !selectedClass || !activePeriod) return;
+    if (!editReason.trim() && editRecord.attId) {
+      toast({ title: "Reason Required", description: "You must provide a reason for editing an existing record.", variant: "destructive" });
+      return;
+    }
+
+    setIsSaving(true);
+    const dateString = format(selectedDate, 'yyyy-MM-dd');
+
+    try {
+      const payload = {
+        class_id: selectedClass.id,
+        date: dateString,
+        period_number: activePeriod.period_number,
+        student_id: editRecord.student.username, // Using username as student_id in attendance generic schema for now
+        status: newStatus,
+        last_edited_at: new Date().toISOString(),
+        edit_reason: editReason || 'Initial Entry'
+      };
+
+      if (editRecord.attId) {
+        const { error } = await supabase.from('attendance').update(payload).eq('id', editRecord.attId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('attendance').insert([payload]);
+        if (error) throw error;
+      }
+
+      toast({ title: "Success", description: "Attendance record updated." });
+      setEditRecord(null);
+      setEditReason("");
+      fetchPeriodsData(); // Refresh records
+    } catch (error: any) {
+      toast({ title: "Error Saving", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Helper for 48-hour lock check
+  const isPeriodLocked = (period: PeriodConfig) => {
+    const startDateTimeStr = `${format(selectedDate, 'yyyy-MM-dd')}T${period.start}:00`;
+    const periodStart = new Date(startDateTimeStr);
+    const hoursDiff = differenceInHours(new Date(), periodStart);
+    return hoursDiff > 48; // Locked if > 48 hours have passed since the start of the period
+  };
+
+  // SECTION 1: TODAY'S CLASSES
+  if (!selectedClass) {
+    const totalInstitutionStudents = classes.reduce((sum, cls) => sum + (cls.totalStudents || 0), 0);
+
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Attendance Management
+            </h1>
+            <p className="text-muted-foreground mt-2">Class-wise daily attendance workflow</p>
+          </div>
+          <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            <span className="font-semibold">Total Students: {totalInstitutionStudents}</span>
+          </div>
         </div>
-        <Button className="shadow-lg hover:shadow-xl transition-shadow">
-          <Download className="mr-2 h-4 w-4" /> Export All
-        </Button>
-      </motion.div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          whileHover={{ y: -4, transition: { duration: 0.2 } }}
-        >
-          <Card className="border-border/40 bg-gradient-to-br from-background via-background to-background/50 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <CardHeader className="pb-3 relative">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Sessions</CardTitle>
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors duration-300">
-                  <CalendarDays className="h-5 w-5 text-primary" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="relative">
-              <div className="text-3xl font-bold bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
-                {overallStats.totalSessions}
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">All time sessions</p>
-            </CardContent>
-          </Card>
-        </motion.div>
+        {isLoading ? (
+          <div className="flex justify-center p-12"><div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" /></div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {classes.map((cls) => (
+              <Card key={cls.id} className="border-border/40 shadow-sm bg-background/60 backdrop-blur-sm hover:shadow-md transition-shadow flex flex-col">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">{cls.department}</Badge>
+                    <Badge variant="secondary" className="text-xs">Batch {cls.batch}</Badge>
+                  </div>
+                  <CardTitle className="text-lg mt-2">{cls.program} {cls.year}</CardTitle>
+                  <CardDescription>Section {cls.section}</CardDescription>
+                </CardHeader>
+                <CardContent className="pb-4 flex-1">
+                  <div className="space-y-3 mt-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" /> Total Students</span>
+                      <span className="font-medium">{cls.totalStudents || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground flex items-center gap-2"><Clock className="h-4 w-4" /> Periods</span>
+                      <span className="font-medium">8 Daily</span>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="pt-0 gap-2 flex-col xl:flex-row">
+                  <Button className="w-full" variant="default" onClick={() => setSelectedClass(cls)}>
+                    <Users className="h-4 w-4 mr-2" /> Class Attendance
+                  </Button>
+                  <Button className="w-full xl:w-auto" variant="outline" onClick={() => navigate('/admin/timetables')}>
+                    <CalendarDays className="h-4 w-4" />
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          whileHover={{ y: -4, transition: { duration: 0.2 } }}
-        >
-          <Card className="border-border/40 bg-gradient-to-br from-background via-background to-background/50 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <CardHeader className="pb-3 relative">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Average Attendance</CardTitle>
-                <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 transition-colors duration-300">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="relative">
-              <div className="flex items-baseline gap-2">
-                <div className="text-3xl font-bold bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  {overallStats.averageAttendance}%
-                </div>
-                {overallStats.averageAttendance >= 75 && (
-                  <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
-                    Good
-                  </Badge>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">Institution-wide</p>
-            </CardContent>
-          </Card>
-        </motion.div>
+  // SECTION 2 & 3 & 4: CLASS ATTENDANCE VIEW & TODAY'S PERIODS & STUDENT LIST
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      {/* Section 2: Header and Date Selector */}
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-background/60 backdrop-blur-sm p-4 rounded-xl border border-border/40 shadow-sm">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => {
+            if (activePeriod) setActivePeriod(null);
+            else setSelectedClass(null);
+          }} className="shrink-0 bg-muted/50 hover:bg-muted">
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
+              {selectedClass.program} {selectedClass.year} <span className="text-muted-foreground font-normal">Section {selectedClass.section}</span>
+            </h1>
+            <p className="text-muted-foreground text-sm">Batch {selectedClass.batch} • {selectedClass.department} Dept</p>
+          </div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          whileHover={{ y: -4, transition: { duration: 0.2 } }}
-        >
-          <Card className="border-border/40 bg-gradient-to-br from-background via-background to-background/50 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <CardHeader className="pb-3 relative">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Active Sessions</CardTitle>
-                <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors duration-300">
-                  <Users className="h-5 w-5 text-blue-600" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="relative">
-              <div className="flex items-center gap-2">
-                <div className="text-3xl font-bold bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  {sessionStats.filter(s => s.is_active).length}
-                </div>
-                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse shadow-lg shadow-green-500/50" />
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">Currently running</p>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn("w-[220px] justify-start text-left font-normal bg-background", !selectedDate && "text-muted-foreground")}
+              >
+                <CalendarDays className="mr-2 h-4 w-4 text-primary" />
+                {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(d) => { if (d) { setSelectedDate(d); setActivePeriod(null); } }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
-      {/* Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
-        <Card className="border-border/40 bg-gradient-to-br from-background via-background to-background/50 backdrop-blur-sm shadow-lg">
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Filter className="h-4 w-4 text-primary" />
-                </div>
-                <span className="text-sm font-semibold">Filters</span>
-              </div>
-              <div className="flex-1 flex flex-wrap gap-3">
-                <Select value={sessionFilter} onValueChange={setSessionFilter}>
-                  <SelectTrigger className="w-[180px] border-border/40 bg-background/50">
-                    <SelectValue placeholder="All Sessions" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Sessions</SelectItem>
-                    <SelectItem value="active">Active Only</SelectItem>
-                    <SelectItem value="inactive">Inactive Only</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-[180px] border-border/40 bg-background/50">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="date">Sort by Date</SelectItem>
-                    <SelectItem value="attendance">Sort by Attendance</SelectItem>
-                    <SelectItem value="name">Sort by Name</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      {isLoadingPeriods ? (
+        <div className="flex justify-center py-20"><div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" /></div>
+      ) : !activePeriod ? (
+        /* Section 3: Today's Periods */
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground/80 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-primary" /> Daily Periods for {format(selectedDate, "EEEE")}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {PERIODS_CONFIG.map((period) => {
+              const ttSlot = classTimetable.find(tt => tt.start_time.startsWith(period.start));
+              const periodAttendance = classAttendance.filter(a => a.period_number === period.period_number);
 
-      {/* Sessions Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-      >
-        <Card className="border-border/40 bg-gradient-to-br from-background via-background to-background/50 backdrop-blur-sm shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-primary" />
-              Session Records
-            </CardTitle>
-            <CardDescription>Detailed attendance records for all sessions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto rounded-lg border border-border/40">
-              <table className="min-w-full divide-y divide-border/40">
-                <thead className="bg-muted/30">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Present</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Absent</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Attendance %</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40 bg-background/50">
-                  <AnimatePresence mode="popLayout">
-                    {isLoading ? (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-12 text-center">
-                          <div className="flex flex-col items-center justify-center gap-3">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                            <p className="text-sm text-muted-foreground">Loading sessions...</p>
+              const isTaken = periodAttendance.length > 0;
+              const presentCount = periodAttendance.filter(a => a.status === 'present').length;
+              const percentage = isTaken ? Math.round((presentCount / classStudents.length) * 100) : 0; // against total class students
+
+              const isActive = !isTaken && selectedDate.toDateString() === new Date().toDateString();
+              const locked = isPeriodLocked(period);
+
+              return (
+                <Card key={period.id} className={cn("relative overflow-hidden flex flex-col transition-all", ttSlot ? "hover:border-primary/40 hover:shadow-md" : "opacity-70")}>
+                  {locked && isTaken && (
+                    <div className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full bg-destructive/10 text-destructive" title="Locked (48h passed)">
+                      <Lock className="h-3 w-3" />
+                    </div>
+                  )}
+                  <CardHeader className="pb-2 bg-muted/20 border-b border-border/40">
+                    <div className="flex justify-between items-center">
+                      <Badge variant="outline" className="font-semibold px-2 bg-background">Period {period.period_number}</Badge>
+                      <span className="text-xs text-muted-foreground font-medium">{period.start} - {period.end}</span>
+                    </div>
+                    <CardTitle className="text-base mt-3 line-clamp-1">{ttSlot ? ttSlot.subject_name : "Free Period"}</CardTitle>
+                    <CardDescription className="text-xs line-clamp-1">
+                      {ttSlot ? `Faculty: ${ttSlot.faculty_id}` : "No assigned faculty"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="py-4 flex-1">
+                    {ttSlot ? (
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Status</span>
+                          {isTaken ? (
+                            <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20">Attendance Taken</Badge>
+                          ) : isActive ? (
+                            <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20">Active Now</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground border-dashed">Not Taken</Badge>
+                          )}
+                        </div>
+                        {isTaken && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">Attendance</span>
+                            <span className="font-bold flex items-center gap-1">
+                              {presentCount}/{classStudents.length} <span className="text-muted-foreground text-xs font-normal">({percentage}%)</span>
+                            </span>
                           </div>
-                        </td>
-                      </tr>
-                    ) : filteredSessions.length > 0 ? (
-                      filteredSessions.map((session, index) => (
-                        <motion.tr
-                          key={session.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          transition={{ duration: 0.2, delay: index * 0.05 }}
-                          className="hover:bg-primary/5 transition-colors duration-200"
-                        >
-                          <td className="px-4 py-4 text-sm font-medium">{session.name}</td>
-                          <td className="px-4 py-4 text-sm text-muted-foreground">
-                            {new Date(session.date).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric', 
-                              year: 'numeric' 
-                            })}
-                          </td>
-                          <td className="px-4 py-4 text-sm">
-                            {session.is_active ? (
-                              <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
-                                <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse mr-1.5" />
-                                Active
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="border-border/40">
-                                Ended
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="px-4 py-4 text-sm">
-                            <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                              </div>
-                              <span className="font-semibold">{session.present}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 text-sm">
-                            <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center">
-                                <XCircle className="h-4 w-4 text-red-600" />
-                              </div>
-                              <span className="font-semibold">{session.absent}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 text-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="flex-1 bg-muted rounded-full h-2 max-w-[120px] overflow-hidden">
-                                <motion.div 
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${session.percentage}%` }}
-                                  transition={{ duration: 0.5, delay: index * 0.05 }}
-                                  className={`h-2 rounded-full ${
-                                    session.percentage >= 75 ? 'bg-green-500' : 
-                                    session.percentage >= 50 ? 'bg-yellow-500' : 
-                                    'bg-red-500'
-                                  }`}
-                                />
-                              </div>
-                              <span className="font-semibold min-w-[45px]">{session.percentage}%</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 text-sm text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleViewDetails(session)}
-                              className="hover:bg-primary/10 hover:text-primary transition-colors"
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              Details
-                            </Button>
-                          </td>
-                        </motion.tr>
-                      ))
+                        )}
+                      </div>
                     ) : (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-12 text-center">
-                          <div className="flex flex-col items-center justify-center gap-3">
-                            <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center">
-                              <CalendarDays className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                            <p className="text-sm font-medium text-muted-foreground">No sessions found</p>
-                            <p className="text-xs text-muted-foreground">Try adjusting your filters</p>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </AnimatePresence>
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Details Dialog */}
-      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>
-                {selectedSession?.name} - Attendance Details
-              </DialogTitle>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => setShowDetailsDialog(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {selectedSession?.date} • {selectedSession?.time}
-            </p>
-          </DialogHeader>
-          
-          <div className="grid grid-cols-2 gap-4 py-4">
-            {/* Present Students */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  Present ({presentStudents.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[400px] pr-4">
-                  <div className="space-y-2">
-                    {presentStudents.map((student) => (
-                      <div 
-                        key={student.id}
-                        className="flex items-center gap-3 p-3 rounded-lg border bg-green-50 dark:bg-green-950/20"
-                      >
-                        <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                          <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                            {student.first_name?.charAt(0)}{student.last_name?.charAt(0)}
-                          </span>
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">
-                            {student.first_name} {student.last_name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{student.username}</p>
-                        </div>
-                        <CheckCircle className="h-5 w-5 text-green-600" />
+                      <div className="flex items-center justify-center h-full text-muted-foreground/40">
+                        <FileText className="h-8 w-8 opacity-20" />
+                        <span className="ml-2 text-sm">No Class</span>
                       </div>
-                    ))}
-                    {presentStudents.length === 0 && (
-                      <p className="text-sm text-center text-muted-foreground py-8">
-                        No students marked present
-                      </p>
                     )}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-
-            {/* Absent Students */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <XCircle className="h-5 w-5 text-red-600" />
-                  Absent ({absentStudents.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[400px] pr-4">
-                  <div className="space-y-2">
-                    {absentStudents.map((student) => (
-                      <div 
-                        key={student.id}
-                        className="flex items-center gap-3 p-3 rounded-lg border bg-red-50 dark:bg-red-950/20"
-                      >
-                        <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
-                          <span className="text-sm font-semibold text-red-700 dark:text-red-300">
-                            {student.first_name?.charAt(0)}{student.last_name?.charAt(0)}
-                          </span>
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">
-                            {student.first_name} {student.last_name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{student.username}</p>
-                        </div>
-                        <XCircle className="h-5 w-5 text-red-600" />
-                      </div>
-                    ))}
-                    {absentStudents.length === 0 && (
-                      <p className="text-sm text-center text-muted-foreground py-8">
-                        All students present!
-                      </p>
-                    )}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                  <CardFooter className="pt-0 relative z-10 w-full bg-card">
+                    <Button
+                      className="w-full"
+                      variant={isTaken ? "outline" : "default"}
+                      disabled={!ttSlot}
+                      onClick={() => setActivePeriod(period)}
+                    >
+                      {isTaken ? "View Details" : "Take Attendance"}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })}
           </div>
+        </div>
+      ) : (
+        /* Section 4: Period -> Student Attendance View */
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {(() => {
+            const ttSlot = classTimetable.find(tt => tt.start_time.startsWith(activePeriod.start));
+            const periodAttendance = classAttendance.filter(a => a.period_number === activePeriod.period_number);
+            const locked = isPeriodLocked(activePeriod);
+
+            return (
+              <Card className="border-border/40 shadow-sm overflow-hidden">
+                <CardHeader className="bg-muted/10 border-b border-border/40 flex flex-row items-center justify-between py-4">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Badge variant="default" className="bg-primary/10 text-primary border-primary/20">Period {activePeriod.period_number}</Badge>
+                      {ttSlot?.subject_name}
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {format(selectedDate, "PPP")} • {activePeriod.start} - {activePeriod.end} • {ttSlot?.faculty_id}
+                    </CardDescription>
+                  </div>
+                  {locked && (
+                    <Badge variant="destructive" className="bg-destructive/10 text-destructive border-destructive/20 flex items-center gap-1 py-1 px-3">
+                      <Lock className="h-3 w-3" /> Locked (48h limit)
+                    </Badge>
+                  )}
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b">
+                        <tr>
+                          <th className="px-6 py-3 font-semibold">Roll Number</th>
+                          <th className="px-6 py-3 font-semibold">Student Name</th>
+                          <th className="px-6 py-3 font-semibold text-center">Status</th>
+                          <th className="px-6 py-3 font-semibold text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/40">
+                        {classStudents.map((student) => {
+                          const record = periodAttendance.find(a => a.student_id === student.username);
+                          const status = record?.status || "unmarked";
+
+                          return (
+                            <tr key={student.id} className="hover:bg-muted/30 transition-colors">
+                              <td className="px-6 py-3 font-medium">{student.username}</td>
+                              <td className="px-6 py-3">{student.name}</td>
+                              <td className="px-6 py-3 text-center">
+                                {status === 'present' ? (
+                                  <Badge className="bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20 w-24 justify-center">Present</Badge>
+                                ) : status === 'absent' ? (
+                                  <Badge className="bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20 w-24 justify-center">Absent</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-muted-foreground border-dashed w-24 justify-center bg-muted/20">Unmarked</Badge>
+                                )}
+                                {record?.edit_reason && (
+                                  <span title={`Edited: ${record.edit_reason}`} className="ml-2 inline-flex items-center justify-center bg-blue-500/10 text-blue-600 rounded-full w-5 h-5 text-[10px] font-bold cursor-help">E</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-3 text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+                                  disabled={locked}
+                                  onClick={() => {
+                                    setEditRecord({ student, currentStatus: status, attId: record?.id });
+                                    setNewStatus(status === 'present' ? 'absent' : 'present');
+                                    setEditReason("");
+                                  }}
+                                >
+                                  {locked ? <Lock className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
+                                  {locked ? "Locked" : "Edit"}
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {classStudents.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
+                              No students found for this class.
+                              <Button variant="link" onClick={() => navigate('/admin/students')}>Add students</Button>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* EDIT MODAL */}
+      <Dialog open={!!editRecord} onOpenChange={(open) => !open && setEditRecord(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modify Attendance</DialogTitle>
+            <DialogDescription>
+              Change attendance status for <span className="font-semibold text-foreground">{editRecord?.student.name}</span> ({editRecord?.student.username}).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="flex bg-muted/50 p-3 rounded-lg border border-border/50 items-center justify-between">
+              <span className="text-sm font-medium">Current Status</span>
+              <Badge variant="outline" className="uppercase font-bold">{editRecord?.currentStatus}</Badge>
+            </div>
+
+            <div className="space-y-2">
+              <Label>New Status</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant={newStatus === 'present' ? "default" : "outline"}
+                  className={cn("w-full", newStatus === 'present' ? "bg-green-600 hover:bg-green-700 text-white" : "")}
+                  onClick={() => setNewStatus('present')}
+                >
+                  Present
+                </Button>
+                <Button
+                  variant={newStatus === 'absent' ? "default" : "outline"}
+                  className={cn("w-full", newStatus === 'absent' ? "bg-red-600 hover:bg-red-700 text-white" : "")}
+                  onClick={() => setNewStatus('absent')}
+                >
+                  Absent
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex justify-between">
+                <span>Reason for Change <span className="text-destructive">*</span></span>
+              </Label>
+              <Textarea
+                placeholder="e.g. Student arrived late, Medical leave approved, Mistake in initial entry..."
+                value={editReason}
+                onChange={(e) => setEditReason(e.target.value)}
+                className="resize-none"
+                rows={3}
+              />
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
+                <ShieldAlert className="h-3 w-3" /> All attendance edits are logged and auditable.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="sm:justify-end">
+            <Button variant="ghost" onClick={() => setEditRecord(null)} disabled={isSaving}>Cancel</Button>
+            <Button onClick={handleSaveAttendance} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Confirm Change"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

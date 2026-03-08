@@ -4,11 +4,11 @@
   "license": "MIT",
   "type": "commonjs",
   "scripts": {
-    "dev": "cross-env NODE_ENV=development tsx server/index.ts",
+    "dev": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first NODE_ENV=development tsx server/index.ts",
     "build:client": "vite build",
     "build:server": "esbuild server/index.ts --platform=node --bundle --external:@google-cloud/* --external:lightningcss --external:@babel/* --format=cjs --outfile=dist/server.js",
     "build": "npm run build:client && npm run build:server",
-    "start": "cross-env NODE_ENV=production node dist/server.js",
+    "start": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first NODE_ENV=production node dist/server.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "deploy:client": "npm run build:client && firebase deploy --only hosting",

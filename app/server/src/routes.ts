@@ -603,6 +603,31 @@ router.post('/sessions/:id/expire', ...isAdmin, async (req: Request, res: Respon
   }
 });
 
+// Vercel Cron Endpoint for Session Expiration
+router.get('/cron/expire-sessions', async (req: Request, res: Response) => {
+  try {
+    // Optional: Protect with a cron secret if configured in Vercel
+    const authHeader = req.headers.authorization;
+    const cronSecret = process.env.CRON_SECRET;
+    
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+    
+    console.log('Cron: Checking for expired sessions...');
+    await storage.updateExpiredSessions();
+    
+    res.json({ success: true, message: 'Expired sessions check completed' });
+  } catch (error) {
+    console.error('Error in cron session expiration check:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Error checking expired sessions',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Get all attendance records (admin only)
 router.get('/attendance', ...isAdmin, async (req: Request, res: Response) => {
   try {

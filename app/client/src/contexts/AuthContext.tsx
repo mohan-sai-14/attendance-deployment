@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (identifier: string, password: string) => {
     setLoading(true);
     console.log('Attempting to sign in with:', { identifier });
-    
+
     try {
       let loginIdentifier = identifier.trim();
 

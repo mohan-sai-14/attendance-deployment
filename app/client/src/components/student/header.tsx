@@ -40,7 +40,7 @@ export function Header({ onMenuClick }: HeaderProps = {}) {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-display font-semibold">Attendance System</h1>
+          <h1 className="text-xl font-display font-semibold">TU ATTENDANCE SYSTEM</h1>
         </div>
 
         <div className="flex items-center gap-3">

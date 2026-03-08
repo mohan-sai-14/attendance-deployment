@@ -1,29 +1,67 @@
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, CheckCircle2, XCircle, Clock, Stethoscope, FileText, Sun, Loader2, Users, Save, Calendar } from "lucide-react";
+import {
+  Search,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Loader2,
+  Save,
+  ArrowLeft,
+  BookOpen,
+  Timer,
+  Lock,
+  Unlock,
+  ShieldAlert,
+  Stethoscope,
+  FileText,
+} from "lucide-react";
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
 
-type AttendanceStatus = 'present' | 'absent' | 'late' | 'od' | 'ml';
+const DEFAULT_TIME_SLOTS = [
+  { id: 'p1', label: 'Period 1', start: '09:00', end: '09:50' },
+  { id: 'p2', label: 'Period 2', start: '09:50', end: '10:40' },
+  { id: 'p3', label: 'Period 3', start: '11:00', end: '11:50' },
+  { id: 'p4', label: 'Period 4', start: '11:50', end: '12:40' },
+  { id: 'p5', label: 'Period 5', start: '13:30', end: '14:20' },
+  { id: 'p6', label: 'Period 6', start: '14:20', end: '15:10' },
+  { id: 'p7', label: 'Period 7', start: '15:30', end: '16:20' },
+  { id: 'p8', label: 'Period 8', start: '16:20', end: '17:10' },
+];
 
-interface User {
-  id: number; // Changed from string to number (serial)
-  username: string;
-  name: string;
-  email: string;
-  role: string;
-  status: string;
-  enroll_no?: string;
-  registered_no?: string;
-  department?: string;
-  section?: string;
-  program?: string;
-  year?: string;
+const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+interface TimetableEntry {
+  id: string;
+  class_id: string;
+  subject_name: string;
+  faculty_id: string;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+}
+
+interface ClassInfo {
+  id: string;
+  department: string;
+  program: string;
+  year: string;
+  section: string;
+  batch: string;
+}
+
+interface PeriodCard {
+  entry: TimetableEntry;
+  classInfo: ClassInfo;
+  slot: typeof DEFAULT_TIME_SLOTS[0];
+  session: any | null;
 }
 
 interface AttendanceRecord {
@@ -31,485 +69,600 @@ interface AttendanceRecord {
   username: string;
   session_id: string;
   check_in_time: string;
-  status: AttendanceStatus;
-  name: string;
-  date?: string;
-  session_name?: string;
-  role: string;
-  enroll_no: string;
-  registered_no: string;
-  department?: string;
-  program?: string;
-  section?: string;
-  year?: string;
+  status: string;
+  date: string;
+  name?: string;
+  enroll_no?: string;
 }
 
-interface Session {
-  id: string;
-  name: string;
-  date: string;
+function formatTime12h(time24: string): string {
+  const [h, m] = time24.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 || 12;
+  return `${hour}:${m.toString().padStart(2, '0')} ${ampm}`;
 }
 
 export default function ManualAttendance() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [selectedSession, setSelectedSession] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [isLoading, setIsLoading] = useState(true);
-  const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { toast } = useToast();
 
-  // Fetch users and sessions
+  const [isLoading, setIsLoading] = useState(true);
+  const [periodCards, setPeriodCards] = useState<PeriodCard[]>([]);
+
+  // Selected period / edit state (mirrors EditAttendance)
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodCard | null>(null);
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [changes, setChanges] = useState<Record<string, string>>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isStudentsLoading, setIsStudentsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [minutesRemaining, setMinutesRemaining] = useState<number | null>(null);
+
+  const todayName = DAYS_OF_WEEK[new Date().getDay()];
+  const todayDate = new Date().toISOString().split('T')[0];
+
+  // ── Fetch teacher's timetable ──
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchTimetable = async () => {
+      if (!user?.username) return;
       try {
         setIsLoading(true);
-        
-        // Fetch users
-        const { data: usersData, error: usersError } = await supabase
-          .from('users')
-          .select(`
-            id,
-            username,
-            name,
-            email,
-            role,
-            status,
-            enroll_no,
-            registered_no,
-            department,
-            section,
-            program,
-            year
-          `)
-          .order('username');
-
-        if (usersError) throw usersError;
-
-        // Fetch sessions
-        const { data: sessionsData, error: sessionsError } = await supabase
-          .from('sessions')
+        const { data: timetableData, error: ttError } = await supabase
+          .from('timetables')
           .select('*')
-          .order('date', { ascending: false });
+          .eq('faculty_id', user.username)
+          .eq('day_of_week', todayName);
+        if (ttError) throw ttError;
 
-        if (sessionsError) throw sessionsError;
-
-        setUsers(usersData || []);
-        setFilteredUsers(usersData || []);
-        setSessions(sessionsData || []);
-
-        // Set the most recent session as selected by default
-        if (sessionsData?.length) {
-          setSelectedSession(sessionsData[0].id);
+        if (!timetableData || timetableData.length === 0) {
+          setPeriodCards([]);
+          return;
         }
 
-        console.log('Loaded users data structure:', usersData?.[0]);
-        console.log('Loaded users:', usersData?.length || 0);
-        console.log('Loaded sessions:', sessionsData?.length || 0);
+        const classIds = Array.from(new Set(timetableData.map(t => t.class_id)));
+        const { data: classesData } = await supabase.from('classes').select('*').in('id', classIds);
+        const classesMap: Record<string, ClassInfo> = (classesData || []).reduce((acc, cls) => {
+          acc[cls.id] = cls;
+          return acc;
+        }, {} as Record<string, ClassInfo>);
+
+        const { data: sessionsData } = await supabase.from('sessions').select('*').eq('date', todayDate);
+
+        const cards: PeriodCard[] = [];
+        for (const entry of timetableData) {
+          const slot = DEFAULT_TIME_SLOTS.find(s => entry.start_time?.substring(0, 5) === s.start);
+          if (!slot) continue;
+          const classInfo = classesMap[entry.class_id];
+          if (!classInfo) continue;
+          const matchingSession = (sessionsData || []).find(s =>
+            s.time?.substring(0, 5) === slot.start && s.class_id === entry.class_id
+          );
+          cards.push({ entry, classInfo, slot, session: matchingSession || null });
+        }
+        cards.sort((a, b) => a.slot.start.localeCompare(b.slot.start));
+        setPeriodCards(cards);
       } catch (error) {
-        console.error('Error fetching data:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to load data',
-        });
+        console.error('Error fetching timetable:', error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to load your timetable' });
       } finally {
         setIsLoading(false);
       }
     };
+    fetchTimetable();
+  }, [user?.username, todayName, todayDate, toast]);
 
-    fetchData();
-  }, [toast]);
-
-  // Fetch attendance for selected date and session
+  // ── Countdown timer for lock ──
   useEffect(() => {
-    const fetchAttendance = async () => {
-      if (!selectedSession || !selectedDate) return;
+    if (isLocked || !selectedPeriod) return;
+    const interval = setInterval(() => {
+      const now = new Date();
+      const [startH, startM] = selectedPeriod.slot.start.split(':').map(Number);
+      const [endH, endM] = selectedPeriod.slot.end.split(':').map(Number);
+      const slotStart = new Date(); slotStart.setHours(startH, startM, 0, 0);
+      const slotEnd = new Date(); slotEnd.setHours(endH, endM, 0, 0);
+      const isOngoing = now >= slotStart && now <= slotEnd;
 
-      try {
-        console.log('Fetching attendance for date:', selectedDate, 'session:', selectedSession);
-
-        const { data, error } = await supabase
-          .from('attendance')
-          .select('*')
-          .eq('date', selectedDate)
-          .eq('session_id', selectedSession);
-
-        if (error) throw error;
-
-        // Create a map of username to attendance status
-        const attendanceMap: Record<string, AttendanceStatus> = {};
-        data?.forEach(record => {
-          attendanceMap[record.username] = record.status;
-        });
-
-        console.log('Loaded existing attendance:', data?.length || 0, 'records');
-        console.log('Attendance data structure:', data?.[0]);
-        console.log('Attendance map:', attendanceMap);
-
-        setAttendance(attendanceMap);
-      } catch (error) {
-        console.error('Error fetching attendance:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to load attendance data',
-        });
+      if (isOngoing) {
+        setMinutesRemaining(Math.ceil((slotEnd.getTime() - now.getTime()) / 60000));
+      } else if (selectedPeriod.session?.created_at) {
+        const deadline = new Date(new Date(selectedPeriod.session.created_at).getTime() + 3600000);
+        if (now > deadline) {
+          setIsLocked(true);
+          setMinutesRemaining(null);
+          clearInterval(interval);
+        } else {
+          setMinutesRemaining(Math.ceil((deadline.getTime() - now.getTime()) / 60000));
+        }
       }
-    };
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [isLocked, selectedPeriod]);
 
-    fetchAttendance();
-  }, [selectedDate, selectedSession, toast]);
-
-  // Filter users based on search query
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredUsers(users);
-      return;
-    }
-
-    const query = searchQuery.toLowerCase();
-    const filtered = users.filter(
-      user =>
-        (user.name || user.email).toLowerCase().includes(query) ||
-        (user.enroll_no || '').toLowerCase().includes(query) ||
-        (user.registered_no || '').toLowerCase().includes(query) ||
-        (user.program || '').toLowerCase().includes(query) ||
-        (user.department || '').toLowerCase().includes(query) ||
-        (user.section || '').toLowerCase().includes(query) ||
-        (user.year || '').toLowerCase().includes(query)
-    );
-    setFilteredUsers(filtered);
-  }, [searchQuery, users]);
-
-  const handleStatusChange = (username: string, status: AttendanceStatus) => {
-    console.log('Status change for user:', username, 'to status:', status);
-    setAttendance(prev => {
-      const newAttendance = {
-        ...prev,
-        [username]: status
-      };
-      console.log('Updated attendance state:', newAttendance);
-      return newAttendance;
-    });
-  };
-
-  const getStatusColor = (status: AttendanceStatus) => {
-    switch (status) {
-      case 'present': return 'bg-green-100 text-green-800';
-      case 'absent': return 'bg-red-100 text-red-800';
-      case 'late': return 'bg-yellow-100 text-yellow-800';
-      case 'od': return 'bg-purple-100 text-purple-800';
-      case 'ml': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusIcon = (status: AttendanceStatus) => {
-    switch (status) {
-      case 'present': return <CheckCircle2 className="h-4 w-4" />;
-      case 'absent': return <XCircle className="h-4 w-4" />;
-      case 'late': return <Clock className="h-4 w-4" />;
-      case 'od': return <FileText className="h-4 w-4" />;
-      case 'ml': return <Stethoscope className="h-4 w-4" />;
-      default: return null;
-    }
-  };
-
-  const handleSaveAttendance = async () => {
-    if (!selectedSession) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Please select a session',
-      });
-      return;
-    }
-
-    // Check if there are any attendance records to save
-    if (Object.keys(attendance).length === 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No attendance records to save. Please mark some attendance first.',
-      });
-      return;
-    }
+  // ── When a period card is selected → load attendance (same as EditAttendance) ──
+  const handleSelectPeriod = async (card: PeriodCard) => {
+    setSelectedPeriod(card);
+    setSearchQuery('');
+    setChanges({});
+    setIsStudentsLoading(true);
 
     try {
-      setIsLoading(true);
+      const cls = card.classInfo;
+      const sessionId = card.session?.id;
 
-      // Prepare attendance records
-      const attendanceRecords = Object.entries(attendance).map(([username, status]) => {
-        const user = users.find(u => u.username === username);
-        if (!user) {
-          throw new Error(`User not found: ${username}`);
+      // Check if this period is currently ongoing
+      const now = new Date();
+      const [startH, startM] = card.slot.start.split(':').map(Number);
+      const [endH, endM] = card.slot.end.split(':').map(Number);
+      const slotStart = new Date(); slotStart.setHours(startH, startM, 0, 0);
+      const slotEnd = new Date(); slotEnd.setHours(endH, endM, 0, 0);
+      const isOngoing = now >= slotStart && now <= slotEnd;
+
+      // Check lock status — skip lock if period is currently ongoing
+      if (isOngoing) {
+        setIsLocked(false);
+        const remaining = Math.ceil((slotEnd.getTime() - now.getTime()) / 60000);
+        setMinutesRemaining(remaining);
+      } else if (card.session?.created_at) {
+        const createdAt = new Date(card.session.created_at);
+        const deadline = new Date(createdAt.getTime() + 3600000);
+        const locked = now > deadline;
+        setIsLocked(locked);
+        if (!locked) {
+          setMinutesRemaining(Math.ceil((deadline.getTime() - now.getTime()) / 60000));
+        } else {
+          setMinutesRemaining(null);
         }
+      } else {
+        setIsLocked(false);
+        setMinutesRemaining(null);
+      }
 
+      // Fetch all students in this class
+      const { data: classStudents } = await supabase
+        .from('users')
+        .select('username, name, enroll_no')
+        .eq('role', 'student')
+        .eq('status', 'active')
+        .eq('department', cls.department)
+        .eq('program', cls.program)
+        .eq('year', cls.year)
+        .eq('section', cls.section);
+
+      // Fetch existing attendance records if session exists
+      let attMap: Record<string, any> = {};
+      if (sessionId) {
+        const { data: attData } = await supabase
+          .from('attendance')
+          .select('*')
+          .eq('session_id', sessionId);
+        attMap = (attData || []).reduce((acc, a) => {
+          acc[a.username] = a;
+          return acc;
+        }, {} as Record<string, any>);
+      }
+
+      // Build enriched records (exactly like EditAttendance)
+      const enrichedRecords: AttendanceRecord[] = (classStudents || []).map(student => {
+        const existing = attMap[student.username];
         return {
-          username: username,
-          session_id: selectedSession,
-          check_in_time: new Date().toISOString(),
-          status: status,
-          name: user.name,
-          date: selectedDate,
-          session_name: sessions.find(s => s.id === selectedSession)?.name || 'Session',
-          role: user.role,
-          enroll_no: user.enroll_no || '',
-          registered_no: user.registered_no || '',
-          department: user.department || '',
-          program: user.program || '',
-          section: user.section || '',
-          year: user.year || ''
+          id: existing?.id || `temp-${student.username}`,
+          username: student.username,
+          session_id: sessionId || '',
+          check_in_time: existing?.check_in_time || '',
+          status: existing?.status || 'absent',
+          date: existing?.date || todayDate,
+          name: student.name,
+          enroll_no: student.enroll_no,
         };
       });
 
-      console.log('Saving attendance records:', attendanceRecords);
-
-      // Only delete if there are existing records to avoid unnecessary operations
-      const { error: deleteError } = await supabase
-        .from('attendance')
-        .delete()
-        .eq('date', selectedDate)
-        .eq('session_id', selectedSession);
-
-      if (deleteError) {
-        console.error('Delete error:', deleteError);
-        // Don't throw here, continue with insert
-      }
-
-      // Insert new attendance records
-      const { data, error: insertError } = await supabase
-        .from('attendance')
-        .insert(attendanceRecords)
-        .select();
-
-      if (insertError) {
-        console.error('Insert error:', insertError);
-        throw insertError;
-      }
-
-      console.log('Attendance saved successfully:', data);
-
-      toast({
-        title: 'Success',
-        description: `Attendance saved successfully for ${attendanceRecords.length} students`,
+      enrichedRecords.sort((a, b) => {
+        const idA = a.enroll_no || a.username || '';
+        const idB = b.enroll_no || b.username || '';
+        return idA.localeCompare(idB);
       });
+
+      setRecords(enrichedRecords);
     } catch (error) {
-      console.error('Error saving attendance:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to save attendance: ' + (error as Error).message,
-      });
+      console.error('Error fetching students:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to load students' });
     } finally {
-      setIsLoading(false);
+      setIsStudentsLoading(false);
     }
   };
 
-  if (isLoading && !users.length) {
+  // ── Set status (matches EditAttendance) ──
+  const setStatus = (recordId: string, newStatus: string) => {
+    if (isLocked) return;
+    setChanges(prev => ({ ...prev, [recordId]: newStatus }));
+  };
+
+  const getEffectiveStatus = (record: AttendanceRecord) => {
+    return changes[record.id] || record.status;
+  };
+
+  const statusOptions = [
+    { key: 'present', label: 'P', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400', icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
+    { key: 'absent', label: 'A', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400', icon: <XCircle className="h-3.5 w-3.5" /> },
+    { key: 'late', label: 'Late', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400', icon: <Clock className="h-3.5 w-3.5" /> },
+    { key: 'od', label: 'OD', color: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400', icon: <FileText className="h-3.5 w-3.5" /> },
+    { key: 'ml', label: 'ML', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400', icon: <Stethoscope className="h-3.5 w-3.5" /> },
+  ];
+
+  const filteredRecords = useMemo(() => {
+    if (!searchQuery) return records;
+    const q = searchQuery.toLowerCase();
+    return records.filter(r =>
+      (r.name || '').toLowerCase().includes(q) ||
+      (r.username || '').toLowerCase().includes(q) ||
+      (r.enroll_no || '').toLowerCase().includes(q)
+    );
+  }, [records, searchQuery]);
+
+  const presentCount = records.filter(r => getEffectiveStatus(r) === 'present').length;
+  const absentCount = records.filter(r => getEffectiveStatus(r) === 'absent').length;
+  const hasChanges = Object.keys(changes).length > 0;
+
+  // ── Save (same logic as EditAttendance) ──
+  const handleSave = async () => {
+    if (isLocked || !hasChanges || !selectedPeriod) return;
+
+    try {
+      setIsSaving(true);
+
+      let sessionId = selectedPeriod.session?.id;
+
+      // Create session if none exists
+      if (!sessionId) {
+        const { data: newSession, error: sessError } = await supabase
+          .from('sessions')
+          .insert({
+            name: `${selectedPeriod.entry.subject_name} - ${selectedPeriod.slot.label}`,
+            date: todayDate,
+            time: selectedPeriod.slot.start,
+            duration:
+              (parseInt(selectedPeriod.slot.end.split(':')[0]) * 60 + parseInt(selectedPeriod.slot.end.split(':')[1])) -
+              (parseInt(selectedPeriod.slot.start.split(':')[0]) * 60 + parseInt(selectedPeriod.slot.start.split(':')[1])),
+            is_active: false,
+            class_id: selectedPeriod.entry.class_id,
+            section: selectedPeriod.classInfo.section,
+            expires_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+        if (sessError) throw sessError;
+        sessionId = newSession.id;
+        setSelectedPeriod(prev => prev ? { ...prev, session: newSession } : null);
+      }
+
+      // Save each change (insert or update)
+      for (const [recordId, newStatus] of Object.entries(changes)) {
+        if (recordId.startsWith('temp-')) {
+          const username = recordId.replace('temp-', '');
+          const student = records.find(r => r.username === username);
+          const { error } = await supabase.from('attendance').insert({
+            username,
+            session_id: sessionId,
+            status: newStatus,
+            date: todayDate,
+            check_in_time: new Date().toISOString(),
+            name: student?.name || username,
+            session_name: `${selectedPeriod.entry.subject_name} - ${selectedPeriod.slot.label}`,
+            role: 'student',
+            enroll_no: student?.enroll_no || '',
+            department: selectedPeriod.classInfo.department,
+            program: selectedPeriod.classInfo.program,
+            section: selectedPeriod.classInfo.section,
+            year: selectedPeriod.classInfo.year,
+          });
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('attendance')
+            .update({ status: newStatus })
+            .eq('id', recordId);
+          if (error) throw error;
+        }
+      }
+
+      setChanges({});
+      toast({ title: 'Changes Saved', description: 'Attendance records updated successfully.' });
+
+      // Refetch to get real IDs for temp records
+      handleSelectPeriod(selectedPeriod);
+    } catch (error) {
+      console.error('Error saving:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save changes' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ── Loading ──
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading your classes...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 space-y-6">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Manual Attendance
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Mark attendance for students manually
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="border-border/40">
-            <Users className="h-3 w-3 mr-1" />
-            {filteredUsers.length} Students
-          </Badge>
-          <Badge variant="outline" className="border-border/40">
-            <Calendar className="h-3 w-3 mr-1" />
-            {selectedDate}
-          </Badge>
-        </div>
-      </motion.div>
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 md:p-8 space-y-5">
+      {/* Back + Header */}
+      <Button
+        variant="ghost"
+        className="mb-1"
+        onClick={() => selectedPeriod ? (() => { setSelectedPeriod(null); setRecords([]); setChanges({}); })() : navigate('/teacher/dashboard')}
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        {selectedPeriod ? 'Back to Classes' : 'Back'}
+      </Button>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}>
-        <Card className="border-border/40 bg-gradient-to-br from-background via-background to-background/50 backdrop-blur-sm shadow-lg">
-          <CardHeader>
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary" />
-                  Mark Attendance
-                </CardTitle>
-                <CardDescription className="mt-1">Select students and mark their attendance status</CardDescription>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search students..."
-                  className="pl-10 w-full"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <div className="flex gap-2">
-                <select
-                  value={selectedSession}
-                  onChange={(e) => setSelectedSession(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {sessions.map((session) => (
-                    <option key={session.id} value={session.id}>
-                      {session.name} - {format(new Date(session.date), 'PP')}
-                    </option>
-                  ))}
-                </select>
-                <Input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  max={format(new Date(), 'yyyy-MM-dd')}
-                  className="w-full md:w-auto"
-                />
-              </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto rounded-lg border border-border/40">
-              <table className="w-full">
-                <thead className="bg-muted/30">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Username</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Department</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40 bg-background/50">
-                  {filteredUsers.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="px-4 py-12 text-center">
-                        <div className="flex flex-col items-center justify-center gap-3">
-                          <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center">
-                            <Users className="h-8 w-8 text-muted-foreground" />
+      <AnimatePresence mode="wait">
+        {!selectedPeriod ? (
+          /* ── CLASS CARDS ── */
+          <motion.div
+            key="cards"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="space-y-3"
+          >
+            <h1 className="text-2xl font-bold text-foreground mb-1">Manual Attendance</h1>
+            <p className="text-sm text-muted-foreground mb-4">Select a class to edit attendance</p>
+
+            {periodCards.length === 0 ? (
+              <Card className="border-border/40 shadow-lg">
+                <CardContent className="pt-8 pb-8 text-center">
+                  <div className="h-14 w-14 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                    <BookOpen className="h-7 w-7 text-muted-foreground" />
+                  </div>
+                  <h2 className="text-lg font-semibold">No Classes Today</h2>
+                  <p className="text-muted-foreground mt-2 text-sm">You have no classes assigned for today.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              periodCards.map((card, index) => {
+                const hasTaken = !!card.session;
+                const now = new Date();
+                const [sH, sM] = card.slot.start.split(':').map(Number);
+                const [eH, eM] = card.slot.end.split(':').map(Number);
+                const ss = new Date(); ss.setHours(sH, sM, 0, 0);
+                const se = new Date(); se.setHours(eH, eM, 0, 0);
+                const isOngoing = now >= ss && now <= se;
+                const locked = !isOngoing && card.session && now > new Date(new Date(card.session.created_at).getTime() + 3600000);
+
+                return (
+                  <motion.div
+                    key={card.entry.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Card
+                      className={`border-border/40 shadow-md cursor-pointer transition-all hover:shadow-lg hover:border-primary/30 overflow-hidden ${locked ? 'opacity-60' : ''}`}
+                      onClick={() => handleSelectPeriod(card)}
+                    >
+                      <div className={`h-1 ${isOngoing ? 'bg-gradient-to-r from-blue-500 to-cyan-500' : hasTaken ? (locked ? 'bg-gradient-to-r from-red-400 to-orange-400' : 'bg-gradient-to-r from-emerald-500 to-teal-500') : 'bg-gradient-to-r from-slate-300 to-slate-200 dark:from-slate-700 dark:to-slate-600'}`} />
+                      <CardContent className="py-4 px-5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-semibold text-foreground">{card.classInfo.section}</h3>
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">{card.slot.label}</Badge>
+                              {isOngoing && (
+                                <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20 text-[10px] px-1.5 py-0">
+                                  <Clock className="h-3 w-3 mr-0.5" /> Ongoing
+                                </Badge>
+                              )}
+                              {hasTaken && (
+                                <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 text-[10px] px-1.5 py-0">
+                                  <CheckCircle2 className="h-3 w-3 mr-0.5" /> Taken
+                                </Badge>
+                              )}
+                              {locked && (
+                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                  <Lock className="h-3 w-3 mr-0.5" /> Locked
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">Subject: {card.entry.subject_name}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                              <Timer className="h-3 w-3" />
+                              {formatTime12h(card.slot.start)} – {formatTime12h(card.slot.end)}
+                              <span className="mx-1">·</span>
+                              {card.classInfo.department} {card.classInfo.program} {card.classInfo.year}
+                            </p>
                           </div>
-                          <p className="text-sm font-medium text-muted-foreground">No students found</p>
-                          <p className="text-xs text-muted-foreground">Try adjusting your search</p>
+                          <ArrowLeft className="h-4 w-4 text-muted-foreground rotate-180 shrink-0" />
                         </div>
-                      </td>
-                    </tr>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })
+            )}
+          </motion.div>
+        ) : (
+          /* ── EDIT ATTENDANCE VIEW (mirrors EditAttendance.tsx) ── */
+          <motion.div
+            key="edit"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="space-y-5"
+          >
+            {/* Session Info + Lock Status */}
+            <Card className="border-border/40 shadow-sm overflow-hidden">
+              <div className={`h-1 ${isLocked ? 'bg-gradient-to-r from-red-400 to-orange-400' : 'bg-gradient-to-r from-emerald-500 to-teal-500'}`} />
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">
+                      {selectedPeriod.entry.subject_name}
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {selectedPeriod.classInfo.program} {selectedPeriod.classInfo.year} – Sec {selectedPeriod.classInfo.section}
+                      <span className="mx-1.5">·</span>
+                      {selectedPeriod.slot.label}
+                      <span className="mx-1.5">·</span>
+                      {formatTime12h(selectedPeriod.slot.start)} – {formatTime12h(selectedPeriod.slot.end)}
+                    </p>
+                  </div>
+                  {isLocked ? (
+                    <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
+                      <Lock className="h-3 w-3 mr-1" /> Locked
+                    </Badge>
                   ) : (
-                    filteredUsers.map((user, index) => (
-                      <motion.tr
-                        key={user.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.02 }}
-                        className="hover:bg-primary/5 transition-colors duration-200">
-                        <td className="px-4 py-4">
-                          <div>
-                            <div className="font-medium text-sm">{user.name}</div>
-                            <div className="text-xs text-muted-foreground">{user.email}</div>
+                    <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
+                      <Unlock className="h-3 w-3 mr-1" /> Editable
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Lock/Edit banner */}
+                <div className={`mt-4 p-3 rounded-lg border ${isLocked ? 'bg-red-500/5 border-red-500/20' : 'bg-blue-500/5 border-blue-500/20'}`}>
+                  <div className="flex items-center gap-2">
+                    {isLocked ? (
+                      <>
+                        <ShieldAlert className="h-4 w-4 text-red-500" />
+                        <span className="text-sm text-red-700 dark:text-red-400">
+                          Attendance locked. Contact admin for changes.
+                        </span>
+                      </>
+                    ) : minutesRemaining !== null ? (
+                      <>
+                        <Timer className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm text-blue-700 dark:text-blue-400">
+                          Editable for {minutesRemaining} more minute{minutesRemaining !== 1 ? 's' : ''}.
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Timer className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm text-blue-700 dark:text-blue-400">
+                          New session — click students to mark present.
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 mt-3">
+                  <Badge variant="outline" className="text-xs">{presentCount} Present</Badge>
+                  <Badge variant="outline" className="text-xs">{absentCount} Absent</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Attendance Records */}
+            <Card className="border-border/40 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Attendance Records</CardTitle>
+                <div className="relative mt-2">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search students..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="pl-9 h-9"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {isStudentsLoading ? (
+                  <div className="flex items-center justify-center h-40">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <div className="space-y-1 max-h-[400px] overflow-y-auto pr-1">
+                    {filteredRecords.map((record, index) => {
+                      const effectiveStatus = getEffectiveStatus(record);
+                      const isChanged = changes[record.id] !== undefined;
+
+                      return (
+                        <motion.div
+                          key={record.id}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: index * 0.02 }}
+                          className={`
+                            flex items-center justify-between py-2.5 px-3 rounded-lg transition-colors
+                            ${isChanged ? 'ring-1 ring-primary/30 bg-primary/5' : ''}
+                            ${effectiveStatus === 'absent' ? 'bg-red-500/5' : 'hover:bg-muted/30'}
+                          `}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`
+                              h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0
+                              ${effectiveStatus === 'present' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                                : effectiveStatus === 'late' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                                  : effectiveStatus === 'od' ? 'bg-violet-500/10 text-violet-700 dark:text-violet-400'
+                                    : effectiveStatus === 'ml' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                                      : 'bg-red-500/10 text-red-700 dark:text-red-400'}
+                            `}>
+                              {(record.name || record.username || '?').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{record.name || record.username || 'Unknown'}</p>
+                              <p className="text-[11px] text-muted-foreground truncate">{record.enroll_no || record.username || 'No ID'}</p>
+                            </div>
                           </div>
-                        </td>
-                        <td className="px-4 py-4">{user.username}</td>
-                        <td className="px-4 py-4">{user.department}</td>
-                        <td className="px-4 py-4">
-                          <div className="flex justify-end gap-1 flex-wrap">
-                            {(['present', 'absent', 'late', 'od', 'ml'] as const).map((status) => (
+                          <div className="shrink-0 ml-2 flex items-center gap-1">
+                            {isChanged && <span className="text-[10px] text-primary font-medium mr-1">Modified</span>}
+                            {statusOptions.map(opt => (
                               <button
-                                key={status}
-                                onClick={() => handleStatusChange(user.username, status)}
-                                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
-                                  attendance[user.username] === status
-                                    ? getStatusColor(status) + ' shadow-sm'
-                                    : 'bg-muted hover:bg-muted/80 hover:shadow-sm'
-                                }`}
+                                key={opt.key}
+                                disabled={isLocked}
+                                onClick={() => setStatus(record.id, opt.key)}
+                                className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all flex items-center gap-0.5 ${effectiveStatus === opt.key
+                                  ? opt.color + ' shadow-sm ring-1 ring-black/5'
+                                  : 'bg-muted/40 text-muted-foreground hover:bg-muted'
+                                  } ${isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                               >
-                                {getStatusIcon(status)}
-                                <span className="ml-1 capitalize">
-                                  {status === 'ml' ? 'ML' : status === 'od' ? 'OD' : status.charAt(0).toUpperCase() + status.slice(1)}
-                                </span>
+                                {opt.icon}
+                                <span className="hidden sm:inline ml-0.5">{opt.label}</span>
                               </button>
                             ))}
                           </div>
-                        </td>
-                      </motion.tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            
-            <div className="flex flex-wrap gap-2 items-center justify-between mb-4">
-              <div className="flex flex-wrap gap-2">
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <span className="w-3 h-3 rounded-full bg-green-100" /> Present
-                </div>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <span className="w-3 h-3 rounded-full bg-red-100" /> Absent
-                </div>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <span className="w-3 h-3 rounded-full bg-yellow-100" /> Late
-                </div>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <span className="w-3 h-3 rounded-full bg-purple-100" /> OD
-                </div>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <span className="w-3 h-3 rounded-full bg-blue-100" /> ML
-                </div>
-              </div>
-            </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-muted/30 rounded-lg border border-border/40">
-                <div className="text-sm text-muted-foreground">
-                  {Object.keys(attendance).length > 0 ? (
-                    <span className="font-medium text-foreground">
-                      {Object.keys(attendance).length} student(s) marked
-                    </span>
-                  ) : (
-                    <span>No attendance marked yet</span>
-                  )}
-                </div>
+            {/* Save button */}
+            {!isLocked && hasChanges && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="sticky bottom-4"
+              >
                 <Button
-                  onClick={handleSaveAttendance}
-                  disabled={isLoading || !selectedSession || Object.keys(attendance).length === 0}
-                  className="shadow-lg hover:shadow-xl transition-shadow w-full sm:w-auto"
+                  size="lg"
+                  className="w-full shadow-lg"
+                  onClick={handleSave}
+                  disabled={isSaving}
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
+                  {isSaving ? (
+                    <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Saving...</>
                   ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Attendance
-                    </>
+                    <><Save className="h-5 w-5 mr-2" /> Save Changes ({Object.keys(changes).length} modified)</>
                   )}
                 </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

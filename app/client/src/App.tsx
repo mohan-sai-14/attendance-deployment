@@ -26,6 +26,9 @@ const ManageUsers = lazy(() => import('./pages/admin/UserManagement'));
 const SystemSettings = lazy(() => import('./pages/admin/SystemSettings'));
 const Students = lazy(() => import('./pages/admin/students'));
 const AdminAttendance = lazy(() => import('./pages/admin/attendance'));
+const AcademicSetup = lazy(() => import('./pages/admin/AcademicSetup'));
+const TimetableManagement = lazy(() => import('./pages/admin/TimetableManagement'));
+const FacultyManagement = lazy(() => import('./pages/admin/FacultyManagement'));
 
 // Faculty pages
 const FacultyLayout = lazy(() => import('./pages/faculty/Layout'));
@@ -110,6 +113,9 @@ const AppRouter = () => {
           <Route path="settings" element={<SystemSettings />} />
           <Route path="students" element={<Students />} />
           <Route path="attendance" element={<AdminAttendance />} />
+          <Route path="academic-setup" element={<AcademicSetup />} />
+          <Route path="timetables" element={<TimetableManagement />} />
+          <Route path="faculty" element={<FacultyManagement />} />
         </Route>
 
         {/* Teacher Routes */}

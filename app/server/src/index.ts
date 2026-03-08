@@ -145,23 +145,29 @@ async function checkAndUpdateExpiredSessions() {
   }
 }
 
-// Start the server
-const server = app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  
-  // Initial check
-  checkAndUpdateExpiredSessions();
-  
-  // Check every 1 minute (60000 ms)
-  setInterval(checkAndUpdateExpiredSessions, 60 * 1000);
-  console.log('Session expiration check scheduled to run every 1 minute');
-});
+// Export the app for Vercel Serverless Functions
+export default app;
 
-// Handle server shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Shutting down gracefully');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
+// Only start the server if we're not running in a Serverless environment (like Vercel)
+if (process.env.VERCEL !== '1' && process.env.NODE_ENV !== 'test') {
+  // Start the server
+  const server = app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    
+    // Initial check
+    checkAndUpdateExpiredSessions();
+    
+    // Check every 1 minute (60000 ms)
+    setInterval(checkAndUpdateExpiredSessions, 60 * 1000);
+    console.log('Session expiration check scheduled to run every 1 minute');
   });
-}); 
+
+  // Handle server shutdown
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received. Shutting down gracefully');
+    server.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
+  }); 
+}

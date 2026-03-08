@@ -25,14 +25,14 @@ class SupabaseStorage {
 
   constructor() {
     this.useSupabase = !!(supabaseUrl && supabaseKey);
-    
+
     console.log('Initializing Supabase storage:');
     console.log('- URL available:', !!supabaseUrl);
     console.log('- API key available:', !!supabaseKey);
     console.log('- URL:', supabaseUrl);
     // Only log the first few characters of the key for security
     console.log('- Key begins with:', supabaseKey?.substring(0, 10) + '...');
-    
+
     if (this.useSupabase) {
       try {
         this.supabase = createClient(supabaseUrl!, supabaseKey!, {
@@ -274,11 +274,11 @@ class SupabaseStorage {
   async validateUser(userId: string, password: string): Promise<boolean> {
     try {
       console.log('Validating user:', userId);
-      
+
       if (!this.useSupabase || !this.supabase) {
         console.log('Using mock validation for user:', userId);
-        const mockValid = (userId === 'S1001' && password === 'student123') || 
-                         (userId === 'admin' && password === 'admin123');
+        const mockValid = (userId === 'S1001' && password === 'student123') ||
+          (userId === 'admin' && password === 'admin123');
         console.log('Mock validation result:', mockValid);
         return mockValid;
       }
@@ -287,7 +287,7 @@ class SupabaseStorage {
       console.log('Query details:');
       console.log('- Table: users');
       console.log('- Condition: username =', userId);
-      
+
       const supabase = this.supabase;
       const { data, error } = await supabase
         .from('users')
@@ -398,7 +398,7 @@ class SupabaseStorage {
 
       // Parse the expiry time if provided, otherwise default to 24 hours
       let expiresAt: Date;
-      
+
       if (sessionData.expires_at) {
         // If expires_at is provided, use it directly (should be in ISO format)
         expiresAt = new Date(sessionData.expires_at);
@@ -414,7 +414,7 @@ class SupabaseStorage {
         expiresAt.setHours(expiresAt.getHours() + 24);
         console.log(`Using default 24h expiry: ${expiresAt.toISOString()}`);
       }
-      
+
       // Ensure the time is stored in UTC
       const utcExpiresAt = new Date(expiresAt.getTime() - (expiresAt.getTimezoneOffset() * 60000));
       console.log(`Storing expiry time in UTC: ${utcExpiresAt.toISOString()}`);
@@ -476,7 +476,7 @@ class SupabaseStorage {
       }
 
       const supabase = this.supabase;
-      
+
       // First, get all users who are not admins or teachers
       const { data: users, error: usersError } = await supabase
         .from('users')
@@ -496,7 +496,7 @@ class SupabaseStorage {
 
       // Get usernames of non-admin, non-teacher users
       const eligibleUsernames = users.map(user => user.username);
-      
+
       // Get attendance records only for eligible users
       const { data: attendanceData, error: attendanceError } = await supabase
         .from('attendance')
@@ -538,7 +538,7 @@ class SupabaseStorage {
 
       const supabase = this.supabase;
       console.log(`Fetching attendance for user: ${username}`);
-      
+
       // First, get all sessions to ensure we show all sessions, even without attendance
       const { data: sessions, error: sessionsError } = await supabase
         .from('sessions')
@@ -580,7 +580,7 @@ class SupabaseStorage {
 
       // Create a map of session_id to attendance record
       const attendanceMap = new Map();
-      
+
       if (attendanceData) {
         attendanceData.forEach(record => {
           // Safely access session data with proper null checks
@@ -614,7 +614,7 @@ class SupabaseStorage {
         if (attendance) {
           return attendance;
         }
-        
+
         // If no attendance record exists, create an absent record
         return {
           id: `session-${session.id}`,
@@ -650,7 +650,7 @@ class SupabaseStorage {
       }
 
       const supabase = this.supabase;
-      
+
       // First, get the user to check their role, status, and get their name
       const { data: user, error: userError } = await supabase
         .from('users')
@@ -668,7 +668,7 @@ class SupabaseStorage {
         console.log(`❌ Skipping attendance recording for ${user.role} user: ${username} (${user.name || 'no name'})`);
         return null;
       }
-      
+
       // Check if user is active
       if (user.status !== 'active') {
         console.log(`❌ Skipping attendance recording for inactive user: ${username} (status: ${user.status})`);
@@ -726,7 +726,7 @@ class SupabaseStorage {
       }
 
       const supabase = this.supabase;
-      
+
       // Check if attendance already exists
       const { data: existing } = await supabase
         .from('attendance')
@@ -769,7 +769,7 @@ class SupabaseStorage {
       }
 
       const supabase = this.supabase;
-      
+
       // First, get all non-admin, non-teacher, active users
       const { data: eligibleUsers, error: usersError } = await supabase
         .from('users')
@@ -788,7 +788,7 @@ class SupabaseStorage {
       }
 
       const eligibleUsernames = eligibleUsers.map(user => user.username);
-      
+
       // Get attendance records only for eligible users
       const { data, error } = await supabase
         .from('attendance')
@@ -828,7 +828,7 @@ class SupabaseStorage {
       }
 
       const supabase = this.supabase;
-      
+
       // First, check if the user is an admin, teacher, or inactive
       const { data: user, error: userError } = await supabase
         .from('users')
@@ -874,7 +874,7 @@ class SupabaseStorage {
       }
 
       const supabase = this.supabase;
-      
+
       // First, get the user to check their role and status
       const { data: user, error: userError } = await supabase
         .from('users')
@@ -927,21 +927,21 @@ class SupabaseStorage {
         console.log('Cannot test connection - Supabase not initialized');
         return false;
       }
-      
+
       console.log('Testing Supabase connection...');
       const supabase = this.supabase;
-      
+
       // Try to query the users table
       const { data, error } = await supabase
         .from('users')
         .select('count(*)')
         .limit(1);
-        
+
       if (error) {
         console.error('Connection test failed:', error);
         return false;
       }
-      
+
       console.log('Connection test successful. Data:', data);
       return true;
     } catch (error) {
@@ -956,32 +956,32 @@ class SupabaseStorage {
         console.log(`Cannot get table info for ${tableName} - Supabase not initialized`);
         return null;
       }
-      
+
       console.log(`Getting table info for ${tableName}...`);
       const supabase = this.supabase;
-      
+
       // Try to get a single row to inspect columns
       const { data, error } = await supabase
         .from(tableName)
         .select('*')
         .limit(1);
-        
+
       if (error) {
         console.error(`Error getting ${tableName} info:`, error);
         return null;
       }
-      
+
       if (!data || data.length === 0) {
         console.log(`No data found in ${tableName}`);
         return { columns: [] };
       }
-      
+
       // Extract column names from the first row
       const columns = Object.keys(data[0]).map(column => ({
         name: column,
         type: typeof data[0][column]
       }));
-      
+
       console.log(`Table ${tableName} columns:`, columns);
       return { columns };
     } catch (error) {
@@ -999,15 +999,15 @@ class SupabaseStorage {
     try {
       console.log(`\n=== Starting markUsersAbsent for session ${sessionId} (${sessionName}) ===`);
       console.log(`Total users to process: ${users.length}`);
-      
+
       const now = new Date();
-      
+
       console.log('\n=== Verifying user roles and statuses before marking absent ===');
-      
+
       // First, get all users with their roles and status to ensure we don't mark admins/teachers/inactive users
       const usernames = users.map(u => u.username).filter(Boolean);
       console.log(`Fetching roles and status for ${usernames.length} users:`, usernames);
-      
+
       // Use the same query approach as the client-side code that works
       const { data: userRoles, error: rolesError } = await this.supabase
         .from('users')
@@ -1024,13 +1024,13 @@ class SupabaseStorage {
           year
         `)
         .in('username', usernames);
-        
+
       if (rolesError) {
         console.error('❌ Error fetching user roles:', rolesError);
         console.error('Error details:', JSON.stringify(rolesError, null, 2));
         return;
       }
-      
+
       console.log(`Retrieved ${userRoles?.length || 0} user records from database`);
       if (userRoles && userRoles.length > 0) {
         console.log('Sample user data:', JSON.stringify(userRoles[0], null, 2));
@@ -1045,9 +1045,9 @@ class SupabaseStorage {
       }
 
       const userDataMap = new Map(userRoles.map(user => [user.username, user]));
-      
+
       console.log('\n=== Filtering eligible users for absent marking ===');
-      
+
       // Prepare attendance records for absent users, excluding admins, teachers, and inactive users
       const attendanceRecords = users
         .filter(user => {
@@ -1055,33 +1055,33 @@ class SupabaseStorage {
             console.log(`❌ Invalid username:`, user.username);
             return false;
           }
-          
+
           const username = user.username.trim();
           const userData = userDataMap.get(username);
-          
+
           // If we couldn't find the user in the database, skip them
           if (!userData) {
             console.log(`❌ User not found in database: ${username} - skipping`);
             return false;
           }
-          
+
           console.log(`🔍 User data for ${username}:`, JSON.stringify(userData, null, 2));
-          
+
           const role = userData.role || user.role;
           const status = userData.status || user.status;
-          
+
           // Check if the user is an admin or teacher
           if (role === 'admin' || role === 'teacher') {
             console.log(`⏩ SKIPPING - ${role} user: ${username} (${userData.name || 'no name'})`);
             return false;
           }
-          
+
           // Check if the user is inactive
           if (status !== 'active') {
             console.log(`⏩ SKIPPING - Inactive user (${status}): ${username} (${userData.name || 'no name'})`);
             return false;
           }
-          
+
           // If we get here, the user is eligible for absent marking
           console.log(`✅ INCLUDING - ${role || 'student'} user: ${username} (${userData.name || 'no name'})`);
           return true;
@@ -1089,7 +1089,7 @@ class SupabaseStorage {
         .map(user => {
           const username = user.username.trim();
           const userData = userRoles.find(u => u.username === username);
-          
+
           // Create the attendance record with all required fields
           const record = {
             session_id: sessionId,
@@ -1107,18 +1107,18 @@ class SupabaseStorage {
             section: userData?.section ?? '',
             year: userData?.year ?? ''
           };
-          
+
           console.log(`📝 Creating absent record for ${username}:`, JSON.stringify(record, null, 2));
-          
+
           return record;
         });
-        
+
       console.log(`\n=== Attendance Records to Create ===`);
       console.log(`Total eligible users for absent marking: ${attendanceRecords.length}`);
       attendanceRecords.forEach((record, index) => {
         console.log(`${index + 1}. ${record.username} (${record.name}) - Role: ${record.role}`);
       });
-        
+
       if (attendanceRecords.length === 0) {
         console.log('No valid attendance records to process');
         return;
@@ -1127,13 +1127,13 @@ class SupabaseStorage {
       // Insert attendance records in batches to avoid hitting limits
       const batchSize = 50; // Smaller batch size for safety
       let successCount = 0;
-      
+
       for (let i = 0; i < attendanceRecords.length; i += batchSize) {
         const batch = attendanceRecords.slice(i, i + batchSize);
-        const batchNumber = Math.floor(i/batchSize) + 1;
-        
-        console.log(`Processing batch ${batchNumber} (${i+1}-${Math.min(i+batchSize, attendanceRecords.length)} of ${attendanceRecords.length})`);
-        
+        const batchNumber = Math.floor(i / batchSize) + 1;
+
+        console.log(`Processing batch ${batchNumber} (${i + 1}-${Math.min(i + batchSize, attendanceRecords.length)} of ${attendanceRecords.length})`);
+
         const { error: insertError } = await this.supabase
           .from('attendance')
           .insert(batch);
@@ -1145,7 +1145,7 @@ class SupabaseStorage {
             const { error } = await this.supabase
               .from('attendance')
               .insert(record);
-              
+
             if (error) {
               console.error(`  - Failed to mark user ${record.username}:`, error);
             } else {
@@ -1157,13 +1157,13 @@ class SupabaseStorage {
           console.log(`  - Successfully marked ${batch.length} users as absent`);
         }
       }
-      
+
       console.log(`\n✅ Successfully marked ${successCount} out of ${attendanceRecords.length} users as absent`);
-      
+
       if (successCount < attendanceRecords.length) {
         console.warn(`⚠️ Failed to mark ${attendanceRecords.length - successCount} users as absent`);
       }
-      
+
     } catch (error) {
       console.error('Error in markUsersAbsent:', error);
       throw error; // Re-throw to be handled by the caller
@@ -1178,7 +1178,7 @@ class SupabaseStorage {
 
     try {
       console.log(`\nPreparing to mark ${students.length} students as absent...`);
-      
+
       // Prepare attendance records for absent students
       const attendanceRecords = students.map((student) => ({
         session_id: sessionId,
@@ -1190,29 +1190,29 @@ class SupabaseStorage {
       // Insert attendance records in batches to avoid hitting limits
       const batchSize = 100;
       let successCount = 0;
-      
+
       for (let i = 0; i < attendanceRecords.length; i += batchSize) {
         const batch = attendanceRecords.slice(i, i + batchSize);
-        console.log(`Processing batch ${Math.floor(i/batchSize) + 1} (${i+1}-${Math.min(i+batchSize, attendanceRecords.length)} of ${attendanceRecords.length})`);
-        
+        console.log(`Processing batch ${Math.floor(i / batchSize) + 1} (${i + 1}-${Math.min(i + batchSize, attendanceRecords.length)} of ${attendanceRecords.length})`);
+
         const { error: insertError } = await this.supabase
           .from('attendance')
           .insert(batch);
 
         if (insertError) {
-          console.error(`Error inserting batch ${Math.floor(i/batchSize) + 1}:`, insertError);
+          console.error(`Error inserting batch ${Math.floor(i / batchSize) + 1}:`, insertError);
         } else {
           successCount += batch.length;
           console.log(`Successfully marked ${batch.length} students as absent in this batch`);
         }
       }
-      
+
       console.log(`\n✅ Successfully marked ${successCount} out of ${attendanceRecords.length} students as absent`);
-      
+
       if (successCount < attendanceRecords.length) {
         console.warn(`⚠️ Failed to mark ${attendanceRecords.length - successCount} students as absent`);
       }
-      
+
     } catch (error) {
       console.error('Error in markStudentsAbsent:', error);
       throw error; // Re-throw to be handled by the caller
@@ -1227,8 +1227,8 @@ class SupabaseStorage {
 
     try {
       console.log(`\n=== Marking absent students for session ${sessionId} ===`);
-      
-      // First, get the session details to verify it exists and get the session name
+
+      // Get the session details
       const { data: session, error: sessionError } = await this.supabase
         .from('sessions')
         .select('*')
@@ -1239,106 +1239,83 @@ class SupabaseStorage {
         console.error('Error fetching session:', sessionError || 'Session not found');
         return;
       }
-      
-      console.log(`Session found: ${session.name} (ID: ${session.id})`);
-      
-      // Get all users who have already marked attendance for this session
+
+      console.log(`Session found: ${session.name} (ID: ${session.id}, class_id: ${session.class_id || 'none'})`);
+
+      // Get users who already marked attendance for this session
       const { data: presentUsers, error: attendanceError } = await this.supabase
         .from('attendance')
         .select('username')
         .eq('session_id', sessionId);
-        
+
       if (attendanceError) {
         console.error('Error fetching attendance records:', attendanceError);
         return;
       }
-      
-      // Get all active users first to see what we're working with
-      const { data: allActiveUsers, error: allUsersError } = await this.supabase
+
+      // Build the student query - filter by class if session has class_id
+      let studentQuery = this.supabase
         .from('users')
         .select('id, name, username, email, role, status')
+        .eq('role', 'student')
         .eq('status', 'active');
-        
-      if (allUsersError) {
-        console.error('Error fetching all active users:', allUsersError);
-        return;
-      }
-      
-      if (!allActiveUsers || allActiveUsers.length === 0) {
-        console.log('No active users found in the system');
-        return;
-      }
-      
-      // Log all active users and their roles for debugging
-      console.log('\n=== Active Users and Roles ===');
-      allActiveUsers.forEach(user => {
-        console.log(`- ${user.username} (${user.name}): ${user.role || 'no role'}`);
-      });
-      
-      // Filter out admin and teacher users and inactive users
-      const allUsers = allActiveUsers.filter(user => {
-        const isAdminOrTeacher = user.role === 'admin' || user.role === 'teacher';
-        const isInactive = user.status !== 'active';
-        const shouldInclude = !isAdminOrTeacher && !isInactive;
-        
-        if (isAdminOrTeacher) {
-          console.log(`- ${user.username}: EXCLUDED (${user.role} role)`);
-        } else if (isInactive) {
-          console.log(`- ${user.username}: EXCLUDED (inactive status: ${user.status})`);
+
+      if (session.class_id) {
+        // Fetch the class details to filter students by department/program/year/section
+        const { data: classData, error: classError } = await this.supabase
+          .from('classes')
+          .select('*')
+          .eq('id', session.class_id)
+          .single();
+
+        if (classError || !classData) {
+          console.error('Error fetching class for session:', classError || 'Class not found');
+          console.log('Falling back to all students (no class filter)');
         } else {
-          console.log(`- ${user.username}: INCLUDED (${user.role || 'student'} role, active)`);
+          console.log(`Filtering students by class: ${classData.department} ${classData.program} ${classData.year} ${session.section || classData.section}`);
+          studentQuery = studentQuery
+            .eq('department', classData.department)
+            .eq('program', classData.program)
+            .eq('year', classData.year)
+            .eq('section', session.section || classData.section);
         }
-        
-        return shouldInclude;
-      });
-      
-      if (allUsers.length === 0) {
-        console.log('\n⚠️ No eligible active users found (excluding admins, teachers, and inactive users)');
+      } else {
+        console.log('⚠️ Session has no class_id – falling back to all active students');
+      }
+
+      const { data: classStudents, error: studentsError } = await studentQuery;
+
+      if (studentsError) {
+        console.error('Error fetching students:', studentsError);
         return;
       }
-      
-      console.log(`\n✅ Proceeding with ${allUsers.length} eligible users for absent marking`);
-      
+
+      if (!classStudents || classStudents.length === 0) {
+        console.log('No eligible students found for this class');
+        return;
+      }
+
+      console.log(`Found ${classStudents.length} students in this class`);
+
       // Get usernames of users who have already marked attendance
       const presentUsernames = new Set(
         presentUsers
           ?.map(record => record.username?.toString())
           .filter(Boolean) || []
       );
-      
-      // Filter out users who have already marked attendance
-      const absentUsers = allUsers.filter(user => 
-        user.username && 
-        !presentUsernames.has(user.username.toString())
+
+      // Filter out students who already marked attendance
+      const absentStudents = classStudents.filter(user =>
+        user.username && !presentUsernames.has(user.username.toString())
       );
-      
-      // Double-check that we're not including any admin/teacher users
-      const eligibleAbsentUsers = absentUsers.filter(user => {
-        const isEligible = user.role !== 'admin' && 
-                          user.role !== 'teacher' && 
-                          user.status === 'active';
-        
-        if (!isEligible) {
-          console.log(`⚠️ Filtering out ineligible user from absent list: ${user.username} (role: ${user.role}, status: ${user.status})`);
-        }
-        
-        return isEligible;
-      });
-      
-      console.log('Present usernames:', Array.from(presentUsernames));
-      console.log('All eligible usernames:', allUsers.map(u => u.username));
-      console.log('Eligible absent users:', eligibleAbsentUsers.map(u => u.username));
-      console.log(`\nFound ${eligibleAbsentUsers.length} eligible users who haven't marked attendance out of ${allUsers.length} active users`);
-      
-      if (eligibleAbsentUsers.length > 0) {
-        console.log(`\n=== Marking ${eligibleAbsentUsers.length} eligible users as absent ===`);
-        eligibleAbsentUsers.forEach((user, index) => {
-          console.log(`${index + 1}. ${user.username} (${user.name || 'No name'}) - ${user.role || 'student'}`);
-        });
-        
-        await this.markUsersAbsent(sessionId, eligibleAbsentUsers, session.name);
+
+      console.log(`Present: ${presentUsernames.size}, Absent: ${absentStudents.length}`);
+
+      if (absentStudents.length > 0) {
+        console.log(`Marking ${absentStudents.length} students as absent`);
+        await this.markUsersAbsent(sessionId, absentStudents, session.name);
       } else {
-        console.log('No eligible absent users to mark for this session');
+        console.log('All students in this class have marked attendance');
       }
     } catch (error) {
       console.error('Error in markAbsentStudents:', error);
@@ -1355,9 +1332,9 @@ class SupabaseStorage {
       // Get current time in UTC
       const now = new Date();
       const nowISOString = now.toISOString();
-      
+
       console.log(`Checking for sessions that expired before ${nowISOString} (UTC)`);
-      
+
       // First, log the sessions that should be expired
       const { data: sessionsToExpire, error: queryError } = await this.supabase
         .from('sessions')
@@ -1372,14 +1349,14 @@ class SupabaseStorage {
 
       if (sessionsToExpire && sessionsToExpire.length > 0) {
         console.log(`Found ${sessionsToExpire.length} sessions to expire:`);
-        
+
         // Process each expired session
         for (const session of sessionsToExpire) {
           console.log(`- Session ${session.id} expired at ${session.expires_at} (UTC)`);
-          
+
           // Mark absent students before expiring the session
           await this.markAbsentStudents(session.id);
-          
+
           // Mark the session as inactive
           const { error: updateError } = await this.supabase
             .from('sessions')
@@ -1512,13 +1489,13 @@ class SupabaseStorage {
       }
 
       // Calculate cosine similarity
-      const dotProduct = inputEmbedding.reduce((sum, val, i) => 
+      const dotProduct = inputEmbedding.reduce((sum, val, i) =>
         sum + val * storedFace.face_embedding[i], 0);
       const magnitudeA = Math.sqrt(inputEmbedding.reduce((sum, val) => sum + val * val, 0));
       const magnitudeB = Math.sqrt(storedFace.face_embedding.reduce((sum, val) => sum + val * val, 0));
-      
+
       const similarity = dotProduct / (magnitudeA * magnitudeB);
-      
+
       return {
         isMatch: similarity >= threshold,
         similarity,

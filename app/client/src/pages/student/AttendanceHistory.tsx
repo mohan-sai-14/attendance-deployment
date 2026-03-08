@@ -5,7 +5,6 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
 import { 
-  Download, 
   Filter, 
   CheckCircle, 
   XCircle, 
@@ -137,6 +136,24 @@ export default function AttendanceHistory() {
   };
 
 
+  // Calculate Summary Stats
+  const stats = {
+    total: filteredData.length,
+    present: filteredData.filter(r => r.status === 'present').length,
+    absent: filteredData.filter(r => r.status === 'absent').length,
+    late: filteredData.filter(r => r.status === 'late').length,
+    od: filteredData.filter(r => r.status === 'od').length,
+    ml: filteredData.filter(r => r.status === 'ml').length,
+  };
+
+  // Group by Month
+  const groupedData = filteredData.reduce((acc, record) => {
+    const monthYear = format(parseISO(record.date), 'MMMM yyyy');
+    if (!acc[monthYear]) acc[monthYear] = [];
+    acc[monthYear].push(record);
+    return acc;
+  }, {} as Record<string, AttendanceRecord[]>);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
@@ -167,11 +184,56 @@ export default function AttendanceHistory() {
         </Badge>
       </motion.div>
 
-      {/* Main Card */}
+      {/* Summary Stats */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}>
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
+      >
+        <Card className="bg-background/50 border-border/40 hover:bg-accent/5 transition-colors">
+          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+            <span className="text-2xl font-bold">{stats.total}</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider mt-1">Total</span>
+          </CardContent>
+        </Card>
+        <Card className="bg-green-500/5 border-green-500/20 hover:bg-green-500/10 transition-colors">
+          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+            <span className="text-2xl font-bold text-green-600 dark:text-green-500">{stats.present}</span>
+            <span className="text-xs text-green-600/70 dark:text-green-500/70 uppercase tracking-wider mt-1">Present</span>
+          </CardContent>
+        </Card>
+        <Card className="bg-red-500/5 border-red-500/20 hover:bg-red-500/10 transition-colors">
+          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+            <span className="text-2xl font-bold text-red-600 dark:text-red-500">{stats.absent}</span>
+            <span className="text-xs text-red-600/70 dark:text-red-500/70 uppercase tracking-wider mt-1">Absent</span>
+          </CardContent>
+        </Card>
+        <Card className="bg-yellow-500/5 border-yellow-500/20 hover:bg-yellow-500/10 transition-colors">
+          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+            <span className="text-2xl font-bold text-yellow-600 dark:text-yellow-500">{stats.late}</span>
+            <span className="text-xs text-yellow-600/70 dark:text-yellow-500/70 uppercase tracking-wider mt-1">Late</span>
+          </CardContent>
+        </Card>
+        <Card className="bg-purple-500/5 border-purple-500/20 hover:bg-purple-500/10 transition-colors">
+          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+            <span className="text-2xl font-bold text-purple-600 dark:text-purple-500">{stats.od}</span>
+            <span className="text-xs text-purple-600/70 dark:text-purple-500/70 uppercase tracking-wider mt-1">On Duty (OD)</span>
+          </CardContent>
+        </Card>
+        <Card className="bg-blue-500/5 border-blue-500/20 hover:bg-blue-500/10 transition-colors">
+          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+            <span className="text-2xl font-bold text-blue-600 dark:text-blue-500">{stats.ml}</span>
+            <span className="text-xs text-blue-600/70 dark:text-blue-500/70 uppercase tracking-wider mt-1">Med Leave</span>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Main Content Area */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}>
         <Card className="border-border/40 bg-gradient-to-br from-background via-background to-background/50 backdrop-blur-sm shadow-lg">
           <CardHeader>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -180,79 +242,114 @@ export default function AttendanceHistory() {
                   <Calendar className="h-5 w-5 text-primary" />
                   Attendance Records
                 </CardTitle>
-                <CardDescription className="mt-1">Your attendance history for all classes</CardDescription>
+                <CardDescription className="mt-1">Your detailed timeline</CardDescription>
               </div>
-              <div className="flex gap-2">
-                <div className="relative flex-1 md:w-[250px]">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex gap-2 bg-muted/50 p-1 rounded-lg">
+                  <Button 
+                    variant={filters.status === 'all' ? 'default' : 'ghost'} 
+                    size="sm" 
+                    onClick={() => setFilters({...filters, status: 'all'})}
+                    className="h-8"
+                  >
+                    All
+                  </Button>
+                  <Button 
+                    variant={filters.status === 'present' ? 'default' : 'ghost'} 
+                    size="sm" 
+                    onClick={() => setFilters({...filters, status: 'present'})}
+                    className="h-8 text-green-600"
+                  >
+                    Present
+                  </Button>
+                  <Button 
+                    variant={filters.status === 'absent' ? 'default' : 'ghost'} 
+                    size="sm" 
+                    onClick={() => setFilters({...filters, status: 'absent'})}
+                    className="h-8 text-red-600"
+                  >
+                    Absent
+                  </Button>
+                </div>
+                <div className="relative flex-1 sm:w-[250px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
-                    placeholder="Search..."
-                    className="pl-10 border-border/40 bg-background/50"
+                    placeholder="Search session..."
+                    className="pl-10 h-10 border-border/40 bg-background/50"
                     value={filters.search}
                     onChange={(e) => setFilters({...filters, search: e.target.value})}
                   />
                 </div>
-                <Button variant="outline" className="border-border/40">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto rounded-lg border border-border/40">
-              <table className="w-full">
-                <thead className="bg-muted/30">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Session</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Check-in Time</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40 bg-background/50">
-                  {filteredData.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="px-4 py-12 text-center">
-                        <div className="flex flex-col items-center justify-center gap-3">
-                          <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center">
-                            <AlertCircle className="h-8 w-8 text-muted-foreground" />
-                          </div>
-                          <p className="text-sm font-medium text-muted-foreground">No attendance records found</p>
-                          <p className="text-xs text-muted-foreground">Try adjusting your search</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredData.map((record, index) => (
-                      <motion.tr
-                        key={record.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="hover:bg-primary/5 transition-colors duration-200">
-                        <td className="px-4 py-4 text-sm text-muted-foreground">
-                          {format(parseISO(record.date), 'MMM dd, yyyy')}
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="font-medium text-sm">{record.session_name}</div>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-muted-foreground">
-                          {record.check_in_time ? format(parseISO(record.check_in_time), 'hh:mm a') : '—'}
-                        </td>
-                        <td className="px-4 py-4">{getStatusBadge(record.status)}</td>
-                      </motion.tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {filteredData.length > 0 && (
-              <div className="flex items-center justify-between gap-4 pt-4 mt-4 border-t border-border/40">
-                <div className="text-sm text-muted-foreground">
-                  Showing <span className="font-semibold text-foreground">{filteredData.length}</span> of <span className="font-semibold text-foreground">{attendanceData.length}</span> records
+            {Object.entries(groupedData).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 border rounded-xl bg-muted/10">
+                <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center">
+                  <AlertCircle className="h-8 w-8 text-muted-foreground" />
                 </div>
+                <p className="text-sm font-medium text-foreground">No attendance records found</p>
+                <p className="text-xs text-muted-foreground">Try adjusting your filters or search term</p>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {Object.entries(groupedData).map(([month, records], groupIndex) => (
+                  <div key={month} className="space-y-4">
+                    <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-2">
+                      <h3 className="font-semibold text-lg flex items-center gap-2">
+                        {month}
+                        <Badge variant="secondary" className="font-normal">{records.length}</Badge>
+                      </h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {records.map((record, index) => {
+                        let statusColor = 'bg-border/50';
+                        if (record.status === 'present') statusColor = 'bg-green-500';
+                        if (record.status === 'absent') statusColor = 'bg-red-500';
+                        if (record.status === 'late') statusColor = 'bg-yellow-500';
+                        if (record.status === 'od') statusColor = 'bg-purple-500';
+                        if (record.status === 'ml') statusColor = 'bg-blue-500';
+
+                        return (
+                          <motion.div
+                            key={record.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: (groupIndex * 0.1) + (index * 0.05) }}
+                          >
+                            <Card className="overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col justify-center">
+                              <div className="flex h-full">
+                                <div className={`w-1.5 shrink-0 ${statusColor}`} />
+                                <div className="p-4 flex-1 flex flex-col justify-between">
+                                  <div className="flex justify-between items-start gap-2 mb-3">
+                                    <div>
+                                      <p className="font-semibold text-sm leading-tight line-clamp-2" title={record.session_name}>{record.session_name}</p>
+                                      <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                                        <Calendar className="h-3 w-3" />
+                                        {format(parseISO(record.date), 'MMM dd, yyyy')}
+                                      </p>
+                                    </div>
+                                    <div className="shrink-0">{getStatusBadge(record.status)}</div>
+                                  </div>
+                                  
+                                  <div className="mt-auto pt-3 border-t flex justify-between items-center">
+                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {record.check_in_time ? format(parseISO(record.check_in_time), 'hh:mm a') : 'No check-in'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </Card>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

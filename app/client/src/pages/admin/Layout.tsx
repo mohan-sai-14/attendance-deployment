@@ -57,7 +57,7 @@ export default function AdminLayout() {
                   Admin Dashboard
                 </h1>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium hidden sm:inline">{displayName}</span>
                 <div className="relative">

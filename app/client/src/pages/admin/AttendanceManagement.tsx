@@ -1,454 +1,562 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar } from "@/components/ui/calendar";
 import {
-  ClipboardCheck,
-  Search,
-  Filter,
-  Download,
-  Eye,
-  Calendar as CalendarIcon,
-  Users,
-  Clock,
-  MapPin,
-  TrendingUp,
-  AlertTriangle
+  Users, CalendarDays, Clock, ArrowRight, ChevronLeft, AlertCircle, FileText,
+  Lock, Edit3, ShieldAlert
 } from "lucide-react";
-import { supabase } from '../integrations/supabase/client';
-import { toast } from "@/hooks/use-toast";
+import { format, differenceInHours } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { supabase } from '@/lib/supabase';
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+
+// Types
+interface ClassRow {
+  id: string;
+  department: string;
+  program: string;
+  year: string;
+  section: string;
+  batch: string;
+}
+
+interface StudentRow {
+  id: string;
+  username: string; // roll number
+  name: string;
+}
 
 interface AttendanceRecord {
   id: string;
-  username: string;
-  name?: string;
-  enroll_no?: string;
-  program?: string;
-  department?: string;
-  year?: string;
-  section?: string;
-  session_name?: string;
+  class_id: string;
   date: string;
-  check_in_time?: string;
-  status: string;
-  session_id?: string;
-}
-
-interface Session {
-  id: string;
-  name: string;
-  description?: string;
-  start_time?: string;
-  end_time?: string;
+  period_number: number;
+  student_id: string;
   status: string;
   created_at: string;
+  last_edited_at?: string;
+  edit_reason?: string;
 }
 
-const AttendanceManagement: React.FC = () => {
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [selectedSession, setSelectedSession] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
+interface TimetableRow {
+  id: string;
+  subject_name: string;
+  faculty_id: string;
+  start_time: string;
+  end_time: string;
+  day_of_week: string;
+}
+
+interface PeriodConfig {
+  id: string;
+  period_number: number;
+  start: string;
+  end: string;
+}
+
+// 8-period config
+const PERIODS_CONFIG: PeriodConfig[] = [
+  { id: 'p1', period_number: 1, start: '09:00', end: '09:50' },
+  { id: 'p2', period_number: 2, start: '09:50', end: '10:40' },
+  { id: 'p3', period_number: 3, start: '11:00', end: '11:50' },
+  { id: 'p4', period_number: 4, start: '11:50', end: '12:40' },
+  { id: 'p5', period_number: 5, start: '13:30', end: '14:20' },
+  { id: 'p6', period_number: 6, start: '14:20', end: '15:10' },
+  { id: 'p7', period_number: 7, start: '15:30', end: '16:20' },
+  { id: 'p8', period_number: 8, start: '16:20', end: '17:10' },
+];
+
+export default function AttendanceManagement() {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [classes, setClasses] = useState<ClassRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [selectedClass, setSelectedClass] = useState<ClassRow | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  const [classTimetable, setClassTimetable] = useState<TimetableRow[]>([]);
+  const [classAttendance, setClassAttendance] = useState<AttendanceRecord[]>([]);
+  const [classStudents, setClassStudents] = useState<StudentRow[]>([]);
+  const [isLoadingPeriods, setIsLoadingPeriods] = useState(false);
+
+  // Section 4 state
+  const [activePeriod, setActivePeriod] = useState<PeriodConfig | null>(null);
+  const [editRecord, setEditRecord] = useState<{ student: StudentRow, currentStatus: string, attId?: string } | null>(null);
+  const [editReason, setEditReason] = useState("");
+  const [newStatus, setNewStatus] = useState<"present" | "absent">("present");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    fetchAttendanceRecords();
-    fetchSessions();
+    fetchClasses();
   }, []);
 
-  const fetchAttendanceRecords = async () => {
+  useEffect(() => {
+    if (selectedClass) {
+      fetchPeriodsData();
+      fetchClassStudents();
+      setActivePeriod(null);
+    }
+  }, [selectedClass, selectedDate]);
+
+  const fetchClasses = async () => {
+    setIsLoading(true);
     try {
-      setLoading(true);
+      const { data, error } = await supabase.from('classes').select('*').order('program');
+      if (error) throw error;
+      setClasses(data || []);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchClassStudents = async () => {
+    if (!selectedClass) return;
+    try {
       const { data, error } = await supabase
+        .from('users')
+        .select('id, username, name')
+        .eq('role', 'student')
+        .eq('department', selectedClass.department)
+        .eq('program', selectedClass.program)
+        .eq('year', selectedClass.year)
+        .eq('section', selectedClass.section)
+        .eq('batch', selectedClass.batch)
+        .order('username');
+      if (error) throw error;
+      setClassStudents(data || []);
+    } catch (error) {
+      console.error("Error fetching students:", error);
+    }
+  };
+
+  const fetchPeriodsData = async () => {
+    if (!selectedClass) return;
+    setIsLoadingPeriods(true);
+    try {
+      const dayOfWeek = format(selectedDate, 'EEEE');
+      const dateString = format(selectedDate, 'yyyy-MM-dd');
+
+      const { data: ttData, error: ttError } = await supabase
+        .from('timetables')
+        .select('*')
+        .eq('class_id', selectedClass.id)
+        .eq('day_of_week', dayOfWeek);
+
+      if (ttError) throw ttError;
+      setClassTimetable(ttData || []);
+
+      const { data: attData, error: attError } = await supabase
         .from('attendance')
         .select('*')
-        .order('date', { ascending: false });
+        .eq('class_id', selectedClass.id)
+        .eq('date', dateString);
 
-      if (error) {
-        console.error('Error fetching attendance:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch attendance records",
-          variant: "destructive"
-        });
-        return;
-      }
+      if (attError) console.error("Attendance fetch error:", attError);
 
-      setAttendanceRecords(data || []);
-    } catch (error) {
-      console.error('Error:', error);
+      setClassAttendance(attData || []);
+    } catch (error: any) {
+      console.error("Fetch Periods Error", error);
+      toast({ title: "Check Console", description: "Could not fetch periods data.", variant: "destructive" });
     } finally {
-      setLoading(false);
+      setIsLoadingPeriods(false);
     }
   };
 
-  const fetchSessions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('sessions')
-        .select('*')
-        .order('created_at', { ascending: false });
+  const handleSaveAttendance = async () => {
+    if (!editRecord || !selectedClass || !activePeriod) return;
+    if (!editReason.trim() && editRecord.attId) {
+      toast({ title: "Reason Required", description: "You must provide a reason for editing an existing record.", variant: "destructive" });
+      return;
+    }
 
-      if (error) {
-        console.error('Error fetching sessions:', error);
-        return;
+    setIsSaving(true);
+    const dateString = format(selectedDate, 'yyyy-MM-dd');
+
+    try {
+      const payload = {
+        class_id: selectedClass.id,
+        date: dateString,
+        period_number: activePeriod.period_number,
+        student_id: editRecord.student.username, // Using username as student_id in attendance generic schema for now
+        status: newStatus,
+        last_edited_at: new Date().toISOString(),
+        edit_reason: editReason || 'Initial Entry'
+      };
+
+      if (editRecord.attId) {
+        const { error } = await supabase.from('attendance').update(payload).eq('id', editRecord.attId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('attendance').insert([payload]);
+        if (error) throw error;
       }
 
-      setSessions(data || []);
-    } catch (error) {
-      console.error('Error:', error);
+      toast({ title: "Success", description: "Attendance record updated." });
+      setEditRecord(null);
+      setEditReason("");
+      fetchPeriodsData(); // Refresh records
+    } catch (error: any) {
+      toast({ title: "Error Saving", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const filteredRecords = attendanceRecords.filter(record => {
-    const matchesSearch = record.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         record.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         record.session_name?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesSession = selectedSession === 'all' || record.session_id === selectedSession;
-    const matchesStatus = selectedStatus === 'all' || record.status === selectedStatus;
-
-    let matchesDate = true;
-    if (selectedDate) {
-      const recordDate = new Date(record.date);
-      matchesDate = recordDate.toDateString() === selectedDate.toDateString();
-    }
-
-    return matchesSearch && matchesSession && matchesStatus && matchesDate;
-  });
-
-  const handleExport = () => {
-    const csvData = filteredRecords.map(record => ({
-      Date: record.date,
-      Name: record.name || '',
-      Username: record.username,
-      'Enrollment No': record.enroll_no || '',
-      Program: record.program || '',
-      Department: record.department || '',
-      Year: record.year || '',
-      Section: record.section || '',
-      'Session Name': record.session_name || '',
-      'Check-in Time': record.check_in_time || '',
-      Status: record.status
-    }));
-
-    const csvString = [
-      Object.keys(csvData[0]).join(','),
-      ...csvData.map(row => Object.values(row).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvString], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `attendance_${selectedDate?.toISOString().split('T')[0] || 'all'}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+  // Helper for 48-hour lock check
+  const isPeriodLocked = (period: PeriodConfig) => {
+    const startDateTimeStr = `${format(selectedDate, 'yyyy-MM-dd')}T${period.start}:00`;
+    const periodStart = new Date(startDateTimeStr);
+    const hoursDiff = differenceInHours(new Date(), periodStart);
+    return hoursDiff > 48; // Locked if > 48 hours have passed since the start of the period
   };
 
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'present': return 'bg-green-100 text-green-800';
-      case 'absent': return 'bg-red-100 text-red-800';
-      case 'late': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const stats = {
-    total: attendanceRecords.length,
-    present: attendanceRecords.filter(r => r.status === 'present').length,
-    absent: attendanceRecords.filter(r => r.status === 'absent').length,
-    late: attendanceRecords.filter(r => r.status === 'late').length,
-    today: selectedDate ?
-      attendanceRecords.filter(r => {
-        const recordDate = new Date(r.date);
-        return recordDate.toDateString() === selectedDate.toDateString();
-      }).length : 0
-  };
-
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Attendance Management</h1>
-          <p className="text-muted-foreground">Monitor and manage attendance records</p>
+  // SECTION 1: TODAY'S CLASSES
+  if (!selectedClass) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Attendance Management
+            </h1>
+            <p className="text-muted-foreground mt-2">Class-wise daily attendance workflow</p>
+          </div>
         </div>
-        <Button onClick={handleExport} className="flex items-center gap-2">
-          <Download className="h-4 w-4" />
-          Export CSV
-        </Button>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Records</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Present</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.present}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Absent</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.absent}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Late</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.late}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              {selectedDate ? 'Today' : 'Selected Date'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.today}</div>
-          </CardContent>
-        </Card>
+        {isLoading ? (
+          <div className="flex justify-center p-12"><div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" /></div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {classes.map((cls) => (
+              <Card key={cls.id} className="border-border/40 shadow-sm bg-background/60 backdrop-blur-sm hover:shadow-md transition-shadow flex flex-col">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">{cls.department}</Badge>
+                    <Badge variant="secondary" className="text-xs">Batch {cls.batch}</Badge>
+                  </div>
+                  <CardTitle className="text-lg mt-2">{cls.program} {cls.year}</CardTitle>
+                  <CardDescription>Section {cls.section}</CardDescription>
+                </CardHeader>
+                <CardContent className="pb-4 flex-1">
+                  <div className="space-y-3 mt-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground flex items-center gap-2"><Clock className="h-4 w-4" /> Periods Completed</span>
+                      <span className="font-medium">0 / 8</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground flex items-center gap-2"><ArrowRight className="h-4 w-4" /> Pending Periods</span>
+                      <span className="font-medium">8</span>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="pt-0 gap-2 flex-col xl:flex-row">
+                  <Button className="w-full" variant="default" onClick={() => setSelectedClass(cls)}>
+                    <Users className="h-4 w-4 mr-2" /> Class Attendance
+                  </Button>
+                  <Button className="w-full xl:w-auto" variant="outline" onClick={() => navigate('/admin/timetables')}>
+                    <CalendarDays className="h-4 w-4" />
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
+    );
+  }
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Filters Sidebar */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg">Filters</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Date</label>
+  // SECTION 2 & 3 & 4: CLASS ATTENDANCE VIEW & TODAY'S PERIODS & STUDENT LIST
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      {/* Section 2: Header and Date Selector */}
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-background/60 backdrop-blur-sm p-4 rounded-xl border border-border/40 shadow-sm">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => {
+            if (activePeriod) setActivePeriod(null);
+            else setSelectedClass(null);
+          }} className="shrink-0 bg-muted/50 hover:bg-muted">
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
+              {selectedClass.program} {selectedClass.year} <span className="text-muted-foreground font-normal">Section {selectedClass.section}</span>
+            </h1>
+            <p className="text-muted-foreground text-sm">Batch {selectedClass.batch} • {selectedClass.department} Dept</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn("w-[220px] justify-start text-left font-normal bg-background", !selectedDate && "text-muted-foreground")}
+              >
+                <CalendarDays className="mr-2 h-4 w-4 text-primary" />
+                {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={setSelectedDate}
-                className="rounded-md border"
+                onSelect={(d) => { if (d) { setSelectedDate(d); setActivePeriod(null); } }}
+                initialFocus
               />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
+      {isLoadingPeriods ? (
+        <div className="flex justify-center py-20"><div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" /></div>
+      ) : !activePeriod ? (
+        /* Section 3: Today's Periods */
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground/80 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-primary" /> Daily Periods for {format(selectedDate, "EEEE")}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {PERIODS_CONFIG.map((period) => {
+              const ttSlot = classTimetable.find(tt => tt.start_time.startsWith(period.start));
+              const periodAttendance = classAttendance.filter(a => a.period_number === period.period_number);
+
+              const isTaken = periodAttendance.length > 0;
+              const presentCount = periodAttendance.filter(a => a.status === 'present').length;
+              const percentage = isTaken ? Math.round((presentCount / classStudents.length) * 100) : 0; // against total class students
+
+              const isActive = !isTaken && selectedDate.toDateString() === new Date().toDateString();
+              const locked = isPeriodLocked(period);
+
+              return (
+                <Card key={period.id} className={cn("relative overflow-hidden flex flex-col transition-all", ttSlot ? "hover:border-primary/40 hover:shadow-md" : "opacity-70")}>
+                  {locked && isTaken && (
+                    <div className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full bg-destructive/10 text-destructive" title="Locked (48h passed)">
+                      <Lock className="h-3 w-3" />
+                    </div>
+                  )}
+                  <CardHeader className="pb-2 bg-muted/20 border-b border-border/40">
+                    <div className="flex justify-between items-center">
+                      <Badge variant="outline" className="font-semibold px-2 bg-background">Period {period.period_number}</Badge>
+                      <span className="text-xs text-muted-foreground font-medium">{period.start} - {period.end}</span>
+                    </div>
+                    <CardTitle className="text-base mt-3 line-clamp-1">{ttSlot ? ttSlot.subject_name : "Free Period"}</CardTitle>
+                    <CardDescription className="text-xs line-clamp-1">
+                      {ttSlot ? `Faculty: ${ttSlot.faculty_id}` : "No assigned faculty"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="py-4 flex-1">
+                    {ttSlot ? (
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Status</span>
+                          {isTaken ? (
+                            <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20">Attendance Taken</Badge>
+                          ) : isActive ? (
+                            <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20">Active Now</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground border-dashed">Not Taken</Badge>
+                          )}
+                        </div>
+                        {isTaken && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">Attendance</span>
+                            <span className="font-bold flex items-center gap-1">
+                              {presentCount}/{classStudents.length} <span className="text-muted-foreground text-xs font-normal">({percentage}%)</span>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground/40">
+                        <FileText className="h-8 w-8 opacity-20" />
+                        <span className="ml-2 text-sm">No Class</span>
+                      </div>
+                    )}
+                  </CardContent>
+                  <CardFooter className="pt-0 relative z-10 w-full bg-card">
+                    <Button
+                      className="w-full"
+                      variant={isTaken ? "outline" : "default"}
+                      disabled={!ttSlot}
+                      onClick={() => setActivePeriod(period)}
+                    >
+                      {isTaken ? "View Details" : "Take Attendance"}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        /* Section 4: Period -> Student Attendance View */
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {(() => {
+            const ttSlot = classTimetable.find(tt => tt.start_time.startsWith(activePeriod.start));
+            const periodAttendance = classAttendance.filter(a => a.period_number === activePeriod.period_number);
+            const locked = isPeriodLocked(activePeriod);
+
+            return (
+              <Card className="border-border/40 shadow-sm overflow-hidden">
+                <CardHeader className="bg-muted/10 border-b border-border/40 flex flex-row items-center justify-between py-4">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Badge variant="default" className="bg-primary/10 text-primary border-primary/20">Period {activePeriod.period_number}</Badge>
+                      {ttSlot?.subject_name}
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {format(selectedDate, "PPP")} • {activePeriod.start} - {activePeriod.end} • {ttSlot?.faculty_id}
+                    </CardDescription>
+                  </div>
+                  {locked && (
+                    <Badge variant="destructive" className="bg-destructive/10 text-destructive border-destructive/20 flex items-center gap-1 py-1 px-3">
+                      <Lock className="h-3 w-3" /> Locked (48h limit)
+                    </Badge>
+                  )}
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b">
+                        <tr>
+                          <th className="px-6 py-3 font-semibold">Roll Number</th>
+                          <th className="px-6 py-3 font-semibold">Student Name</th>
+                          <th className="px-6 py-3 font-semibold text-center">Status</th>
+                          <th className="px-6 py-3 font-semibold text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/40">
+                        {classStudents.map((student) => {
+                          const record = periodAttendance.find(a => a.student_id === student.username);
+                          const status = record?.status || "unmarked";
+
+                          return (
+                            <tr key={student.id} className="hover:bg-muted/30 transition-colors">
+                              <td className="px-6 py-3 font-medium">{student.username}</td>
+                              <td className="px-6 py-3">{student.name}</td>
+                              <td className="px-6 py-3 text-center">
+                                {status === 'present' ? (
+                                  <Badge className="bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20 w-24 justify-center">Present</Badge>
+                                ) : status === 'absent' ? (
+                                  <Badge className="bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20 w-24 justify-center">Absent</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-muted-foreground border-dashed w-24 justify-center bg-muted/20">Unmarked</Badge>
+                                )}
+                                {record?.edit_reason && (
+                                  <span title={`Edited: ${record.edit_reason}`} className="ml-2 inline-flex items-center justify-center bg-blue-500/10 text-blue-600 rounded-full w-5 h-5 text-[10px] font-bold cursor-help">E</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-3 text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+                                  disabled={locked}
+                                  onClick={() => {
+                                    setEditRecord({ student, currentStatus: status, attId: record?.id });
+                                    setNewStatus(status === 'present' ? 'absent' : 'present');
+                                    setEditReason("");
+                                  }}
+                                >
+                                  {locked ? <Lock className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
+                                  {locked ? "Locked" : "Edit"}
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {classStudents.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
+                              No students found for this class.
+                              <Button variant="link" onClick={() => navigate('/admin/students')}>Add students</Button>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* EDIT MODAL */}
+      <Dialog open={!!editRecord} onOpenChange={(open) => !open && setEditRecord(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modify Attendance</DialogTitle>
+            <DialogDescription>
+              Change attendance status for <span className="font-semibold text-foreground">{editRecord?.student.name}</span> ({editRecord?.student.username}).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="flex bg-muted/50 p-3 rounded-lg border border-border/50 items-center justify-between">
+              <span className="text-sm font-medium">Current Status</span>
+              <Badge variant="outline" className="uppercase font-bold">{editRecord?.currentStatus}</Badge>
             </div>
 
-            <div>
-              <label className="text-sm font-medium mb-2 block">Session</label>
-              <select
-                value={selectedSession}
-                onChange={(e) => setSelectedSession(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md"
-              >
-                <option value="all">All Sessions</option>
-                {sessions.map(session => (
-                  <option key={session.id} value={session.id}>{session.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Status</label>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md"
-              >
-                <option value="all">All Status</option>
-                <option value="present">Present</option>
-                <option value="absent">Absent</option>
-                <option value="late">Late</option>
-              </select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Attendance Records */}
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Attendance Records</CardTitle>
-            <CardDescription>
-              {filteredRecords.length} records found
-              {selectedDate && ` for ${selectedDate.toLocaleDateString()}`}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search by name, username, or session..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+            <div className="space-y-2">
+              <Label>New Status</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant={newStatus === 'present' ? "default" : "outline"}
+                  className={cn("w-full", newStatus === 'present' ? "bg-green-600 hover:bg-green-700 text-white" : "")}
+                  onClick={() => setNewStatus('present')}
+                >
+                  Present
+                </Button>
+                <Button
+                  variant={newStatus === 'absent' ? "default" : "outline"}
+                  className={cn("w-full", newStatus === 'absent' ? "bg-red-600 hover:bg-red-700 text-white" : "")}
+                  onClick={() => setNewStatus('absent')}
+                >
+                  Absent
+                </Button>
               </div>
             </div>
 
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {loading ? (
-                <div className="text-center p-4">Loading...</div>
-              ) : filteredRecords.length === 0 ? (
-                <div className="text-center p-4 text-gray-500">No records found</div>
-              ) : (
-                filteredRecords.map((record) => (
-                  <motion.div
-                    key={record.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                        {(record.name || record.username || 'U')[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-medium">{record.name || record.username}</div>
-                        <div className="text-sm text-gray-500">
-                          {record.session_name} • {record.department} • {record.program}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className="text-sm text-gray-500">
-                          {new Date(record.date).toLocaleDateString()}
-                        </div>
-                        <div className="text-sm font-medium">
-                          {record.check_in_time ? new Date(record.check_in_time).toLocaleTimeString() : 'N/A'}
-                        </div>
-                      </div>
-
-                      <Badge className={getStatusBadgeColor(record.status)}>
-                        {record.status.toUpperCase()}
-                      </Badge>
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedRecord(record);
-                          setShowDetailsModal(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </motion.div>
-                ))
-              )}
+            <div className="space-y-2">
+              <Label className="flex justify-between">
+                <span>Reason for Change <span className="text-destructive">*</span></span>
+              </Label>
+              <Textarea
+                placeholder="e.g. Student arrived late, Medical leave approved, Mistake in initial entry..."
+                value={editReason}
+                onChange={(e) => setEditReason(e.target.value)}
+                className="resize-none"
+                rows={3}
+              />
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
+                <ShieldAlert className="h-3 w-3" /> All attendance edits are logged and auditable.
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
 
-      {/* Record Details Modal */}
-      {showDetailsModal && selectedRecord && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-2xl mx-4">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                  {(selectedRecord.name || selectedRecord.username || 'U')[0].toUpperCase()}
-                </div>
-                {selectedRecord.name || selectedRecord.username}
-              </CardTitle>
-              <CardDescription>Attendance record details</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="details" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                  <TabsTrigger value="academic">Academic Info</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="details" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Date</label>
-                      <p className="text-sm text-gray-600">
-                        {new Date(selectedRecord.date).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Check-in Time</label>
-                      <p className="text-sm text-gray-600">
-                        {selectedRecord.check_in_time ?
-                          new Date(selectedRecord.check_in_time).toLocaleString() : 'N/A'}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Session</label>
-                      <p className="text-sm text-gray-600">{selectedRecord.session_name || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Status</label>
-                      <Badge className={getStatusBadgeColor(selectedRecord.status)}>
-                        {selectedRecord.status.toUpperCase()}
-                      </Badge>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="academic" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Username</label>
-                      <p className="text-sm text-gray-600">{selectedRecord.username}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Enrollment No.</label>
-                      <p className="text-sm text-gray-600">{selectedRecord.enroll_no || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Program</label>
-                      <p className="text-sm text-gray-600">{selectedRecord.program || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Department</label>
-                      <p className="text-sm text-gray-600">{selectedRecord.department || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Year</label>
-                      <p className="text-sm text-gray-600">{selectedRecord.year || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Section</label>
-                      <p className="text-sm text-gray-600">{selectedRecord.section || 'N/A'}</p>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-            <div className="flex justify-end gap-2 p-6 pt-0">
-              <Button variant="outline" onClick={() => setShowDetailsModal(false)}>
-                Close
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+          <DialogFooter className="sm:justify-end">
+            <Button variant="ghost" onClick={() => setEditRecord(null)} disabled={isSaving}>Cancel</Button>
+            <Button onClick={handleSaveAttendance} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Confirm Change"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-export default AttendanceManagement;
+}
