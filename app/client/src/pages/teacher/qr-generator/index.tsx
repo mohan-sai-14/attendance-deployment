@@ -218,15 +218,6 @@ export default function QRGenerator() {
       console.log('Local expiration time:', localExpirationDate.toString());
       console.log('Local timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
 
-      // Convert to string for QR code
-      const qrString = JSON.stringify(qrData);
-      setQrValue(qrString);
-
-      // Generate QR code URL for download
-      const { generateQRCodeDataURL } = await import('@/lib/qrcode-utils');
-      const url = await generateQRCodeDataURL(qrString);
-      setQrUrl(url);
-
       // Set expiry time for countdown (use local time for display)
       setExpiryTime(localExpirationDate);
       
@@ -244,7 +235,7 @@ export default function QRGenerator() {
         date: formattedDate,
         time: formattedTime,
         duration: data.duration,
-        qr_code: qrString,
+        qr_code: '{}', // Placeholder, will be updated below
         expires_at: localExpirationDate.toISOString(), // Send as ISO string, backend will handle conversion
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, // Include timezone
         is_active: true,
@@ -257,7 +248,7 @@ export default function QRGenerator() {
       
       console.log("Inserting session with data:", sessionData);
 
-      // Insert session data into Supabase
+      // First, insert session data into Supabase WITHOUT the QR code to get the numeric ID
       const { data: insertedData, error } = await supabase
         .from('sessions')
         .insert([sessionData])
@@ -267,20 +258,41 @@ export default function QRGenerator() {
       if (error) {
         console.error("Supabase error:", error);
         let errorMessage = `Database error: ${error.message}`;
-        
-        // Provide more user-friendly error messages for common issues
         if (error.message.includes('timezone')) {
           errorMessage = "Error with timezone information. Please try again.";
         } else if (error.message.includes('expires_at')) {
           errorMessage = "Invalid expiration time. Please select a future time.";
         }
-        
         throw new Error(errorMessage);
       }
 
+      // Use the actual database-assigned numeric ID
+      const dbId = insertedData.id.toString();
+      
+      const finalQrData = {
+        ...qrData,
+        sessionId: dbId
+      };
+
+      // Generate final QR code with the correct numeric ID
+      const finalQrString = JSON.stringify(finalQrData);
+      
+      // Update state with final values
+      setQrValue(finalQrString);
+      
+      const { generateQRCodeDataURL } = await import('@/lib/qrcode-utils');
+      const finalUrl = await generateQRCodeDataURL(finalQrString);
+      setQrUrl(finalUrl);
+
+      // Now update the database record with the final QR string
+      await supabase
+        .from('sessions')
+        .update({ qr_code: finalQrString })
+        .eq('id', insertedData.id);
+
       // Update UI state
       setSessionSaved(true);
-      refetchSessions();
+      await refetchSessions();
 
       // Show success message with local time
       toast({

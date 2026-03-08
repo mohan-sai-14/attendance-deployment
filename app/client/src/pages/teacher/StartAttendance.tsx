@@ -378,7 +378,6 @@ export default function StartAttendance() {
          }
 
          const now = new Date();
-         const sessionId = uuidv4();
          const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
          const localExpirationDate = new Date(data.expiresAt);
@@ -389,44 +388,19 @@ export default function StartAttendance() {
             throw new Error('Expiration time must be in the future.');
          }
 
-         const qrData = {
-            sessionId,
-            name: data.name,
-            date: data.date,
-            time: data.time,
-            duration: data.duration,
-            generatedAt: now.toISOString(),
-            expiresAfter: data.duration,
-            expiresAt: localExpirationDate.toISOString(),
-            timezone
-         };
-
          // Generate a secret for rotating QR tokens
          const secret = generateSecret();
          setQrSecret(secret);
-         sessionIdRef.current = sessionId;
 
-         // Generate the first rotating token
-         const qrString = await generateQRToken(sessionId, secret, {
-            name: data.name,
-            date: data.date,
-            time: data.time,
-            duration: data.duration,
-         });
-
-         // Also keep the static data for the qr_code column (backwards compat)
-         const staticQrString = JSON.stringify(qrData);
-
-         // Create session record
+         // First, create the session record WITHOUT the QR token to get the DB-assigned ID
          const { data: newSession, error: sessionError } = await supabase
             .from('sessions')
             .insert({
-               id: sessionId,
                name: data.name,
                date: data.date,
                time: data.time,
                duration: data.duration,
-               qr_code: staticQrString,
+               qr_code: '{}', // Placeholder, will be updated below
                qr_secret: secret,
                expires_at: localExpirationDate.toISOString(),
                timezone,
@@ -442,6 +416,38 @@ export default function StartAttendance() {
             .single();
 
          if (sessionError) throw sessionError;
+         
+         // Use the database-assigned numeric ID
+         const dbSessionId = newSession.id.toString();
+         sessionIdRef.current = dbSessionId;
+
+         const qrData = {
+            sessionId: dbSessionId,
+            name: data.name,
+            date: data.date,
+            time: data.time,
+            duration: data.duration,
+            generatedAt: now.toISOString(),
+            expiresAfter: data.duration,
+            expiresAt: localExpirationDate.toISOString(),
+            timezone
+         };
+
+         // Generate the true rotating token with the correct ID
+         const qrString = await generateQRToken(dbSessionId, secret, {
+            name: data.name,
+            date: data.date,
+            time: data.time,
+            duration: data.duration,
+         });
+
+         const staticQrString = JSON.stringify(qrData);
+
+         // Update the session in DB with the correct QR JSON
+         await supabase
+            .from('sessions')
+            .update({ qr_code: staticQrString })
+            .eq('id', newSession.id);
 
          setQrValue(qrString);
          setExpiryTime(localExpirationDate);

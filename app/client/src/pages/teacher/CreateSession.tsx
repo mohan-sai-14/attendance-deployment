@@ -202,17 +202,49 @@ export default function QRGenerator() {
       setExpiryTime(localExpirationDate);
       setSessionSaved(true);
 
-      // Save to database
-      const { error } = await supabase
+      // First, save to database WITHOUT the QR token to get the DB-assigned numeric ID
+      const { data: newSession, error: insertError } = await supabase
         .from('sessions')
         .insert([{
-          ...qrData,
-          qr_code: qrString,
+          name: qrData.name,
+          date: qrData.date,
+          time: qrData.time,
+          duration: qrData.duration,
+          expires_at: qrData.expiresAt,
+          timezone: qrData.timezone,
+          qr_code: '{}', // Placeholder
           is_active: true
         }])
+        .select()
         .single();
 
-      if (error) throw error;
+      if (insertError) throw insertError;
+
+      // Use the actual database-assigned numeric ID
+      const dbId = newSession.id.toString();
+      
+      const finalQrData: QRCodeData = {
+        ...qrData,
+        sessionId: dbId
+      };
+
+      // Generate final QR code with the correct numeric ID
+      const qrString = JSON.stringify(finalQrData);
+      const qrUrl = await generateQRCode(qrString);
+      
+      // Update state
+      setQrValue(qrString);
+      setQrUrl(qrUrl);
+      setExpiryTime(localExpirationDate);
+      setSessionSaved(true);
+
+      // Update the record in DB with the final QR JSON
+      const { error: updateError } = await supabase
+        .from('sessions')
+        .update({ qr_code: qrString })
+        .eq('id', newSession.id);
+
+      if (updateError) throw updateError;
 
       // Refresh sessions list
       await refetchSessions();
