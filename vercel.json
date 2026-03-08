@@ -1,12 +1,12 @@
 {
   "version": 2,
-  "buildCommand": "cd app/client && npm run build",
+  "buildCommand": "npm run build --prefix app/client",
   "outputDirectory": "app/client/dist",
-  "installCommand": "cd app/client && npm install",
+  "installCommand": "npm install --prefix app/client",
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "https://attendance-backend-00pc.onrender.com/api/$1"
+      "dest": "/api/$1"
     },
     {
       "handle": "filesystem"
