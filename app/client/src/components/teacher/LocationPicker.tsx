@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-geosearch/dist/geosearch.css';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { MapPin } from 'lucide-react';
 import L from 'leaflet';
+import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 
 // Fix leaflet icon paths in Vite
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -21,6 +23,55 @@ L.Icon.Default.mergeOptions({
 interface LocationPickerProps {
   onLocationSelect: (lat: number, lng: number) => void;
   defaultLocation?: { lat: number; lng: number } | null;
+}
+
+// Subcomponent to handle Map invalidation when Dialog opens (fixes blank map on desktop)
+function MapEffect() {
+  const map = useMap();
+  useEffect(() => {
+    // Wait a brief moment for the dialog animation to finish, then resize map
+    const timeout = setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+    return () => clearTimeout(timeout);
+  }, [map]);
+  return null;
+}
+
+// Subcomponent to handle the GeoSearch Bar
+function SearchField({ setPosition }: { setPosition: (pos: L.LatLng) => void }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const provider = new OpenStreetMapProvider();
+    const searchControl = new (GeoSearchControl as any)({
+      provider: provider,
+      style: 'bar',
+      showMarker: false,
+      showPopup: false,
+      autoClose: true,
+      retainZoomLevel: false,
+      animateZoom: true,
+      keepResult: false,
+      searchLabel: 'Enter address or city...'
+    });
+
+    map.addControl(searchControl);
+
+    map.on('geosearch/showlocation', (result: any) => {
+      if (result && result.location) {
+        const { x, y } = result.location;
+        setPosition(new L.LatLng(y, x));
+      }
+    });
+
+    return () => {
+      map.removeControl(searchControl);
+      map.off('geosearch/showlocation');
+    };
+  }, [map, setPosition]);
+
+  return null;
 }
 
 function LocationMarker({ position, setPosition }: { position: L.LatLng | null, setPosition: (pos: L.LatLng) => void }) {
@@ -70,16 +121,16 @@ export function LocationPicker({ onLocationSelect, defaultLocation }: LocationPi
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-[600px] h-[85vh] sm:h-auto flex flex-col">
+        <DialogContent className="sm:max-w-[700px] h-[90vh] sm:h-[80vh] flex flex-col p-4">
           <DialogHeader>
             <DialogTitle>Select Classroom Location</DialogTitle>
             <DialogDescription>
-              Click on the map to place the pin at your exact current location. This pin will be used as the center for the 150m student radius check.
+              Search for your college/building or click on the map to drop a pin. This exact location restricts where students can scan the QR code.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 min-h-[350px] w-full rounded-md overflow-hidden border">
-            {open && ( // Only render map when dialog is open to prevent Leaflet sizing issues
+          <div className="flex-1 w-full rounded-md overflow-hidden border mt-2 relative z-0">
+            {open && ( 
                 <MapContainer 
                   center={initialCenter} 
                   zoom={16} 
@@ -90,6 +141,8 @@ export function LocationPicker({ onLocationSelect, defaultLocation }: LocationPi
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
+                  <MapEffect />
+                  <SearchField setPosition={setPosition} />
                   <LocationMarker position={position} setPosition={setPosition} />
                 </MapContainer>
             )}
