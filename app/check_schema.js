@@ -11,28 +11,16 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABAS
 async function checkSchema() {
   const supabase = createClient(supabaseUrl, supabaseKey);
   
-  console.log('Checking "users" table columns...');
-  const { data: usersData, error: usersError } = await supabase
-    .from('users')
+  console.log('Checking "attendance" table columns...');
+  const { data: attData, error: attError } = await supabase
+    .from('attendance')
     .select('*')
     .limit(1);
     
-  if (usersError) {
-    console.error('Error fetching from users table:', usersError);
-  } else if (usersData && usersData.length > 0) {
-    console.log('Columns found in "users" table:', Object.keys(usersData[0]));
-  }
-  
-  console.log('Checking if "face_embeddings" table exists...');
-  const { data: feData, error: feError } = await supabase
-    .from('face_embeddings')
-    .select('*')
-    .limit(1);
-    
-  if (feError) {
-    console.log('"face_embeddings" table error (might not exist):', feError.message);
-  } else {
-    console.log('"face_embeddings" table exists. Columns:', feData.length > 0 ? Object.keys(feData[0]) : 'No rows to check columns');
+  if (attError) {
+    console.error('Error fetching from attendance table:', attError);
+  } else if (attData && attData.length > 0) {
+    console.log('Columns found in "attendance" table:', Object.keys(attData[0]));
   }
 }
 
