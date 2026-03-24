@@ -177,7 +177,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         });
       }
       
-      const { user_id: username, password } = loginData;
+      const { username, password } = loginData as any;
       
       passport.authenticate("local", (err: any, user: any, info: any) => {
         if (err) {

@@ -72,6 +72,6 @@ export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
 export type Attendance = typeof attendance.$inferSelect;
 
 export const loginSchema = z.object({
-  user_id: z.string().min(1, "User ID is required"),
+  username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
