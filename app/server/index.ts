@@ -1,21 +1,34 @@
+const dotenv = require('dotenv');
+const path = require('path');
+
+// Load environment variables FIRST, before anything reads process.env
+const envPath = path.resolve(__dirname, '../../.env');
+dotenv.config({ path: envPath });
+dotenv.config(); // Also check cwd .env
+
 const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
-const dotenv = require('dotenv');
-const path = require('path');
 const { registerRoutes } = require('./routes');
 const { storage } = require('./src/storage');
-const pgSession = require('connect-pg-simple')(session);
-const { Pool } = require('pg');
-
-const pgPool = new Pool({
-  connectionString: process.env.DATABASE_URL
-});
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
+
+// Build session store: use PostgreSQL if DATABASE_URL exists, otherwise MemoryStore
+let sessionStore: any = undefined; // MemoryStore (default)
+if (process.env.DATABASE_URL) {
+  try {
+    const pgSession = require('connect-pg-simple')(session);
+    const { Pool } = require('pg');
+    const pgPool = new Pool({ connectionString: process.env.DATABASE_URL });
+    sessionStore = new pgSession({ pool: pgPool, tableName: 'session' });
+    console.log('Using PostgreSQL session store');
+  } catch (err) {
+    console.warn('Failed to initialize pg session store, falling back to MemoryStore:', err);
+  }
+} else {
+  console.log('No DATABASE_URL found — using MemoryStore (dev mode)');
+}
 
 // CORS configuration - Temporarily allow all origins for testing
 const corsOptions = {
@@ -51,24 +64,24 @@ app.use((req: any, res: any, next: any) => {
 // Trust proxy for secure cookies behind proxy
 app.set('trust proxy', 1);
 
-// Persistent Session configuration using PostgreSQL
-app.use(session({
-  store: new pgSession({
-    pool: pgPool,
-    tableName: 'session' // Optional but standard
-  }),
+// Session configuration
+const sessionConfig: any = {
   secret: process.env.SESSION_SECRET || 'd8e015a7f9e3b2c4a1d6e9f8b7c0a3d2',
   resave: false,
   saveUninitialized: false,
-  proxy: true, // Required for Cloudflare Tunnel
+  proxy: true,
   cookie: {
-    secure: process.env.NODE_ENV === 'production' ? true : 'auto', // 'auto' in development
+    secure: process.env.NODE_ENV === 'production' ? true : false,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined
   }
-}));
+};
+if (sessionStore) {
+  sessionConfig.store = sessionStore;
+}
+app.use(session(sessionConfig));
 
 // API routes
 registerRoutes(app);
