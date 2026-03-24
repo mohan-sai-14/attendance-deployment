@@ -162,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(message);
       }
 
-      const sessionUser = result?.user ?? result;
+      const sessionUser = result?.data ?? result?.user ?? result;
 
       if (!sessionUser) {
         throw new Error('Unable to retrieve user details from login response');
