@@ -939,7 +939,9 @@ const StudentScannerPage: React.FC = () => {
     queryFn: async () => {
       if (!activeSession?.id) return null;
       try {
-        const response = await axios.get(getApiUrl(`/api/sessions/code/${activeSession.id}`));
+        const response = await axios.get(getApiUrl(`/api/sessions/code/${activeSession.id}`), {
+          withCredentials: true
+        });
         return response.data.attendanceCode;
       } catch (error) {
         console.error('Error fetching session code:', error);

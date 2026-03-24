@@ -175,7 +175,9 @@ export default function Attendance() {
       const { data: attData, error: attError } = await supabase
         .from('attendance')
         .select('*')
-        .in('username', classStudents.map(s => s.username))
+        .eq('program', selectedClass.program)
+        .eq('year', selectedClass.year)
+        .eq('section', selectedClass.section)
         .eq('date', dateString);
 
       if (attError) console.error("Attendance fetch error:", attError);
@@ -351,13 +353,29 @@ export default function Attendance() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {PERIODS_CONFIG.map((period) => {
               const ttSlot = classTimetable.find(tt => tt.start_time.startsWith(period.start));
-              const periodAttendance = classAttendance.filter(a => a.period_number === period.period_number);
+              const periodAttendance = classAttendance.filter(a => 
+                a.period_number === period.period_number || 
+                (ttSlot && a.session_name?.toLowerCase().includes(ttSlot.subject_name.toLowerCase()))
+              );
 
               const isTaken = periodAttendance.length > 0;
-              const presentCount = periodAttendance.filter(a => a.status === 'present').length;
-              const percentage = isTaken ? Math.round((presentCount / classStudents.length) * 100) : 0; // against total class students
+              const presentCount = periodAttendance.filter(a => a.status?.toLowerCase() === 'present').length;
+              const percentage = isTaken ? Math.round((presentCount / (classStudents.length || 1)) * 100) : 0;
 
-              const isActive = !isTaken && selectedDate.toDateString() === new Date().toDateString();
+              const now = new Date();
+              const [startHour, startMin] = period.start.split(':').map(Number);
+              const [endHour, endMin] = period.end.split(':').map(Number);
+              
+              const periodStart = new Date(selectedDate);
+              periodStart.setHours(startHour, startMin, 0);
+              
+              const periodEnd = new Date(selectedDate);
+              periodEnd.setHours(endHour, endMin, 0);
+
+              const isCurrentDate = selectedDate.toDateString() === now.toDateString();
+              const isActive = isCurrentDate && now >= periodStart && now <= periodEnd;
+              const isMissed = isCurrentDate && now > periodEnd && !isTaken;
+              const isFuture = isCurrentDate && now < periodStart;
               const locked = isPeriodLocked(period);
 
               return (
@@ -383,11 +401,15 @@ export default function Attendance() {
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-muted-foreground">Status</span>
                           {isTaken ? (
-                            <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20">Attendance Taken</Badge>
+                            <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20">Taken</Badge>
                           ) : isActive ? (
-                            <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20">Active Now</Badge>
+                            <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 border-blue-500/20 animate-pulse">Active</Badge>
+                          ) : isMissed ? (
+                            <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-500/20">Missed</Badge>
+                          ) : isFuture && isCurrentDate ? (
+                            <Badge variant="outline" className="text-blue-500 border-blue-500/20">Scheduled</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-muted-foreground border-dashed">Not Taken</Badge>
+                            <Badge variant="outline" className="text-muted-foreground border-dashed">Not Started</Badge>
                           )}
                         </div>
                         {isTaken && (

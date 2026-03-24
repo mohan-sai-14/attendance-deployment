@@ -248,7 +248,7 @@ export default function StudentDashboard() {
       const { data: leaveData } = await supabase
         .from('leave_requests')
         .select('*')
-        .eq('username', user.email)
+        .eq('username', user.username)
         .order('updated_at', { ascending: false })
         .limit(10);
       setLeaveRequests(leaveData || []);
