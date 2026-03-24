@@ -140,7 +140,7 @@ const StudentScannerPage: React.FC = () => {
           .select('*')
           .in('class_id', classIds)
           .eq('is_active', true)
-          .order('check_in_time', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(1);
         
         if (error) {
