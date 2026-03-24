@@ -441,7 +441,7 @@ export default function AttendanceManagement() {
                       <tbody className="divide-y divide-border/40">
                         {classStudents.map((student) => {
                           const record = periodAttendance.find(a => a.username === student.username);
-                          const status = record?.status || "unmarked";
+                          const status = record?.status?.toLowerCase() || "unmarked";
 
                           return (
                             <tr key={student.id} className="hover:bg-muted/30 transition-colors">

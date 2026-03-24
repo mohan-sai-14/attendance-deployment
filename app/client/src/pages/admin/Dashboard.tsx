@@ -72,8 +72,8 @@ export default function AdminDashboard() {
       const sessions: RecentSession[] = [];
 
       for (const [key, records] of Object.entries(groups)) {
-        const presentCount = records.filter((r: any) => r.status === 'present').length;
-        const absentCount = records.filter((r: any) => r.status === 'absent').length;
+        const presentCount = records.filter((r: any) => r.status?.toLowerCase() === 'present').length;
+        const absentCount = records.filter((r: any) => r.status?.toLowerCase() === 'absent').length;
         const totalStudents = presentCount + absentCount;
         const percentage = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
 
