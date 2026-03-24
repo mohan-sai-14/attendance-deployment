@@ -80,8 +80,28 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.status(204).end();
   });
 
-  // Add root route
-  app.get('/', (req: Request, res: Response) => {
+  // Session check endpoint
+  app.get('/api/me', async (req: Request, res: Response) => {
+    const sess = (req as any).session;
+    if (!sess || !sess.userId) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+    try {
+      const { data: user, error } = await storage.supabase
+        .from('users')
+        .select('id, username, name, email, role, status')
+        .eq('id', sess.userId)
+        .single();
+      if (error || !user) {
+        return res.status(401).json({ success: false, message: 'User not found' });
+      }
+      return res.json(user);
+    } catch (err) {
+      return res.status(500).json({ success: false, message: 'Server error' });
+    }
+  });
+
+  app.get('/api', (req: Request, res: Response) => {
     res.json({ 
       message: 'Attendance Backend API', 
       version: '1.0.0',
@@ -597,15 +617,64 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Face Enrollment Route (Admin Only)
+  app.post('/api/enroll-face', isAuthenticated, isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { studentId, face_embeddings, face_images_count, face_quality_score } = req.body;
+      
+      if (!studentId || !face_embeddings) {
+        return res.status(400).json({ success: false, message: 'studentId and face_embeddings are required' });
+      }
+
+      console.log(`Enrolling face for student ID: ${studentId}`);
+      
+      const { data, error } = await storage.supabase
+        .from('users')
+        .update({
+          face_embeddings,
+          face_enrollment_status: 'enrolled',
+          face_enrollment_date: new Date().toISOString(),
+          face_images_count: face_images_count || 0,
+          face_quality_score: face_quality_score || 0
+        })
+        .eq('id', studentId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Database error during face enrollment:', error);
+        throw error;
+      }
+      
+      console.log(`Face enrollment successful for student ID: ${studentId}`);
+      res.json({ success: true, message: 'Face enrolled successfully', user: data });
+    } catch (error: any) {
+      console.error('Face enrollment exception:', error);
+      res.status(500).json({ success: false, message: error.message || 'Enrollment failed' });
+    }
+  });
+
   // New strict Face Verification route
   app.post('/api/verify-face', isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { sessionId, faceDescriptor, studentLat, studentLng, localTimestamp, dateString } = req.body;
-      const user = (req as any).session.user || req.user;
+      const sess = (req as any).session;
       const studentIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress) as string;
       
       if (!sessionId || !faceDescriptor || !Array.isArray(faceDescriptor)) {
         return res.status(400).json({ success: false, message: 'Missing required fields: sessionId and faceDescriptor are required' });
+      }
+
+      // Resolve the full user from session.userId
+      const { data: userProfile, error: profileError } = await storage.supabase
+        .from('users')
+        .select('*')
+        .eq('id', sess.userId)
+        .single();
+
+      if (profileError || !userProfile) {
+        console.error('User lookup failed for session userId:', sess.userId, profileError);
+        return res.status(404).json({ success: false, message: 'User not found. Please re-login.' });
       }
       
       const session = await storage.getSession(sessionId);
@@ -629,32 +698,40 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
         locationVerified = true;
       }
-      
-      // Using Supabase client to fetch raw embeddings natively
-      const { data: userProfile, error: profileError } = await storage.supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single();
         
-      if (profileError || !userProfile || !userProfile.face_embeddings) {
-        return res.status(404).json({ success: false, message: 'Face data not found. Please complete enrollment.' });
+      if (!userProfile.face_embeddings || !Array.isArray(userProfile.face_embeddings)) {
+        console.warn(`Face embeddings missing for user ID: ${sess.userId} (${userProfile.username})`);
+        return res.status(404).json({ success: false, message: 'Face data not found correctly in profile. Please re-enroll.' });
       }
       
-      // Euclidean distance mapping 
+      // Calculate Euclidean distance (standard for face-api.js)
       const euclideanDistance = Math.sqrt(
-        faceDescriptor.reduce((sum: number, val: number, i: number) => sum + Math.pow(val - userProfile.face_embeddings[i], 2), 0)
+        faceDescriptor.reduce((sum: number, val: number, i: number) => {
+          const diff = val - userProfile.face_embeddings[i];
+          return sum + (diff * diff);
+        }, 0)
       );
+      
+      // Typical face-api.js threshold for matching is 0.6 distance (LESS is better)
+      // Here we map it back to similarity: similarity = 1 - distance
       const similarity = 1 - euclideanDistance;
-      const SIMILARITY_THRESHOLD = 0.6;
+      const SIMILARITY_THRESHOLD = 0.5; // (means distance 0.5, more lenient than 0.4)
       const isMatch = similarity >= SIMILARITY_THRESHOLD;
       
+      console.log(`Face match attempt for ${userProfile.username}: Distance=${euclideanDistance.toFixed(4)}, Similarity=${similarity.toFixed(4)}, Match=${isMatch}`);
+      
       if (!isMatch) {
-        return res.json({ success: false, message: 'Face verification failed.', similarity, threshold: SIMILARITY_THRESHOLD });
+        return res.json({ 
+          success: false, 
+          message: 'Face verification failed: no match detected.', 
+          debug: `Sim: ${similarity.toFixed(2)} (Thresh: ${SIMILARITY_THRESHOLD})`,
+          similarity, 
+          threshold: SIMILARITY_THRESHOLD 
+        });
       }
 
       // Record logic bypasses native Drizzle markAttendance to include rich face stats
-      const existingAttendance = await storage.getAttendanceBySessionAndUser(sessionId, user.id);
+      const existingAttendance = await storage.getAttendanceBySessionAndUser(sessionId, userProfile.username);
       if (existingAttendance) {
          return res.json({ success: true, message: 'Attendance already recorded' });
       }
@@ -663,7 +740,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const networkMismatch = (session as any).teacher_ip && studentIp ? (session as any).teacher_ip !== studentIp : false;
 
       const attendanceData = {
-        user_id: user.id,
+        username: userProfile.username,
         session_id: sessionId,
         check_in_time: localTimestamp || new Date().toISOString(),
         status: 'present',

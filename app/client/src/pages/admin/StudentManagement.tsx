@@ -556,21 +556,26 @@ export default function StudentManagement() {
     if (!selectedStudent || faceEmbeddings.length === 0) return;
 
     try {
-      // Calculate average embedding
       const avgEmbedding = calculateAverageEmbedding(faceEmbeddings);
 
-      const { error } = await supabase
-        .from('users')
-        .update({
+      const response = await fetch('/api/enroll-face', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentId: selectedStudent.id,
           face_embeddings: avgEmbedding,
-          face_enrollment_status: 'enrolled',
-          face_enrollment_date: new Date().toISOString(),
           face_images_count: capturedImages.length,
           face_quality_score: capturedImages.reduce((sum, img) => sum + img.quality_score, 0) / capturedImages.length
-        })
-        .eq('id', selectedStudent.id);
+        }),
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Failed to save face embeddings');
+      }
 
       toast({
         title: "Success",
