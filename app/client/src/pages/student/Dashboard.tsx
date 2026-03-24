@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalendarUI } from "@/components/ui/calendar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate, Link } from 'react-router-dom';
 import { CheckCircle, QrCode, AlertCircle, Clock, Bell, XCircle, FileText, TrendingUp, Award, BookOpen, Home } from 'lucide-react';
@@ -56,6 +55,8 @@ export default function StudentDashboard() {
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
   const [activeSessionChecked, setActiveSessionChecked] = useState<{[key: string]: boolean}>({});
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [studentClassId, setStudentClassId] = useState<string | null>(null);
   const profileRef = React.useRef<any>(null);
 
   useEffect(() => {
@@ -69,10 +70,11 @@ export default function StudentDashboard() {
     const intervalId = setInterval(() => {
       fetchActiveSessions();
       refreshAttendanceRecords();
+      fetchNotifications(studentClassId);
     }, 10000); // Refresh every 10 seconds
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [studentClassId]);
 
   // Check active sessions for attendance status
   useEffect(() => {
@@ -124,6 +126,32 @@ export default function StudentDashboard() {
       setTodaySessions(activeSessionsData || []);
     } catch (error) {
       console.error('Error refreshing active sessions:', error);
+    }
+  };
+
+  const fetchNotifications = async (classId?: string | null) => {
+    try {
+      let query = supabase
+        .from('notifications')
+        .select('*')
+        .gt('expiry_time', new Date().toISOString())
+        .order('created_at', { ascending: false });
+      
+      if (classId) {
+        query = query.or(`class_id.is.null,class_id.eq.${classId}`);
+      } else {
+        query = query.is('class_id', null);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching notifications:', error);
+      } else {
+        setNotifications(data || []);
+      }
+    } catch (error) {
+      console.error('Error refreshing notifications:', error);
     }
   };
 
@@ -253,6 +281,23 @@ export default function StudentDashboard() {
         .limit(10);
       setLeaveRequests(leaveData || []);
 
+      // Fetch student class_id for notifications
+      if (profile) {
+        const { data: classData } = await supabase
+          .from('classes')
+          .select('id')
+          .eq('department', profile.department)
+          .eq('program', profile.program)
+          .eq('year', profile.year)
+          .eq('section', profile.section)
+          .single();
+        
+        if (classData) {
+          setStudentClassId(classData.id);
+          fetchNotifications(classData.id);
+        }
+      }
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -337,26 +382,6 @@ export default function StudentDashboard() {
     const needed = Math.max(0, Math.ceil(3 * t - 4 * p));
     return needed;
   }, [stats.presentCount, stats.totalSessions]);
-
-  const calendarModifiers = useMemo(() => {
-    const dateMap = new Map<string, Set<string>>();
-    attendanceRecords.forEach((r) => {
-      if (!dateMap.has(r.date)) dateMap.set(r.date, new Set());
-      dateMap.get(r.date)!.add(r.status);
-    });
-    const present: Date[] = [];
-    const absent: Date[] = [];
-    const od: Date[] = [];
-    const ml: Date[] = [];
-    dateMap.forEach((statuses, dateStr) => {
-      if (statuses.has('present')) present.push(new Date(dateStr));
-      else if (statuses.has('od')) od.push(new Date(dateStr));
-      else if (statuses.has('ml')) ml.push(new Date(dateStr));
-      else if (statuses.has('absent')) absent.push(new Date(dateStr));
-    });
-    const holiday = holidays.map(h => new Date(h.date));
-    return { present, absent, od, ml, holiday } as const;
-  }, [attendanceRecords, holidays]);
 
   if (loading) {
     return (
@@ -528,112 +553,58 @@ export default function StudentDashboard() {
         </motion.div>
       </div>
 
-    {/* Calendar & Details Grid */}
-    <div id="calendarSection" className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-      {/* Calendar Column */}
-      <Card className="lg:col-span-1 shadow-md border-border/40 bg-gradient-to-b from-background to-background/50">
-        <CardHeader className="pb-3 border-b border-border/40">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <CalendarUI className="h-5 w-5 text-primary opacity-0" />
-            Attendance Calendar
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4 flex flex-col items-center">
-          <div className="mb-4 flex flex-wrap justify-center gap-1.5 text-[10px] w-full max-w-[280px]">
-            <span className="px-1.5 py-0.5 rounded-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">Present</span>
-            <span className="px-1.5 py-0.5 rounded-sm bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400">Absent</span>
-            <span className="px-1.5 py-0.5 rounded-sm bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">Late/OD</span>
-            <span className="px-1.5 py-0.5 rounded-sm bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400">Leave</span>
-          </div>
-          <CalendarUI
-            mode="single"
-            selected={selectedDate}
-            onSelect={setSelectedDate}
-            modifiers={calendarModifiers}
-            modifiersClassNames={{
-              present: 'bg-green-200 text-green-900 dark:bg-green-900 dark:text-green-100 font-bold',
-              absent: 'bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-100 font-bold',
-              od: 'bg-yellow-200 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100 font-bold',
-              late: 'bg-yellow-200 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100 font-bold',
-              ml: 'bg-blue-200 text-blue-900 dark:bg-blue-900 dark:text-blue-100 font-bold',
-              holiday: 'bg-amber-200 text-amber-800 dark:bg-amber-900 dark:text-amber-100 font-bold'
-            }}
-            className="w-full max-w-[300px] border-none p-0"
-          />
-        </CardContent>
-      </Card>
-
-      {/* Day Details Column */}
-      <Card className="lg:col-span-2 shadow-md border-border/40 bg-card">
+    {/* Notifications Section */}
+    <div className="grid grid-cols-1 gap-6 mt-6">
+      <Card className="shadow-md border-border/40 bg-card">
         <CardHeader className="pb-3 border-b border-border/40 flex flex-row items-center justify-between">
-          <CardTitle className="text-lg">
-            {selectedDate ? selectedDate.toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'short', day:'numeric' }) : 'Select a date'}
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Bell className="h-5 w-5 text-primary" />
+            Important Notifications
           </CardTitle>
-          <Button variant="ghost" size="sm" asChild className="hidden sm:flex">
-            <Link to="/student/attendance-history">View Full History</Link>
-          </Button>
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+            {notifications.length} New
+          </Badge>
         </CardHeader>
         <CardContent className="pt-6">
-          {selectedDate && (
-            <div className="space-y-4">
-              {(() => {
-                const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
-                
-                const normalizeDate = (dateStr: string) => {
-                  if (!dateStr) return null;
-                  if (dateStr.includes('T')) return dateStr.split('T')[0];
-                  if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) return dateStr;
-                  if (dateStr.match(/^\d{2}-\d{2}-\d{4}$/)) {
-                    const parts = dateStr.split('-');
-                    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
-                  }
-                  try {
-                    const dateObj = new Date(dateStr);
-                    if (!isNaN(dateObj.getTime())) return dateObj.toISOString().split('T')[0];
-                  } catch (e) {}
-                  return null;
-                };
-
-                const dayAttendance = attendanceRecords.filter(r => normalizeDate(r.date) === selectedDateStr);
-                
-                if (dayAttendance.length === 0) {
-                  return (
-                    <div className="flex flex-col items-center justify-center py-12 text-center h-full min-h-[200px]">
-                      <div className="h-16 w-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
-                        <CalendarUI className="h-8 w-8 text-muted-foreground opacity-50" />
-                      </div>
-                      <h3 className="text-base font-medium text-foreground">No Classes Logged</h3>
-                      <p className="text-sm text-muted-foreground mt-1 max-w-[250px]">
-                        There are no attendance records for this specific date.
-                      </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {notifications.length > 0 ? (
+              notifications.map((notif: any) => (
+                <motion.div
+                  key={notif.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-5 rounded-2xl border border-border/40 bg-gradient-to-br from-background to-muted/30 relative overflow-hidden group hover:shadow-lg transition-all duration-300"
+                >
+                  <div className="absolute top-0 right-0 p-3">
+                    <div className="p-1.5 rounded-full bg-primary/10 text-primary">
+                      <Bell className="h-3 w-3" />
                     </div>
-                  );
-                }
-                
-                return (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {dayAttendance.map(r => (
-                      <div key={r.id} className="flex flex-col border border-border/50 rounded-xl bg-background hover:bg-muted/30 transition-colors overflow-hidden">
-                        <div className={`h-1.5 w-full ${r.status === 'present' ? 'bg-green-500' : r.status === 'absent' ? 'bg-red-500' : 'bg-primary'}`}></div>
-                        <div className="p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-semibold text-sm line-clamp-2 pr-2">{r.session_name}</h4>
-                            <Badge variant="outline" className={`${getStatusColor(r.status)} border-0 text-[10px] px-2 py-0 uppercase tracking-widest shrink-0`}>
-                              {r.status}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center text-xs text-muted-foreground gap-2 mt-3">
-                            <Clock className="h-3 w-3" />
-                            <span>{r.check_in_time ? format(parseISO(r.check_in_time), 'hh:mm a') : 'Time not recorded'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
                   </div>
-                );
-              })()}
-            </div>
-          )}
+                  <div className="mb-3">
+                    <h4 className="font-bold text-base text-foreground pr-8">{notif.title || 'Notification'}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Posted {format(parseISO(notif.created_at), 'MMM dd, h:mm a')}
+                    </p>
+                  </div>
+                  <p className="text-sm text-foreground/80 leading-relaxed mb-4">
+                    {notif.message}
+                  </p>
+                  <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/50 w-fit px-2 py-1 rounded">
+                    <Clock className="h-3 w-3" />
+                    Expires: {format(parseISO(notif.expiry_time), 'MMM dd')}
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              <div className="col-span-full flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+                <div className="h-20 w-20 rounded-full bg-muted/30 flex items-center justify-center mb-4">
+                  <Bell className="h-10 w-10 opacity-20" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground/70">No active notifications</h3>
+                <p className="text-sm max-w-xs mt-2 italic">When admin posts a new message, it will appear here.</p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -70,9 +70,9 @@ export function Sidebar({ isOpen, setIsOpen, userRole }: SidebarProps) {
       href: "/student/scanner",
     },
     {
-      name: "Attendance Reports",
-      icon: FileText,
-      href: "/student/reports",
+      name: "Timetable",
+      icon: Calendar,
+      href: "/student/timetable",
     },
   ];
 

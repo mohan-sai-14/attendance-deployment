@@ -11,9 +11,15 @@ import {
   Loader2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { Bell, Send, Users } from "lucide-react";
 
 // Types
 interface RecentSession {
@@ -33,10 +39,25 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  
+  // Notification form state
+  const [notifTitle, setNotifTitle] = useState("");
+  const [notifMessage, setNotifMessage] = useState("");
+  const [notifExpiry, setNotifExpiry] = useState("");
+  const [notifClassId, setNotifClassId] = useState("all");
+  const [isPosting, setIsPosting] = useState(false);
+  const [classesList, setClassesList] = useState<any[]>([]);
 
   useEffect(() => {
     fetchRecentSessions();
+    fetchClasses();
   }, []);
+
+  const fetchClasses = async () => {
+    const { data } = await supabase.from('classes').select('*').order('program');
+    setClassesList(data || []);
+  };
 
   const fetchRecentSessions = async () => {
     setIsLoading(true);
@@ -318,6 +339,118 @@ export default function AdminDashboard() {
               </div>
             )}
           </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* SECTION 3: POST NOTIFICATION */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.4 }}
+      >
+        <Card className="border-border/40 bg-background/80 backdrop-blur-sm shadow-sm overflow-hidden">
+          <CardHeader className="py-3 px-5 border-b border-border/30">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Bell className="h-4 w-4 text-primary" />
+              Post a New Notification
+            </CardTitle>
+            <CardDescription className="text-xs">
+              This message will be visible to all students until the expiry time.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Notification Title</label>
+                <Input 
+                  placeholder="e.g. Holiday Notice, Exam Update" 
+                  value={notifTitle}
+                  onChange={(e) => setNotifTitle(e.target.value)}
+                  className="bg-background/50"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Users className="h-3 w-3" /> Target Class
+                </label>
+                <Select value={notifClassId} onValueChange={setNotifClassId}>
+                  <SelectTrigger className="bg-background/50">
+                    <SelectValue placeholder="Select target class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Classes</SelectItem>
+                    {classesList.map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id}>
+                        {cls.department} – {cls.program} {cls.year} ({cls.section})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Expiry Time</label>
+                <Input 
+                  type="datetime-local" 
+                  value={notifExpiry}
+                  onChange={(e) => setNotifExpiry(e.target.value)}
+                  className="bg-background/50"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Message Content</label>
+              <Textarea 
+                placeholder="Type your notification message here..." 
+                value={notifMessage}
+                onChange={(e) => setNotifMessage(e.target.value)}
+                rows={3}
+                className="bg-background/50 resize-none"
+              />
+            </div>
+          </CardContent>
+          <CardFooter className="py-3 px-5 border-t border-border/10 bg-muted/20 flex justify-end">
+            <Button 
+              size="sm" 
+              className="gap-2 px-4 font-semibold" 
+              disabled={isPosting || !notifTitle || !notifMessage || !notifExpiry}
+              onClick={async () => {
+                setIsPosting(true);
+                try {
+                  const { error } = await supabase
+                    .from('notifications')
+                    .insert([
+                      { 
+                        title: notifTitle, 
+                        message: notifMessage, 
+                        expiry_time: new Date(notifExpiry).toISOString(),
+                        created_by: user?.username,
+                        class_id: notifClassId === 'all' ? null : notifClassId
+                      }
+                    ]);
+                  
+                  if (error) {
+                    console.error("Supabase insert error:", error);
+                    throw new Error(error.message);
+                  }
+                  
+                  toast.success("Notification posted successfully!");
+                  setNotifTitle("");
+                  setNotifMessage("");
+                  setNotifExpiry("");
+                } catch (error: any) {
+                  console.error("Error posting notification:", error);
+                  toast.error(error.message || "Failed to post notification");
+                } finally {
+                  setIsPosting(false);
+                }
+              }}
+            >
+              {isPosting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Post Notification
+            </Button>
+          </CardFooter>
         </Card>
       </motion.div>
     </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, QrCode, FileText } from 'lucide-react';
+import { Home, QrCode, FileText, Calendar } from 'lucide-react';
 
 const BottomNav: React.FC = () => {
   const location = useLocation();
@@ -50,6 +50,19 @@ const BottomNav: React.FC = () => {
             >
               <FileText className="h-5 w-5 mb-1" />
               <span className="text-xs font-medium">History</span>
+            </button>
+          </Link>
+
+          <Link to="/student/timetable">
+            <button
+              className={`flex flex-col items-center justify-center py-2 px-3 rounded-lg transition-colors ${
+                isActive('/student/timetable')
+                  ? 'bg-accent text-accent-foreground'
+                  : 'hover:bg-accent/50 text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Calendar className="h-5 w-5 mb-1" />
+              <span className="text-xs font-medium">Schedule</span>
             </button>
           </Link>
         </div>
