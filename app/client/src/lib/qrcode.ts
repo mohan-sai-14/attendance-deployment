@@ -99,7 +99,7 @@ export async function generateQRCodeDataURL(qrString: string, size: number = 256
 }
 
 // Mark attendance using QR code
-export async function markAttendanceWithQR(qrContent: string) {
+export async function markAttendanceWithQR(qrContent: string, location?: { lat: number; lng: number }) {
   try {
     // Parse QR code content
     const parsedContent = JSON.parse(qrContent);
@@ -132,10 +132,15 @@ export async function markAttendanceWithQR(qrContent: string) {
       throw new Error('QR code has expired');
     }
     
+    // Compile attendance body to support explicit server geofencing
+    const payload: any = { sessionId: parseInt(parsedContent.sessionId) };
+    if (location) {
+       payload.studentLat = location.lat;
+       payload.studentLng = location.lng;
+    }
+
     // Mark attendance with the current user's information
-    const response = await apiRequest("POST", "/api/attendance", {
-      sessionId: parseInt(parsedContent.sessionId)
-    });
+    const response = await apiRequest("POST", "/api/attendance", payload);
 
     if (!response.ok) {
       const error = await response.json();

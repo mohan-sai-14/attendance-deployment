@@ -415,9 +415,8 @@ class SupabaseStorage {
         console.log(`Using default 24h expiry: ${expiresAt.toISOString()}`);
       }
 
-      // Ensure the time is stored in UTC
-      const utcExpiresAt = new Date(expiresAt.getTime() - (expiresAt.getTimezoneOffset() * 60000));
-      console.log(`Storing expiry time in UTC: ${utcExpiresAt.toISOString()}`);
+      // Ensure the time is stored in UTC without mathematical offset mutation
+      console.log(`Storing expiry time in UTC: ${expiresAt.toISOString()}`);
 
       // Create new session
       const { data, error } = await supabase

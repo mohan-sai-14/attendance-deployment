@@ -866,60 +866,29 @@ const StudentScannerPage: React.FC = () => {
         return;
       }
 
-      // Face verified! Now mark attendance
+      // Face verified locally! Now mark attendance via secure backend endpoint
       const { sessionData, dateString, localTimestamp, studentLocation } = scannedSessionData;
       
-      // Calculate distance if both locations are available
-      let distanceFromTeacher = null;
-      let locationVerified = false;
-      
-      if (studentLocation && sessionData.teacher_lat && sessionData.teacher_lng) {
-        const teacherCoords = {
-          latitude: sessionData.teacher_lat,
-          longitude: sessionData.teacher_lng
-        };
-        const studentCoords = {
-          latitude: studentLocation.lat,
-          longitude: studentLocation.lng
-        };
-        const locationCheck = verifyLocation(studentCoords, teacherCoords, sessionData.allowed_radius_meters || 150);
-        distanceFromTeacher = locationCheck.distance;
-        locationVerified = locationCheck.isWithinRange;
-      }
-      
-      const attendanceRecord = {
-        username: user.username,
-        enroll_no: userProfile.roll_no || user.username,
-        registered_no: userProfile.registered_no || userProfile.roll_no || user.username,
-        program: userProfile.program || '',
-        department: userProfile.department || '',
-        section: userProfile.section || '',
-        year: userProfile.year || '',
-        session_id: sessionData.id,
-        check_in_time: localTimestamp,
-        date: dateString,
-        status: 'present',
-        name: userProfile.name || user.name || 'Student',
-        session_name: sessionData.name,
-        face_verified: true,
-        verification_confidence: similarity,
-        student_lat: studentLocation?.lat,
-        student_lng: studentLocation?.lng,
-        distance_from_teacher_meters: distanceFromTeacher,
-        location_verified: locationVerified
-      };
-
-      const { error: insertError } = await supabase
-        .from('attendance')
-        .insert(attendanceRecord);
-
-      if (insertError) {
-        console.error("Error recording attendance:", insertError);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to record attendance. Please try again."
+      try {
+        const response = await axios.post(getApiUrl('/api/verify-face'), {
+          sessionId: sessionData.id,
+          faceDescriptor: capturedEmbedding,
+          studentLat: studentLocation?.lat,
+          studentLng: studentLocation?.lng,
+          localTimestamp: localTimestamp,
+          dateString: dateString
+        }, {
+          withCredentials: true // To ensure session cookie is sent correctly
         });
+        
+        if (!response.data.success) {
+          toast({ variant: "destructive", title: "Verification Failed", description: response.data.message });
+          setIsVerifying(false);
+          return;
+        }
+      } catch (err: any) {
+        console.error("Backend Error recording attendance:", err);
+        toast({ variant: "destructive", title: "Error", description: err.response?.data?.message || "Failed to record attendance securely via the server." });
         setIsVerifying(false);
         return;
       }

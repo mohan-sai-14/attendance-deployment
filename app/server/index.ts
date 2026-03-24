@@ -3,8 +3,14 @@ const session = require('express-session');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-const routes = require('./src/routes');
+const { registerRoutes } = require('./routes');
 const { storage } = require('./src/storage');
+const pgSession = require('connect-pg-simple')(session);
+const { Pool } = require('pg');
+
+const pgPool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
 
 // Load environment variables
 dotenv.config();
@@ -30,7 +36,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Add security headers
-app.use((req, res, next) => {
+app.use((req: any, res: any, next: any) => {
   // Content Security Policy
   res.setHeader(
     'Content-Security-Policy',
@@ -45,8 +51,12 @@ app.use((req, res, next) => {
 // Trust proxy for secure cookies behind proxy
 app.set('trust proxy', 1);
 
-// Session configuration
+// Persistent Session configuration using PostgreSQL
 app.use(session({
+  store: new pgSession({
+    pool: pgPool,
+    tableName: 'session' // Optional but standard
+  }),
   secret: process.env.SESSION_SECRET || 'd8e015a7f9e3b2c4a1d6e9f8b7c0a3d2',
   resave: false,
   saveUninitialized: false,
@@ -61,7 +71,7 @@ app.use(session({
 }));
 
 // API routes
-app.use('/api', routes);
+registerRoutes(app);
 
 // Serve static files from client build directory if available
 const clientBuildPath = path.join(__dirname, '../client/dist');
@@ -87,7 +97,7 @@ app.get('*', (req, res) => {
 });
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, req: any, res: any, next: any) => {
   console.error('Error:', err);
   res.status(500).json({ 
     error: 'Internal server error',

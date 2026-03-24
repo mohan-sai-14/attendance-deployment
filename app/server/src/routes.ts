@@ -45,100 +45,133 @@ const isAdmin = [
 // Helper function to calculate cosine similarity between two vectors
 const cosineSimilarity = (vecA: number[], vecB: number[]): number => {
   if (vecA.length !== vecB.length) return 0;
-  
   const dotProduct = vecA.reduce((sum, val, i) => sum + val * vecB[i], 0);
   const magnitudeA = Math.sqrt(vecA.reduce((sum, val) => sum + val * val, 0));
   const magnitudeB = Math.sqrt(vecB.reduce((sum, val) => sum + val * val, 0));
-  
   if (magnitudeA === 0 || magnitudeB === 0) return 0;
   return dotProduct / (magnitudeA * magnitudeB);
+};
+
+// Helper function to calculate distance in meters (Haversine)
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371e3; // meters
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
 };
 
 // Face verification endpoint
 router.post('/verify-face', isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const { sessionId, faceDescriptor } = req.body;
-    const userId = (req as any).session.user?.id;
-    const userRole = (req as any).session.user?.role;
+    const { sessionId, faceDescriptor, studentLat, studentLng, localTimestamp, dateString } = req.body;
+    const user = (req as any).session.user;
     
     if (!sessionId || !faceDescriptor || !Array.isArray(faceDescriptor)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Missing required fields: sessionId and faceDescriptor are required' 
-      });
+      return res.status(400).json({ success: false, message: 'Missing required fields: sessionId and faceDescriptor are required' });
     }
     
-    // Get the session
-    const session = await storage.getSession(sessionId);
-    if (!session) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Session not found' 
-      });
-    }
-    
-    // Get student's face data
-    const { data: studentFace, error: faceError } = await storage.supabase
-      .from('student_faces')
+    // Get the session directly using storage.supabase
+    const { data: session, error: sessionError } = await storage.supabase
+      .from('sessions')
       .select('*')
-      .eq('student_id', userId)
+      .eq('id', sessionId)
       .single();
+    if (sessionError || !session) return res.status(404).json({ success: false, message: 'Session not found' });
     
-    if (faceError || !studentFace) {
-      console.error('Error fetching student face data:', faceError);
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Face data not found. Please contact an administrator for enrollment.' 
-      });
+    if (!session.is_active) {
+      return res.status(403).json({ success: false, message: 'Session is no longer active' });
     }
     
-    // Calculate similarity score
-    const similarity = cosineSimilarity(faceDescriptor, studentFace.face_embedding);
-    const SIMILARITY_THRESHOLD = 0.65; // Adjust this threshold as needed
+    // Location verification
+    let distanceFromTeacher = null;
+    let locationVerified = false;
+    if (session.teacher_lat && session.teacher_lng) {
+      if (studentLat === undefined || studentLng === undefined) {
+         return res.status(400).json({ success: false, message: 'This session requires location verification.' });
+      }
+      distanceFromTeacher = calculateDistance(studentLat, studentLng, session.teacher_lat, session.teacher_lng);
+      const allowedRadius = session.allowed_radius_meters || 150;
+      if (distanceFromTeacher > allowedRadius) {
+         return res.status(403).json({ success: false, message: `Outside allowed range. Distance: ${distanceFromTeacher}m` });
+      }
+      locationVerified = true;
+    }
+    
+    // Get student's user profile to get face embedding and demographics
+    const { data: userProfile, error: profileError } = await storage.supabase
+      .from('users')
+      .select('*')
+      .eq('username', user.username)
+      .single();
+      
+    if (profileError || !userProfile || !userProfile.face_embeddings) {
+      return res.status(404).json({ success: false, message: 'Face data not found. Please complete enrollment.' });
+    }
+    
+    // Euclidean distance = sqrt(sum((a - b)^2))
+    const euclideanDistance = Math.sqrt(
+      faceDescriptor.reduce((sum: number, val: number, i: number) => sum + Math.pow(val - userProfile.face_embeddings[i], 2), 0)
+    );
+    const similarity = 1 - euclideanDistance;
+    const SIMILARITY_THRESHOLD = 0.6; // Matches frontend threshold
     const isMatch = similarity >= SIMILARITY_THRESHOLD;
     
     if (!isMatch) {
-      return res.json({
-        success: false,
-        message: 'Face verification failed. Please try again or contact support.',
-        similarity,
-        threshold: SIMILARITY_THRESHOLD
-      });
+      return res.json({ success: false, message: 'Face verification failed.', similarity, threshold: SIMILARITY_THRESHOLD });
     }
     
-    // Mark attendance if verification is successful
+    // Check if attendance already exists
+    const { data: existing } = await storage.supabase
+      .from('attendance')
+      .select('*')
+      .eq('username', user.username)
+      .eq('session_id', sessionId)
+      .single();
+      
+    if (existing) {
+       return res.json({ success: true, message: 'Attendance already recorded' });
+    }
+    
+    // Insert robust attendance data
     const attendanceData = {
+      username: user.username,
+      enroll_no: userProfile.roll_no || user.username,
+      registered_no: userProfile.registered_no || userProfile.roll_no || user.username,
+      program: userProfile.program || '',
+      department: userProfile.department || '',
+      section: userProfile.section || '',
+      year: userProfile.year || '',
       session_id: sessionId,
-      student_id: userId,
+      check_in_time: localTimestamp || new Date().toISOString(),
+      date: dateString || new Date().toISOString().split('T')[0],
       status: 'present',
-      marked_at: new Date().toISOString(),
-      verification_method: 'face_recognition',
-      verification_score: similarity
+      name: userProfile.name || user.name || 'Student',
+      session_name: session.name,
+      face_verified: true,
+      verification_confidence: similarity,
+      student_lat: studentLat,
+      student_lng: studentLng,
+      distance_from_teacher_meters: distanceFromTeacher,
+      location_verified: locationVerified
     };
     
-    const { error: attendanceError } = await storage.supabase
+    const { error: insertError } = await storage.supabase
       .from('attendance')
-      .upsert(attendanceData, { onConflict: 'session_id,student_id' });
-    
-    if (attendanceError) {
-      console.error('Error saving attendance:', attendanceError);
-      throw new Error('Failed to save attendance');
+      .insert(attendanceData);
+      
+    if (insertError) {
+      console.error('Error saving attendance:', insertError);
+      return res.status(500).json({ success: false, message: 'Failed to save attendance' });
     }
     
-    res.json({
-      success: true,
-      message: 'Attendance marked successfully',
-      similarity,
-      threshold: SIMILARITY_THRESHOLD
-    });
-    
-  } catch (error) {
+    res.json({ success: true, message: 'Attendance marked successfully', similarity });
+  } catch (error: any) {
     console.error('Error in face verification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error during face verification',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    res.status(500).json({ success: false, message: 'Internal server error during verification' });
   }
 });
 

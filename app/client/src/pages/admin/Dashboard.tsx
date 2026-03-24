@@ -58,8 +58,13 @@ export default function AdminDashboard() {
       const groups: Record<string, any[]> = {};
 
       for (const record of (attData || [])) {
-        if (!record.class_id || !record.date || !record.period_number) continue;
-        const key = groupKey(record);
+        let key;
+        if (!record.class_id || !record.period_number) {
+            if (!record.session_id) continue;
+            key = `proto_${record.session_id}`;
+        } else {
+            key = groupKey(record);
+        }
         if (!groups[key]) groups[key] = [];
         groups[key].push(record);
       }
@@ -67,6 +72,29 @@ export default function AdminDashboard() {
       const sessions: RecentSession[] = [];
 
       for (const [key, records] of Object.entries(groups)) {
+        const presentCount = records.filter((r: any) => r.status === 'present').length;
+        const absentCount = records.filter((r: any) => r.status === 'absent').length;
+        const totalStudents = presentCount + absentCount;
+        const percentage = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
+
+        if (key.startsWith('proto_')) {
+            const sessionId = key.replace('proto_', '');
+            const sessionDate = records[0]?.check_in_time?.split('T')[0] || records[0]?.date || 'Unknown';
+            sessions.push({
+               id: key,
+               class_id: sessionId,
+               class_label: `Custom Scan Session (ID: ${sessionId})`,
+               period_number: 0,
+               subject: 'Face/QR Scan',
+               total_students: totalStudents,
+               present_count: presentCount,
+               absent_count: absentCount,
+               percentage,
+               date: sessionDate,
+            });
+            continue;
+        }
+
         const [classId, date, periodStr] = key.split('__');
         const periodNumber = parseInt(periodStr);
         const cls = classesMap.get(classId);
@@ -79,11 +107,6 @@ export default function AdminDashboard() {
           (tt: any) => tt.class_id === classId && tt.period_number === periodNumber
         );
         const subject = ttSlot?.subject_name || '—';
-
-        const presentCount = records.filter((r: any) => r.status === 'present').length;
-        const absentCount = records.filter((r: any) => r.status === 'absent').length;
-        const totalStudents = presentCount + absentCount;
-        const percentage = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
 
         sessions.push({
           id: key,

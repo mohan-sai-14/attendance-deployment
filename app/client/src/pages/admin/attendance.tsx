@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -203,11 +203,14 @@ export default function Attendance() {
     const dateString = format(selectedDate, 'yyyy-MM-dd');
 
     try {
-      const payload = {
+      const payload: any = {
         class_id: selectedClass.id,
         date: dateString,
         period_number: activePeriod.period_number,
-        student_id: editRecord.student.username, // Using username as student_id in attendance generic schema for now
+        student_id: editRecord.student.username, 
+        username: editRecord.student.username, // Required constraint mapped
+        user_id: editRecord.student.id.toString(), // Strict typing compatibility
+        session_id: "manual", // Fallback for legacy session constraints
         status: newStatus,
         last_edited_at: new Date().toISOString(),
         edit_reason: editReason || 'Initial Entry'

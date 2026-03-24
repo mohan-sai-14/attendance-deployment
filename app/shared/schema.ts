@@ -32,6 +32,7 @@ export const attendance = pgTable("attendance", {
   check_in_time: timestamp("check_in_time").notNull().defaultNow(),
   date: text("date"),
   status: text("status").notNull().default("present"),
+  network_mismatch: boolean("network_mismatch").default(false),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

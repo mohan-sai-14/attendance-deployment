@@ -5,10 +5,9 @@ import { loginSchema, insertUserSchema, insertSessionSchema, insertAttendanceSch
 import { z } from "zod";
 import { randomBytes } from "crypto";
 import session from "express-session";
-import memorystore from "memorystore";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-
+import bcrypt from "bcryptjs";
 // Extend the Express Session Data type
 declare module 'express-session' {
   interface SessionData {
@@ -29,6 +28,28 @@ declare global {
     }
   }
 }
+
+// Helper function to calculate cosine similarity between two vectors
+const cosineSimilarity = (vecA: number[], vecB: number[]): number => {
+  if (vecA.length !== vecB.length) return 0;
+  const dotProduct = vecA.reduce((sum, val, i) => sum + val * vecB[i], 0);
+  const magnitudeA = Math.sqrt(vecA.reduce((sum, val) => sum + val * val, 0));
+  const magnitudeB = Math.sqrt(vecB.reduce((sum, val) => sum + val * val, 0));
+  if (magnitudeA === 0 || magnitudeB === 0) return 0;
+  return dotProduct / (magnitudeA * magnitudeB);
+};
+
+// Helper function to calculate distance in meters (Haversine)
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371e3; // meters
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+};
 
 export async function registerRoutes(app: Express): Promise<void> {
   // Auth middleware
@@ -74,25 +95,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     next();
   });
 
-  // Configure session storage with secure settings
-  const MemoryStore = memorystore(session);
-  const sessionConfig: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "your-secret-key",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax' as boolean | 'lax' | 'strict' | 'none',
-    },
-    store: new MemoryStore({
-      checkPeriod: 86400000, // 24 hours
-    }) as any, // Type assertion to bypass type checking for memorystore
-  };
 
-  // Session middleware with type assertion to handle memorystore compatibility
-  app.use(session(sessionConfig as any));
 
   // Initialize passport
   app.use(passport.initialize());
@@ -106,7 +109,24 @@ export async function registerRoutes(app: Express): Promise<void> {
         if (!user) {
           return done(null, false, { message: "Invalid username" });
         }
-        if (user.password !== password) {
+        
+        // Support graceful migration from plaintext to bcrypt
+        const isLegacyPlaintext = !user.password.startsWith('$2a$') && !user.password.startsWith('$2b$');
+        let isValid = false;
+        
+        if (isLegacyPlaintext) {
+           isValid = (user.password === password);
+           if (isValid) {
+             // Transparently upgrade their password to bcrypt
+             const salt = await bcrypt.genSalt(10);
+             const hashedPassword = await bcrypt.hash(password, salt);
+             await storage.supabase.from('users').update({ password: hashedPassword }).eq('id', user.id);
+           }
+        } else {
+           isValid = await bcrypt.compare(password, user.password);
+        }
+
+        if (!isValid) {
           return done(null, false, { message: "Invalid password" });
         }
         return done(null, user);
@@ -301,6 +321,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(409).json({ message: "Username already exists" });
       }
       
+      const salt = await bcrypt.genSalt(10);
+      userData.password = await bcrypt.hash(userData.password, salt);
+      
       const user = await storage.createUser(userData);
       res.status(201).json({
         id: user.id,
@@ -314,7 +337,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ errors: error.errors });
       }
-      next(error);
+      return res.status(500).json({ message: "Internal server error" });
     }
   });
 
@@ -322,6 +345,11 @@ export async function registerRoutes(app: Express): Promise<void> {
     try {
       const userId = parseInt(req.params.id);
       const userData = req.body;
+      
+      if ((userData as any).password) {
+        const salt = await bcrypt.genSalt(10);
+        (userData as any).password = await bcrypt.hash((userData as any).password, salt);
+      }
       
       const updatedUser = await storage.updateUser(userId, userData);
       if (!updatedUser) {
@@ -337,7 +365,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         status: updatedUser.status
       });
     } catch (error) {
-      next(error);
+      return res.status(500).json({ message: "Internal server error" });
     }
   });
 
@@ -498,8 +526,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.post("/api/attendance", isAuthenticated, async (req, res, next) => {
     try {
       const user = req.user as any;
-      const { sessionId } = req.body;
-      
+      const { sessionId, studentLat, studentLng } = req.body;
+      const studentIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress) as string;
       // Check if session exists and is active
       const session = await storage.getSession(sessionId);
       if (!session) {
@@ -519,6 +547,21 @@ export async function registerRoutes(app: Express): Promise<void> {
         await storage.expireSession(sessionId);
         return res.status(400).json({ message: "Session has expired" });
       }
+
+      // Location Verification
+      let distanceFromTeacher = null;
+      let locationVerified = false;
+      if (session.teacher_lat && session.teacher_lng && !req.body.manual) {
+        if (studentLat === undefined || studentLng === undefined) {
+           return res.status(400).json({ message: 'This session requires location verification.' });
+        }
+        distanceFromTeacher = calculateDistance(studentLat, studentLng, session.teacher_lat, session.teacher_lng);
+        const allowedRadius = session.allowed_radius_meters || 150;
+        if (distanceFromTeacher > allowedRadius) {
+           return res.status(403).json({ message: `Outside allowed range. Distance: ${distanceFromTeacher}m` });
+        }
+        locationVerified = true;
+      }
       
       // Check if user has already marked attendance for this session
       const existingAttendance = await storage.getAttendanceBySessionAndUser(sessionId, user.id);
@@ -530,17 +573,102 @@ export async function registerRoutes(app: Express): Promise<void> {
       const userId = req.body.manual && req.session.role === 'admin' ? req.body.userId : user.id;
       
       // Store user details in attendance record
+      const networkMismatch = (session as any).teacher_ip && studentIp ? (session as any).teacher_ip !== studentIp : false;
+      
       const attendanceData = {
         user_id: userId,
         session_id: sessionId,
         check_in_time: new Date().toISOString(),
-        status: "present",
+        status: "present", 
+        network_mismatch: networkMismatch
       };
       
       const attendance = await storage.markAttendance(attendanceData);
       res.status(201).json(attendance);
     } catch (error) {
       next(error);
+    }
+  });
+
+  // New strict Face Verification route
+  app.post('/api/verify-face', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { sessionId, faceDescriptor, studentLat, studentLng, localTimestamp, dateString } = req.body;
+      const user = (req as any).session.user || req.user;
+      const studentIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress) as string;
+      
+      if (!sessionId || !faceDescriptor || !Array.isArray(faceDescriptor)) {
+        return res.status(400).json({ success: false, message: 'Missing required fields: sessionId and faceDescriptor are required' });
+      }
+      
+      const session = await storage.getSession(sessionId);
+      if (!session) return res.status(404).json({ success: false, message: 'Session not found' });
+      
+      if (!session.is_active) {
+        return res.status(403).json({ success: false, message: 'Session is no longer active' });
+      }
+      
+      // Location verification
+      let distanceFromTeacher = null;
+      let locationVerified = false;
+      if (session.teacher_lat && session.teacher_lng) {
+        if (studentLat === undefined || studentLng === undefined) {
+           return res.status(400).json({ success: false, message: 'This session requires location verification.' });
+        }
+        distanceFromTeacher = calculateDistance(studentLat, studentLng, session.teacher_lat, session.teacher_lng);
+        const allowedRadius = session.allowed_radius_meters || 150;
+        if (distanceFromTeacher > allowedRadius) {
+           return res.status(403).json({ success: false, message: `Outside allowed range. Distance: ${distanceFromTeacher}m` });
+        }
+        locationVerified = true;
+      }
+      
+      // Using Supabase client to fetch raw embeddings natively
+      const { data: userProfile, error: profileError } = await storage.supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+        
+      if (profileError || !userProfile || !userProfile.face_embeddings) {
+        return res.status(404).json({ success: false, message: 'Face data not found. Please complete enrollment.' });
+      }
+      
+      // Euclidean distance mapping 
+      const euclideanDistance = Math.sqrt(
+        faceDescriptor.reduce((sum: number, val: number, i: number) => sum + Math.pow(val - userProfile.face_embeddings[i], 2), 0)
+      );
+      const similarity = 1 - euclideanDistance;
+      const SIMILARITY_THRESHOLD = 0.6;
+      const isMatch = similarity >= SIMILARITY_THRESHOLD;
+      
+      if (!isMatch) {
+        return res.json({ success: false, message: 'Face verification failed.', similarity, threshold: SIMILARITY_THRESHOLD });
+      }
+
+      // Record logic bypasses native Drizzle markAttendance to include rich face stats
+      const existingAttendance = await storage.getAttendanceBySessionAndUser(sessionId, user.id);
+      if (existingAttendance) {
+         return res.json({ success: true, message: 'Attendance already recorded' });
+      }
+      
+      // Direct supabase insert for rich metadata not fully bound by generic params 
+      const networkMismatch = (session as any).teacher_ip && studentIp ? (session as any).teacher_ip !== studentIp : false;
+
+      const attendanceData = {
+        user_id: user.id,
+        session_id: sessionId,
+        check_in_time: localTimestamp || new Date().toISOString(),
+        status: 'present',
+        network_mismatch: networkMismatch
+      };
+      
+      await storage.markAttendance(attendanceData);
+      
+      res.json({ success: true, message: 'Attendance marked successfully', similarity });
+    } catch (error: any) {
+      console.error('Error in face verification:', error);
+      res.status(500).json({ success: false, message: 'Internal server error during verification' });
     }
   });
 
