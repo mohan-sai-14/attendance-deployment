@@ -37,14 +37,13 @@ interface StudentRow {
 
 interface AttendanceRecord {
   id: string;
-  class_id: string;
-  date: string;
-  period_number: number;
-  student_id: string;
+  username: string;
   status: string;
-  created_at: string;
-  last_edited_at?: string;
+  date: string;
+  check_in_time?: string;
+  period_number?: number;
   edit_reason?: string;
+  session_name?: string;
 }
 
 interface TimetableRow {
@@ -157,10 +156,12 @@ export default function AttendanceManagement() {
       if (ttError) throw ttError;
       setClassTimetable(ttData || []);
 
+      const studentUsernames = classStudents.map(s => s.username).filter(Boolean);
+
       const { data: attData, error: attError } = await supabase
         .from('attendance')
         .select('*')
-        .eq('class_id', selectedClass.id)
+        .in('username', studentUsernames)
         .eq('date', dateString);
 
       if (attError) console.error("Attendance fetch error:", attError);
@@ -185,14 +186,13 @@ export default function AttendanceManagement() {
     const dateString = format(selectedDate, 'yyyy-MM-dd');
 
     try {
-      const payload = {
-        class_id: selectedClass.id,
+      const payload: any = {
+        username: editRecord.student.username,
+        name: editRecord.student.name,
+        role: 'student',
         date: dateString,
-        period_number: activePeriod.period_number,
-        student_id: editRecord.student.username, // Using username as student_id in attendance generic schema for now
         status: newStatus,
-        last_edited_at: new Date().toISOString(),
-        edit_reason: editReason || 'Initial Entry'
+        check_in_time: new Date().toISOString()
       };
 
       if (editRecord.attId) {
@@ -440,7 +440,7 @@ export default function AttendanceManagement() {
                       </thead>
                       <tbody className="divide-y divide-border/40">
                         {classStudents.map((student) => {
-                          const record = periodAttendance.find(a => a.student_id === student.username);
+                          const record = periodAttendance.find(a => a.username === student.username);
                           const status = record?.status || "unmarked";
 
                           return (

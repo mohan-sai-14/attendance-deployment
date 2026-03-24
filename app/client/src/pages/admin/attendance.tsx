@@ -35,17 +35,14 @@ interface StudentRow {
   username: string; // roll number
   name: string;
 }
-
 interface AttendanceRecord {
   id: string;
-  class_id: string;
-  date: string;
-  period_number: number;
-  student_id: string;
+  username: string;
   status: string;
-  created_at: string;
-  last_edited_at?: string;
+  check_in_time: string;
+  period_number?: number;
   edit_reason?: string;
+  session_name?: string;
 }
 
 interface TimetableRow {
@@ -463,7 +460,7 @@ export default function Attendance() {
                       </thead>
                       <tbody className="divide-y divide-border/40">
                         {classStudents.map((student) => {
-                          const record = periodAttendance.find(a => a.student_id === student.username);
+                          const record = classAttendance.find(a => a.username === student.username);
                           const status = record?.status || "unmarked";
 
                           return (

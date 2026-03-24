@@ -44,7 +44,7 @@ export default function AdminDashboard() {
       const { data: attData, error: attError } = await supabase
         .from('attendance')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('check_in_time', { ascending: false })
         .limit(500);
 
       if (attError) throw attError;
