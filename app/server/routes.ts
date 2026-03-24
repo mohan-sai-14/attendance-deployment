@@ -507,8 +507,12 @@ export async function registerRoutes(app: Express): Promise<void> {
       const attendanceRecords = await storage.getAttendanceBySession(sessionId);
       
       // Find students who did not mark attendance (absent)
-      const presentStudentIds = attendanceRecords.map(record => record.user_id);
-      const absentStudents = students.filter(student => !presentStudentIds.includes(student.id));
+      const presentUsernames = attendanceRecords.map(record => record.username);
+      const presentUserIds = attendanceRecords.map(record => record.user_id).filter(id => id !== undefined);
+      const absentStudents = students.filter(student => 
+        !presentUsernames.includes(student.username) && 
+        !presentUserIds.includes(student.id)
+      );
       
       // Mark absent students
       for (const student of absentStudents) {
@@ -746,13 +750,23 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       const attendanceData = {
         username: userProfile.username,
+        student_id: userProfile.username, // Mirror for backward compatibility
         session_id: sessionId,
+        class_id: (session as any).class_id,
         check_in_time: localTimestamp || new Date().toISOString(),
         date: dateString || new Date().toISOString().split('T')[0],
         status: 'present',
         name: userProfile.name,
         role: userProfile.role,
-        session_name: session.name
+        session_name: session.name,
+        department: userProfile.department,
+        program: userProfile.program,
+        section: userProfile.section,
+        year: userProfile.year,
+        enroll_no: userProfile.enroll_no,
+        registered_no: userProfile.registered_no,
+        face_verified: true,
+        verification_confidence: similarity
       };
       
       await storage.supabase.from('attendance').insert([attendanceData]);

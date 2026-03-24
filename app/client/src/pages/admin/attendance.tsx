@@ -460,7 +460,11 @@ export default function Attendance() {
                       </thead>
                       <tbody className="divide-y divide-border/40">
                         {classStudents.map((student) => {
-                          const record = classAttendance.find(a => a.username === student.username);
+                          const record = classAttendance.find(a => 
+                            a.username === student.username && 
+                            (a.period_number === activePeriod.period_number || 
+                             a.session_name?.toLowerCase().includes(ttSlot?.subject_name?.toLowerCase() || ""))
+                          );
                           const status = record?.status?.toLowerCase() || "unmarked";
 
                           return (
