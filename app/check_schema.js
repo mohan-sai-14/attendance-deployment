@@ -11,16 +11,16 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABAS
 async function checkSchema() {
   const supabase = createClient(supabaseUrl, supabaseKey);
   
-  console.log('Checking "attendance" table columns...');
-  const { data: attData, error: attError } = await supabase
-    .from('attendance')
+  console.log('Checking "sessions" table columns...');
+  const { data: sessData, error: sessError } = await supabase
+    .from('sessions')
     .select('*')
     .limit(1);
     
-  if (attError) {
-    console.error('Error fetching from attendance table:', attError);
-  } else if (attData && attData.length > 0) {
-    console.log('Columns found in "attendance" table:', Object.keys(attData[0]));
+  if (sessError) {
+    console.error('Error fetching from sessions table:', sessError);
+  } else if (sessData && sessData.length > 0) {
+    console.log('Columns found in "sessions" table:', Object.keys(sessData[0]));
   }
 }
 

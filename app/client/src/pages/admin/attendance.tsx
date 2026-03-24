@@ -178,7 +178,7 @@ export default function Attendance() {
       const { data: attData, error: attError } = await supabase
         .from('attendance')
         .select('*')
-        .eq('class_id', selectedClass.id)
+        .in('username', classStudents.map(s => s.username))
         .eq('date', dateString);
 
       if (attError) console.error("Attendance fetch error:", attError);
@@ -204,14 +204,12 @@ export default function Attendance() {
 
     try {
       const payload: any = {
-        class_id: selectedClass.id,
-        date: dateString,
-        period_number: activePeriod.period_number,
-        student_id: editRecord.student.username, 
         username: editRecord.student.username,
+        name: editRecord.student.name,
+        role: 'student',
+        date: dateString,
         status: newStatus,
-        last_edited_at: new Date().toISOString(),
-        edit_reason: editReason || 'Initial Entry'
+        check_in_time: new Date().toISOString()
       };
 
       if (editRecord.attId) {

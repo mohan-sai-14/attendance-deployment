@@ -750,7 +750,6 @@ export async function registerRoutes(app: Express): Promise<void> {
         check_in_time: localTimestamp || new Date().toISOString(),
         date: dateString || new Date().toISOString().split('T')[0],
         status: 'present',
-        network_mismatch: networkMismatch,
         name: userProfile.name,
         role: userProfile.role,
         session_name: session.name
