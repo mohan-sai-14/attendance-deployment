@@ -54,63 +54,69 @@ export default function AdminDashboard() {
 
       const { data: ttData } = await supabase.from('timetables').select('*');
 
-      const groupKey = (a: any) => `${a.class_id}__${a.date}__${a.period_number}`;
       const groups: Record<string, any[]> = {};
 
       for (const record of (attData || [])) {
-        let key;
-        if (!record.class_id || !record.period_number) {
-            if (!record.session_id) continue;
-            key = `proto_${record.session_id}`;
-        } else {
-            key = groupKey(record);
+        let classId = record.class_id;
+        let periodNumber = record.period_number;
+
+        // 1. Resolve Class ID from metadata if missing
+        if (!classId && record.program && record.year && record.section) {
+          const match = (classesData || []).find(c => 
+            c.department === record.department &&
+            c.program === record.program &&
+            c.year === record.year &&
+            c.section === record.section
+          );
+          if (match) classId = match.id;
         }
+
+        // 2. Resolve Period Number from session_name if missing
+        if (periodNumber === null || periodNumber === undefined) {
+          const name = record.session_name || "";
+          const match = name.match(/Period\s*(\d+)/i);
+          if (match) periodNumber = parseInt(match[1]);
+        }
+
+        const date = record.date || record.check_in_time?.split('T')[0] || "Unknown";
+        let key;
+        if (!classId || periodNumber === null || periodNumber === undefined) {
+          if (!record.session_id) continue;
+          key = `proto_${classId || 'unknown'}_${record.session_id}_${periodNumber || 0}`;
+        } else {
+          key = `${classId}__${date}__${periodNumber}`;
+        }
+
         if (!groups[key]) groups[key] = [];
-        groups[key].push(record);
+        groups[key].push({ ...record, resolved_class_id: classId, resolved_period: periodNumber });
       }
 
       const sessions: RecentSession[] = [];
 
       for (const [key, records] of Object.entries(groups)) {
+        const first = records[0];
+        const classId = first.resolved_class_id;
+        const periodNumber = first.resolved_period || 0;
+        const date = first.date || first.check_in_time?.split('T')[0] || "Unknown";
+
         const presentCount = records.filter((r: any) => r.status?.toLowerCase() === 'present').length;
         const absentCount = records.filter((r: any) => r.status?.toLowerCase() === 'absent').length;
         const totalStudents = presentCount + absentCount;
         const percentage = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
 
-        if (key.startsWith('proto_')) {
-            const sessionId = key.replace('proto_', '');
-            const sessionDate = records[0]?.check_in_time?.split('T')[0] || records[0]?.date || 'Unknown';
-            sessions.push({
-               id: key,
-               class_id: sessionId,
-               class_label: `Custom Scan Session (ID: ${sessionId})`,
-               period_number: 0,
-               subject: 'Face/QR Scan',
-               total_students: totalStudents,
-               present_count: presentCount,
-               absent_count: absentCount,
-               percentage,
-               date: sessionDate,
-            });
-            continue;
-        }
-
-        const [classId, date, periodStr] = key.split('__');
-        const periodNumber = parseInt(periodStr);
-        const cls = classesMap.get(classId);
-
+        const cls = classId ? classesMap.get(classId) : null;
         const classLabel = cls
           ? `${cls.department} – ${cls.program} ${cls.year} – ${cls.section}`
-          : classId;
+          : (first.session_name?.split(' - ')[0] || "Custom Scan");
 
         const ttSlot = (ttData || []).find(
           (tt: any) => tt.class_id === classId && tt.period_number === periodNumber
         );
-        const subject = ttSlot?.subject_name || '—';
+        const subject = ttSlot?.subject_name || first.session_name?.split(' - ')[0] || 'Face/QR Scan';
 
         sessions.push({
           id: key,
-          class_id: classId,
+          class_id: classId || 'unknown',
           class_label: classLabel,
           period_number: periodNumber,
           subject,
