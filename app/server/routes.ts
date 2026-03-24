@@ -196,27 +196,34 @@ export async function registerRoutes(app: Express): Promise<void> {
           });
         }
         
-        req.logIn(user, (err) => {
+        // Sanitize user to prevent session serialization crashes from Supabase metadata
+        const cleanUser = {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          status: user.status
+        };
+
+        req.logIn(cleanUser, (err) => {
           if (err) {
             console.error("Session login error:", err);
+            console.error("Session login error stack:", err?.stack);
             return res.status(500).json({ 
               success: false,
-              message: "Session error occurred" 
+              message: "Session error occurred",
+              debug: err?.message || String(err)
             });
           }
           
-          req.session.userId = user.id;
-          req.session.role = user.role;
+          req.session.userId = cleanUser.id;
+          req.session.role = cleanUser.role;
           
           console.log("User logged in successfully:", username);
           return res.status(200).json({ 
             success: true,
-            data: {
-              id: user.id, 
-              username: user.username, 
-              role: user.role, 
-              name: user.name 
-            }
+            data: cleanUser
           });
         });
       })(req, res, next);
