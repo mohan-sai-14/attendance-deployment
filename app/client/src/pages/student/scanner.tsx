@@ -370,8 +370,15 @@ const StudentScannerPage: React.FC = () => {
           setErrorMessage('Error fetching user profile. Please try again.');
           return;
         }
+
+        console.log("Scanner User Profile Check:", {
+          id: userProfile?.id,
+          username: userProfile?.username,
+          hasEmbeddings: !!userProfile?.face_embeddings,
+          status: userProfile?.face_enrollment_status
+        });
         
-        console.log("Complete user profile:", userProfile);
+        console.log("Complete user profile data:", userProfile);
         
         // Get the active session directly from Supabase using the sessionId from QR
         const { data: activeSessionData, error: sessionsError } = await supabase

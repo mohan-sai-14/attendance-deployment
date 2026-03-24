@@ -56,7 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const storeUser = useCallback((rawUser: any) => {
+    console.log("AuthContext: Storing user data", rawUser);
     const sanitizedUser = normalizeUser(rawUser);
+    console.log("AuthContext: Normalized user", sanitizedUser);
     setUser(sanitizedUser);
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(sanitizedUser));
     return sanitizedUser;

@@ -666,16 +666,21 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
 
       // Resolve the full user from session.userId
+      const numericUserId = Number(sess.userId);
+      console.log(`[VerifyFace] Lookup userId: ${numericUserId} (raw: ${sess.userId})`);
+      
       const { data: userProfile, error: profileError } = await storage.supabase
         .from('users')
         .select('*')
-        .eq('id', sess.userId)
+        .eq('id', numericUserId)
         .single();
 
       if (profileError || !userProfile) {
-        console.error('User lookup failed for session userId:', sess.userId, profileError);
+        console.error('[VerifyFace] User lookup failed for numericUserId:', numericUserId, profileError);
         return res.status(404).json({ success: false, message: 'User not found. Please re-login.' });
       }
+      
+      console.log(`[VerifyFace] Found profile for ${userProfile.username}. HasEmbeddings: ${!!userProfile.face_embeddings}`);
       
       const session = await storage.getSession(sessionId);
       if (!session) return res.status(404).json({ success: false, message: 'Session not found' });
