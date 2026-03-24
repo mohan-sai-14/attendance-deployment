@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./src/storage";
-import { loginSchema, insertUserSchema, insertSessionSchema, insertAttendanceSchema } from "@shared/schema";
+import { loginSchema, insertUserSchema, insertSessionSchema, insertAttendanceSchema } from "../shared/schema";
 import { z } from "zod";
 import { randomBytes } from "crypto";
 import session from "express-session";
