@@ -208,9 +208,7 @@ export default function Attendance() {
         date: dateString,
         period_number: activePeriod.period_number,
         student_id: editRecord.student.username, 
-        username: editRecord.student.username, // Required constraint mapped
-        user_id: editRecord.student.id.toString(), // Strict typing compatibility
-        session_id: "manual", // Fallback for legacy session constraints
+        username: editRecord.student.username,
         status: newStatus,
         last_edited_at: new Date().toISOString(),
         edit_reason: editReason || 'Initial Entry'
