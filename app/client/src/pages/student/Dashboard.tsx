@@ -440,7 +440,13 @@ export default function StudentDashboard() {
                  <BookOpen className="h-5 w-5 text-[#10B981]" />
                  Academic Breakdown
               </h3>
-              <Button variant="link" className="text-xs font-bold text-[#10B981] uppercase tracking-wider p-0 h-auto hover:no-underline">Details <ArrowUpRight className="h-3 w-3 inline ml-1" /></Button>
+              <Button 
+                variant="link" 
+                onClick={() => navigate('/student/subjects-attendance')}
+                className="text-xs font-bold text-[#10B981] uppercase tracking-wider p-0 h-auto hover:no-underline"
+              >
+                Details <ArrowUpRight className="h-3 w-3 inline ml-1" />
+              </Button>
            </div>
            <SubjectAttendance records={attendanceRecords} />
         </section>

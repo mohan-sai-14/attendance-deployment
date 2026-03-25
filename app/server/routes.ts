@@ -66,6 +66,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
 
     if (!req.session.userId) {
+      console.warn('[isAuthenticated] No userId in session:', req.sessionID);
       return res.status(401).json({
         success: false,
         message: "Not authenticated"
@@ -176,7 +177,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     if (req.session && req.session.userId && req.session.role === "admin") {
       return next();
     }
-    console.log("Admin authorization failed for user:", req.session?.userId);
+    console.warn("[isAdmin] Authorization failed. Session:", req.sessionID, "UserId:", req.session?.userId, "Role:", req.session?.role);
     res.status(403).json({ message: "Forbidden - Admin access required" });
   };
 

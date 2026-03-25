@@ -330,12 +330,6 @@ export default function AttendanceHistory() {
                             </div>
                             
                             <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                               <div className="flex items-center gap-2">
-                                  <div className="h-8 w-8 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 overflow-hidden">
-                                     <User className="h-4 w-4" />
-                                  </div>
-                                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Marked by {record.name.split(' ')[0]}</span>
-                               </div>
                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full hover:bg-gray-50 text-gray-300 hover:text-emerald-500">
                                   <ChevronRight className="h-4 w-4" />
                                </Button>

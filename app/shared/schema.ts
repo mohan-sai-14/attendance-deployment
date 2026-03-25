@@ -4,12 +4,19 @@ import { z } from "zod";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  user_id: text("user_id").notNull().unique(),
+  username: text("username").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
   email: text("email").notNull(),
   role: text("role").notNull().default("student"),
   status: text("status").notNull().default("active"),
+  enroll_no: text("enroll_no"),
+  registered_no: text("registered_no"),
+  department: text("department"),
+  section: text("section"),
+  program: text("program"),
+  year: text("year"),
+  batch: text("batch"),
 });
 
 export const sessions = pgTable("sessions", {
@@ -35,13 +42,20 @@ export const attendance = pgTable("attendance", {
   network_mismatch: boolean("network_mismatch").default(false),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  user_id: true,
-  password: true,
-  name: true,
-  email: true,
-  role: true,
-  status: true,
+export const insertUserSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  role: z.string().default("student"),
+  status: z.string().default("active"),
+  enroll_no: z.string().optional().nullable(),
+  registered_no: z.string().optional().nullable(),
+  department: z.string().optional().nullable(),
+  section: z.string().optional().nullable(),
+  program: z.string().optional().nullable(),
+  year: z.string().optional().nullable(),
+  batch: z.string().optional().nullable(),
 });
 
 export const insertSessionSchema = z.object({

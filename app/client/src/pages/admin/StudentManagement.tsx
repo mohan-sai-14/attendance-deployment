@@ -129,7 +129,12 @@ export default function StudentManagement() {
     name: '',
     email: '',
     enroll_no: '',
-    registered_no: ''
+    registered_no: '',
+    department: '',
+    program: '',
+    year: '',
+    section: '',
+    batch: ''
   });
 
   // Camera and video refs
@@ -302,10 +307,6 @@ export default function StudentManagement() {
           ...addStudentFormData,
           role: 'student',
           status: 'active',
-          department: dept !== 'all' ? dept : null,
-          program: prog !== 'all' ? prog : null,
-          year: yr !== 'all' ? yr : null,
-          section: sec !== 'all' ? sec : null,
         }]);
 
       if (error) throw error;
@@ -322,7 +323,12 @@ export default function StudentManagement() {
         name: '',
         email: '',
         enroll_no: '',
-        registered_no: ''
+        registered_no: '',
+        department: '',
+        program: '',
+        year: '',
+        section: '',
+        batch: ''
       });
       fetchStudents();
     } catch (error: any) {
@@ -345,6 +351,11 @@ export default function StudentManagement() {
           email: editStudentData.email,
           enroll_no: editStudentData.enroll_no,
           registered_no: editStudentData.registered_no,
+          department: editStudentData.department,
+          program: editStudentData.program,
+          year: editStudentData.year,
+          section: editStudentData.section,
+          batch: editStudentData.batch,
           password: editStudentData.password // Note: In production, password should be hashed
         })
         .eq('id', editStudentData.id);
@@ -588,6 +599,7 @@ export default function StudentManagement() {
 
       const response = await fetch(getApiUrl('/api/enroll-face'), {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -1278,6 +1290,56 @@ export default function StudentManagement() {
                 placeholder="REG67890"
               />
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="department" className="text-right text-[#374151]">Dept.</Label>
+              <Input
+                id="department"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
+                value={addStudentFormData.department}
+                onChange={(e) => setAddStudentFormData({ ...addStudentFormData, department: e.target.value })}
+                placeholder="e.g. CSE"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="program" className="text-right text-[#374151]">Program</Label>
+              <Input
+                id="program"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
+                value={addStudentFormData.program}
+                onChange={(e) => setAddStudentFormData({ ...addStudentFormData, program: e.target.value })}
+                placeholder="e.g. B.Tech"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="year" className="text-right text-[#374151]">Year</Label>
+              <Input
+                id="year"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
+                value={addStudentFormData.year}
+                onChange={(e) => setAddStudentFormData({ ...addStudentFormData, year: e.target.value })}
+                placeholder="e.g. 3rd"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="section" className="text-right text-[#374151]">Section</Label>
+              <Input
+                id="section"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
+                value={addStudentFormData.section}
+                onChange={(e) => setAddStudentFormData({ ...addStudentFormData, section: e.target.value })}
+                placeholder="e.g. B"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="batch" className="text-right text-[#374151]">Batch</Label>
+              <Input
+                id="batch"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
+                value={addStudentFormData.batch}
+                onChange={(e) => setAddStudentFormData({ ...addStudentFormData, batch: e.target.value })}
+                placeholder="e.g. 2021-25"
+              />
+            </div>
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowAddModal(false)} className="rounded-xl border-[#E5E7EB]">
@@ -1330,6 +1392,46 @@ export default function StudentManagement() {
                 className="col-span-3 rounded-xl border-[#E5E7EB]"
                 value={editStudentData?.registered_no || ''}
                 onChange={(e) => setEditStudentData({ ...editStudentData, registered_no: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right text-[#374151]">Dept.</Label>
+              <Input
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
+                value={editStudentData?.department || ''}
+                onChange={(e) => setEditStudentData({ ...editStudentData, department: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right text-[#374151]">Program</Label>
+              <Input
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
+                value={editStudentData?.program || ''}
+                onChange={(e) => setEditStudentData({ ...editStudentData, program: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right text-[#374151]">Year</Label>
+              <Input
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
+                value={editStudentData?.year || ''}
+                onChange={(e) => setEditStudentData({ ...editStudentData, year: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right text-[#374151]">Section</Label>
+              <Input
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
+                value={editStudentData?.section || ''}
+                onChange={(e) => setEditStudentData({ ...editStudentData, section: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right text-[#374151]">Batch</Label>
+              <Input
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
+                value={editStudentData?.batch || ''}
+                onChange={(e) => setEditStudentData({ ...editStudentData, batch: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">

@@ -18,6 +18,13 @@ const studentFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   username: z.string().min(1, "Student ID is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  enroll_no: z.string().min(1, "Enrollment Number is required"),
+  registered_no: z.string().min(1, "Registration Number is required"),
+  department: z.string().min(1, "Department is required"),
+  section: z.string().min(1, "Section is required"),
+  program: z.string().min(1, "Program is required"),
+  year: z.string().min(1, "Year is required"),
+  batch: z.string().optional(),
   status: z.string().default("active"),
 });
 
@@ -39,6 +46,13 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
       email: "",
       username: "",
       password: "",
+      enroll_no: "",
+      registered_no: "",
+      department: "",
+      section: "",
+      program: "",
+      year: "",
+      batch: "",
       status: "active",
     },
   });
@@ -144,13 +158,114 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
               />
             </div>
             
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="enroll_no"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Enroll No</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="registered_no"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reg. No</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g. CSE" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="program"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Program</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g. B.Tech" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="year"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Year</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g. 3rd" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="section"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Section</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g. B" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="batch"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Batch</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g. 2021-25" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select status" />
@@ -164,7 +279,8 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
                   <FormMessage />
                 </FormItem>
               )}
-            />
+              />
+            </div>
             
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={onClose} className="mr-2">

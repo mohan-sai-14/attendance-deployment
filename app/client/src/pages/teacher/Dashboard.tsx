@@ -589,13 +589,6 @@ export default function TeacherDashboard() {
                         >
                           Fullscreen Mode
                         </Button>
-                        <Button
-                          variant="outline"
-                          className="border-[#E5E7EB] text-[#374151] hover:bg-[#F9FAFB] rounded-xl text-xs h-9 px-4"
-                          onClick={() => navigate(`/teacher/edit-attendance/${activeQrSession.id}`)}
-                        >
-                          Live Data Panel
-                        </Button>
                       </div>
                     </div>
 

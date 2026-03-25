@@ -41,6 +41,7 @@ const MarkAttendance = lazy(() => import('./pages/student/MarkAttendance'));
 const StudentAttendanceHistory = lazy(() => import('./pages/student/AttendanceHistory'));
 const StudentScanner = lazy(() => import('./pages/student/scanner'));
 const StudentTimetable = lazy(() => import('./pages/student/Timetable'));
+const SubjectWiseAttendance = lazy(() => import('./pages/student/SubjectWiseAttendance'));
 
 // Create a client
 const queryClient = new QueryClient();
@@ -157,6 +158,7 @@ const AppRouter = () => {
           <Route path="mark-attendance" element={<MarkAttendance />} />
           <Route path="attendance-history" element={<StudentAttendanceHistory />} />
           <Route path="timetable" element={<StudentTimetable />} />
+          <Route path="subjects-attendance" element={<SubjectWiseAttendance />} />
         </Route>
 
         {/* 404 - Not Found */}
