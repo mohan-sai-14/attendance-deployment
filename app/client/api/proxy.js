@@ -2,10 +2,10 @@ import axios from 'axios';
 
 export default async function handler(req, res) {
   const backendUrl = 'https://attendance-backend-00pc.onrender.com';
-  const path = req.url; // Already contains /api/...
-  const targetUrl = `${backendUrl}${path}`;
+  const apiPath = req.query.path || '';
+  const targetUrl = `${backendUrl}/api/${apiPath}`;
   
-  console.log(`Proxying ${req.method} ${path} to ${targetUrl}`);
+  console.log(`Proxying ${req.method} /api/${apiPath} to ${targetUrl}`);
 
   try {
     const config = {
@@ -17,8 +17,9 @@ export default async function handler(req, res) {
       validateStatus: () => true, // Forward all status codes
     };
 
-    // Remove host header to avoid conflicts
+    // Remove headers that might conflict or be incorrect for the proxy request
     delete config.headers.host;
+    delete config.headers['content-length'];
 
     const response = await axios(config);
 
