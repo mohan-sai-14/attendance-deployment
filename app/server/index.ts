@@ -18,42 +18,51 @@ const { storage } = require('./src/storage');
 
 const app = express();
 
-// Build session store: use PostgreSQL if DATABASE_URL exists, otherwise MemoryStore
+// Build session store: use PostgreSQL if DATABASE_URL exists and is reachable, otherwise MemoryStore
 let sessionStore: any = undefined; 
 
 if (process.env.DATABASE_URL) {
   console.log('Attempting to initialize PostgreSQL session store...');
   // Check if it's a Supabase URL and warn about IPv6/Port 5432
-  if (process.env.DATABASE_URL.includes('supabase.co') && process.env.DATABASE_URL.includes(':5432')) {
+  const isSupabaseStandard = process.env.DATABASE_URL.includes('supabase.co') && process.env.DATABASE_URL.includes(':5432');
+  if (isSupabaseStandard) {
     console.warn('[Session] WARNING: Using standard Supabase port 5432 on Render may cause IPv6 ENETUNREACH errors.');
     console.warn('[Session] TIP: Use the Transaction Pooler (port 6543) connection string instead.');
   }
 
-  try {
-    const pgPool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-      connectionTimeoutMillis: 5000 // Don't hang forever
-    });
-    
-    sessionStore = new pgSession({
-      pool: pgPool,
-      tableName: 'session',
-      createTableIfMissing: true
-    });
-    
-    // We can't easily sync-test the pool here without async, 
-    // but the store will handle errors internally.
-    console.log('PostgreSQL session store configured.');
-  } catch (err) {
-    console.error('Failed to configure PostgreSQL session store:', err);
-  }
+  const pgPool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 5000 // Timeout quickly
+  });
+
+  // Since we are in a non-async top level, we initialize pgSession 
+  // but we will also handle its errors to fallback to memory if it fails later.
+  sessionStore = new pgSession({
+    pool: pgPool,
+    tableName: 'session',
+    createTableIfMissing: true
+  });
+  
+  // Test connection immediately to log status
+  pgPool.connect((err, client, release) => {
+    if (err) {
+      console.error('[Session] PostgreSQL connection failed at startup:', err.message);
+      if (isSupabaseStandard && err.code === 'ENETUNREACH') {
+        console.error('[Session] This is a known IPv6 issue on Render. Use port 6543 instead.');
+      }
+      console.log('[Session] Application will continue, but sessions may be unstable if store is unreachable.');
+    } else {
+      console.log('[Session] PostgreSQL connection successful.');
+      release();
+    }
+  });
 }
 
 if (!sessionStore) {
-  console.log('Using MemoryStore (with persistence-like behavior) for sessions.');
+  console.log('Using MemoryStore for sessions.');
   sessionStore = new MemoryStore({
-    checkPeriod: 86400000 // prune expired entries every 24h
+    checkPeriod: 86400000 
   });
 }
 
