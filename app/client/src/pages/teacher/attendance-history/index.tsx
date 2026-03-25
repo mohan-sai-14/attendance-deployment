@@ -107,7 +107,7 @@ export default function AttendanceHistory() {
       if (attendanceError) throw attendanceError;
 
       attendanceRecords?.forEach(record => {
-        const session = sessions.find(s => s.id === record.session_id);
+        const session = sessions.find(s => String(s.id) === String(record.session_id));
         if (!session) return;
 
         const key = `${session.date}-${record.session_id}`;
