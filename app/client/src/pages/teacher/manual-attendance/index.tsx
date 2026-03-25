@@ -385,39 +385,7 @@ export default function ManualAttendance() {
     }
   };
 
-  const handleLockAttendance = async () => {
-     if (!selectedPeriod?.session?.id) return;
-     if (!confirm("Are you sure you want to lock attendance? This will close the session and no further changes can be made.")) return;
 
-     try {
-       setIsSaving(true);
-       const { error } = await supabase
-         .from('sessions')
-         .update({ 
-            is_active: false, 
-            expires_at: new Date().toISOString() 
-         })
-         .eq('id', selectedPeriod.session.id);
-       
-       if (error) throw error;
-       
-       setIsLocked(true);
-       setMinutesRemaining(null);
-       toast({ 
-          title: 'Attendance Locked', 
-          description: 'The session has been successfully closed.' 
-       });
-     } catch (error) {
-       console.error('Error locking attendance:', error);
-       toast({ 
-          variant: 'destructive', 
-          title: 'Action Failed', 
-          description: 'Could not lock the attendance session.' 
-       });
-     } finally {
-       setIsSaving(false);
-     }
-  };
 
   // ── Loading ──
   if (isLoading) {
@@ -593,17 +561,7 @@ export default function ManualAttendance() {
                                           <Unlock className="h-4 w-4" />
                                           <span className="text-xs font-black uppercase tracking-widest">Editable</span>
                                        </div>
-                                       {selectedPeriod.session && (
-                                          <Button
-                                             variant="outline"
-                                             size="sm"
-                                             onClick={handleLockAttendance}
-                                             className="h-10 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-2xl px-4 flex items-center gap-2"
-                                          >
-                                             <Lock className="h-4 w-4" />
-                                             <span className="text-[10px] font-black uppercase tracking-widest">Lock Attendance</span>
-                                          </Button>
-                                       )}
+
                                     </div>
                                  )}
                               </div>
