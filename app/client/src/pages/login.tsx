@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { ThemeToggle } from '../components/ui/theme-toggle';
 import { useState, useEffect } from 'react';
 import LoginForm from '../components/LoginForm';
 import { ShieldCheck } from 'lucide-react';
@@ -46,19 +45,13 @@ export default function Login() {
           {/* Footer Info */}
           <div className="text-center space-y-4">
             <div className="flex items-center justify-center gap-6">
-               <ThemeToggle />
             </div>
-            <p className="text-[10px] text-gray-400 leading-relaxed max-w-[280px] mx-auto uppercase tracking-wider font-medium">
-              Enterprise Grade Security • 256-bit Encryption • Multi-factor Ready
-            </p>
+
           </div>
         </motion.div>
       </div>
 
-      {/* Version Tag */}
-      <div className="absolute bottom-6 right-8 text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest hidden md:block">
-        Version 2.4.0
-      </div>
+
     </div>
   );
 }
