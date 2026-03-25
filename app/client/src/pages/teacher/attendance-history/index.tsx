@@ -156,24 +156,57 @@ export default function AttendanceHistory() {
         .select('*')
         .eq('session_id', sessionId);
       
-      // Fetch all students
-      const { data: allStudents } = await supabase
-        .from('users')
-        .select('*')
-        .eq('role', 'student')
-        .order('username');
-      
       // Create a map of attendance by username
       const attendanceMap = new Map(
         attendanceRecords?.map(record => [record.username, record]) || []
       );
+
+      // Fetch all students matching this class
+      let detailedStudents: any[] = [];
       
-      // Combine student data with attendance status
-      const detailedStudents = allStudents?.map(student => ({
-        ...student,
-        attendance: attendanceMap.get(student.username) || null,
-        status: attendanceMap.get(student.username)?.status || 'absent'
-      })) || [];
+      if (session.class_id) {
+        // Fetch class info
+        const { data: classData } = await supabase
+          .from('classes')
+          .select('*')
+          .eq('id', session.class_id)
+          .single();
+
+        if (classData) {
+          const { data: classStudents } = await supabase
+            .from('users')
+            .select('*')
+            .eq('role', 'student')
+            .eq('department', classData.department)
+            .eq('program', classData.program)
+            .eq('year', classData.year)
+            .eq('section', session.section || classData.section)
+            .order('username');
+
+          if (classStudents) {
+            detailedStudents = classStudents.map(student => ({
+              ...student,
+              status: attendanceMap.get(student.username)?.status || 'absent'
+            }));
+          }
+        }
+      }
+
+      // Fallback: if no class info or no students found, show only those who have attendance records
+      if (detailedStudents.length === 0 && attendanceRecords && attendanceRecords.length > 0) {
+        const usernames = attendanceRecords.map(r => r.username);
+        const { data: recordStudents } = await supabase
+          .from('users')
+          .select('*')
+          .in('username', usernames);
+        
+        const usersMap = new Map(recordStudents?.map(u => [u.username, u]) || []);
+        
+        detailedStudents = attendanceRecords.map(record => ({
+          ...(usersMap.get(record.username) || { username: record.username, name: record.username }),
+          status: record.status
+        }));
+      }
       
       setStudentDetails(detailedStudents);
     } catch (error) {
