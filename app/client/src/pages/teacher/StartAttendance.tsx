@@ -314,22 +314,16 @@ export default function StartAttendance() {
          if (expiryTime && Date.now() >= expiryTime.getTime()) return;
 
          try {
-            // Parse session data from current QR to keep metadata
-            let extraData: Record<string, any> = {};
-            try {
-               const current = JSON.parse(latestQrVal.current);
-               if (current.name) extraData.name = current.name;
-               if (current.date) extraData.date = current.date;
-               if (current.time) extraData.time = current.time;
-               if (current.duration) extraData.duration = current.duration;
-            } catch {}
+            const sid = sessionIdRef.current;
+            if (!sid || !qrSecret) return;
 
-            // Parse sessionId from qrValue
-            let sid = sessionIdRef.current;
-            try {
-               const parsed = JSON.parse(latestQrVal.current);
-               if (parsed.sessionId) sid = parsed.sessionId;
-            } catch {}
+            const formValues = form.getValues();
+            const extraData = {
+               name: formValues.name,
+               date: formValues.date,
+               time: formValues.time,
+               duration: formValues.duration,
+            };
 
             const newToken = await generateQRToken(sid, qrSecret, extraData);
             setQrValue(newToken);
