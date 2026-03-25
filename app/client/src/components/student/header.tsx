@@ -2,7 +2,6 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogOut, Bell, Menu, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -94,7 +93,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             </AnimatePresence>
           </div>
 
-          <ThemeToggle />
+
           
           {/* User Menu */}
           <div className="relative">

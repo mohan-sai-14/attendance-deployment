@@ -760,46 +760,60 @@ export default function TeacherDashboard() {
 
       {/* ── QR EXPAND DIALOG ── */}
       <Dialog open={showQrExpanded} onOpenChange={setShowQrExpanded}>
-        <DialogContent className="max-w-md p-0 gap-0 border-none shadow-2xl overflow-hidden rounded-[2rem]">
-          <div className="bg-[#374151] p-6 text-white text-center">
-            <h3 className="font-extrabold text-xl tracking-tight">{activeQrSession?.name}</h3>
+        <DialogContent className="max-w-[90%] sm:max-w-[400px] md:max-w-[500px] p-0 gap-0 border-none shadow-xl overflow-hidden rounded-2xl bg-white focus:outline-none">
+          {/* Header */}
+          <div className="bg-[#374151] px-6 py-4 text-white text-center flex flex-col items-center gap-1.5 min-h-[80px]">
+            <h3 className="font-extrabold text-lg tracking-tight uppercase">
+              {activeQrSession?.name || "Attendance Session"}
+            </h3>
             {qrTimeLeft && qrTimeLeft !== 'Expired' && (
-              <div className="flex items-center justify-center gap-2 mt-2">
-                <Badge className="bg-white/10 text-white font-bold border-white/20 px-3 py-1">
-                  <Clock className="h-3.5 w-3.5 mr-1.5" />
-                  {qrTimeLeft} REMAINING
-                </Badge>
-              </div>
+              <Badge className="bg-white/10 text-white font-bold border-white/20 px-2.5 py-0.5 text-[10px] rounded-full">
+                <Clock className="h-3 w-3 mr-1" />
+                {qrTimeLeft} REMAINING
+              </Badge>
             )}
           </div>
-          <div className="flex items-center justify-center p-12 bg-white">
+
+          {/* QR Content */}
+          <div className="flex flex-col items-center justify-center p-8 md:p-12 bg-white gap-6">
             {activeQrSession?.qr_code && (
-              <div className="relative group">
-                <div className="p-6 bg-[#F9FAFB] rounded-[2.5rem] shadow-inner ring-1 ring-black/5">
+              <div className="relative group w-full flex justify-center">
+                <div className="p-4 bg-[#F9FAFB] rounded-2xl shadow-inner ring-1 ring-black/5 w-fit max-w-full overflow-hidden">
                   <QRCodeSVG
                     value={rotatingQrValue || activeQrSession.qr_code}
-                    size={300}
+                    size={Math.min(300, window.innerWidth * 0.7)}
                     level="H"
                     includeMargin={false}
+                    className="block mx-auto max-w-full h-auto"
                   />
                 </div>
                 {qrTimeLeft === 'Expired' && (
-                  <div className="absolute inset-0 bg-white/90 backdrop-blur-md flex flex-col items-center justify-center rounded-[2.5rem]">
-                    <XCircle className="h-16 w-16 text-red-500 mb-2" />
-                    <span className="text-xl font-black text-red-500 uppercase tracking-tighter">Code Expired</span>
+                  <div className="absolute inset-0 bg-white/90 backdrop-blur-md flex flex-col items-center justify-center rounded-2xl">
+                    <XCircle className="h-12 w-12 text-red-500 mb-1" />
+                    <span className="text-lg font-black text-red-500 uppercase tracking-tighter">Code Expired</span>
                   </div>
                 )}
               </div>
             )}
-          </div>
-          <div className="pb-8 px-8 bg-white text-center space-y-4">
-             <div className="p-4 bg-[#F3F4F6] rounded-2xl">
-               <p className="text-xs font-bold text-[#6B7280]">SECURITY INSTRUCTIONS</p>
-               <p className="text-[11px] text-[#9CA3AF] mt-1 italic">Students must scan this code using the mobile app within the classroom premises.</p>
-             </div>
-             <Button variant="ghost" size="sm" onClick={() => setShowQrExpanded(false)} className="text-[#9CA3AF] hover:bg-[#F3F4F6] hover:text-[#374151] rounded-full">
-               Dismiss Preview
-             </Button>
+
+            {/* Security Info */}
+            <div className="w-full space-y-4">
+              <div className="p-4 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB] text-center space-y-1">
+                <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest">Security Instructions</p>
+                <p className="text-[11px] text-[#6B7280]/70 font-medium italic leading-relaxed">
+                  Students must scan this code using the mobile app within the classroom premises.
+                </p>
+              </div>
+
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowQrExpanded(false)} 
+                className="w-full text-[#9CA3AF] hover:bg-[#F3F4F6] hover:text-[#374151] rounded-xl font-bold uppercase text-[10px] tracking-widest"
+              >
+                Dismiss Preview
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

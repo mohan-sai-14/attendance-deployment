@@ -1175,7 +1175,7 @@ const StudentScannerPage: React.FC = () => {
                               <motion.div
                                 initial={{ opacity: 0, scale: 0.5 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="absolute inset-0 flex items-center justify-center bg-green-500/10 backdrop-blur-[2px]"
+                                className="absolute inset-0 flex items-center justify-center bg-green-500/10"
                               >
                                 <div className="h-16 w-16 rounded-full bg-green-500 flex items-center justify-center shadow-xl">
                                   <CheckCircle className="h-8 w-8 text-white" />

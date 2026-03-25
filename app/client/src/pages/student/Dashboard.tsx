@@ -438,7 +438,7 @@ export default function StudentDashboard() {
            <div className="flex items-center justify-between px-2">
               <h3 className="text-xl font-bold text-foreground flex items-center gap-3">
                  <BookOpen className="h-5 w-5 text-[#10B981]" />
-                 Academia Breakdown
+                 Academic Breakdown
               </h3>
               <Button variant="link" className="text-xs font-bold text-[#10B981] uppercase tracking-wider p-0 h-auto hover:no-underline">Details <ArrowUpRight className="h-3 w-3 inline ml-1" /></Button>
            </div>

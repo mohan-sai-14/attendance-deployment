@@ -727,9 +727,14 @@ export async function registerRoutes(app: Express): Promise<void> {
       const SIMILARITY_THRESHOLD = 0.5; // (means distance 0.5, more lenient than 0.4)
       const isMatch = similarity >= SIMILARITY_THRESHOLD;
       
-      console.log(`Face match attempt for ${userProfile.username}: Distance=${euclideanDistance.toFixed(4)}, Similarity=${similarity.toFixed(4)}, Match=${isMatch}`);
+      // Log details for debugging deployment verification issues
+      console.log(`[VerifyFace] User: ${userProfile.username}, Session: ${sessionId}`);
+      console.log(`[VerifyFace] Distance: ${euclideanDistance.toFixed(4)}, Similarity: ${similarity.toFixed(4)}, Threshold: ${SIMILARITY_THRESHOLD}`);
+      console.log(`[VerifyFace] Captured Embedding length: ${faceDescriptor.length}`);
+      console.log(`[VerifyFace] Stored Embedding length: ${userProfile.face_embeddings?.length}`);
       
       if (!isMatch) {
+        console.warn(`[VerifyFace] MATCH FAILED for ${userProfile.username}. Similarity ${similarity.toFixed(4)} < ${SIMILARITY_THRESHOLD}`);
         return res.json({ 
           success: false, 
           message: 'Face verification failed: no match detected.', 
