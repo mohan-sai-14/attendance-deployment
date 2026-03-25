@@ -707,7 +707,7 @@ export default function TeacherDashboard() {
                               }
                             }}
                           >
-                            {isTaken ? "View" : isOngoing ? "Attend" : "Open"}
+                            {isTaken ? "Taken" : isOngoing ? "Attend" : "Open"}
                           </Button>
                         )}
                       </div>
