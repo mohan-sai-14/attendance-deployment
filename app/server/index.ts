@@ -8,53 +8,15 @@ dotenv.config(); // Also check cwd .env
 
 const express = require('express');
 const session = require('express-session');
-const pgSession = require('connect-pg-simple')(session);
-const MemoryStore = require('memorystore')(session);
-const pg = require('pg');
-const passport = require('passport');
 const cors = require('cors');
 const { registerRoutes } = require('./routes');
 const { storage } = require('./src/storage');
 
 const app = express();
 
-// Build session store: use PostgreSQL if DATABASE_URL exists and is reachable, otherwise MemoryStore
-let sessionStore: any = undefined; 
-let usePostgres = false;
-
-if (process.env.DATABASE_URL) {
-  console.log('Attempting to initialize PostgreSQL session store...');
-  const isSupabaseStandard = process.env.DATABASE_URL.includes('supabase.co') && process.env.DATABASE_URL.includes(':5432');
-  
-  try {
-    const pgPool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-      connectionTimeoutMillis: 5000
-    });
-
-    // We initialize the store BUT we don't assign it to sessionStore yet
-    const potentialStore = new pgSession({
-      pool: pgPool,
-      tableName: 'session',
-      createTableIfMissing: true
-    });
-    
-    // Use a flag to avoid using the store if the pool is dead
-    sessionStore = potentialStore;
-    console.log('PostgreSQL session store initialized.');
-  } catch (err) {
-    console.error('Failed to initialize PostgreSQL session store:', err);
-  }
-}
-
-// Fallback to MemoryStore if Postgres was not successfully configured
-if (!sessionStore) {
-  console.log('Using MemoryStore for sessions.');
-  sessionStore = new MemoryStore({
-    checkPeriod: 86400000 
-  });
-}
+// Build session store: use PostgreSQL if DATABASE_URL exists, otherwise MemoryStore
+let sessionStore: any = undefined; // MemoryStore (default)
+console.log('Using MemoryStore for sessions to avoid IPv6 connectivity issues on Render');
 
 
 // CORS configuration - Temporarily allow all origins for testing
@@ -98,10 +60,11 @@ const sessionConfig: any = {
   saveUninitialized: false,
   proxy: true,
   cookie: {
-    secure: process.env.NODE_ENV === 'production' && !process.env.DISABLE_SECURE_COOKIE ? true : false,
+    secure: process.env.NODE_ENV === 'production' ? true : false,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax' // Better for same-origin integrated deployments
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined
   }
 };
 if (sessionStore) {
@@ -109,37 +72,11 @@ if (sessionStore) {
 }
 app.use(session(sessionConfig));
 
-// Initialize passport
-app.use(passport.initialize());
-app.use(passport.session());
-
 // API routes
 registerRoutes(app);
 
-// Robust static file path discovery
-let clientBuildPath = path.join(__dirname, 'public');
-const fs = require('fs');
-
-if (!fs.existsSync(path.join(clientBuildPath, 'index.html'))) {
-  console.log('Static files not found in default path, trying alternatives...');
-  const alternatives = [
-    path.join(__dirname, '../client/dist'),
-    path.join(__dirname, '../../client/dist'),
-    path.join(process.cwd(), 'client/dist'),
-    path.join(process.cwd(), 'app/client/dist'),
-    path.join(process.cwd(), 'dist/public')
-  ];
-  
-  for (const alt of alternatives) {
-    if (fs.existsSync(path.join(alt, 'index.html'))) {
-      clientBuildPath = alt;
-      console.log('Found static files at:', alt);
-      break;
-    }
-  }
-}
-
-console.log('Serving static files from:', clientBuildPath);
+// Serve static files from client build directory if available
+const clientBuildPath = path.join(__dirname, '../client/dist');
 app.use(express.static(clientBuildPath));
 
 // Health check route
