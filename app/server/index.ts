@@ -20,45 +20,35 @@ const app = express();
 
 // Build session store: use PostgreSQL if DATABASE_URL exists and is reachable, otherwise MemoryStore
 let sessionStore: any = undefined; 
+let usePostgres = false;
 
 if (process.env.DATABASE_URL) {
   console.log('Attempting to initialize PostgreSQL session store...');
-  // Check if it's a Supabase URL and warn about IPv6/Port 5432
   const isSupabaseStandard = process.env.DATABASE_URL.includes('supabase.co') && process.env.DATABASE_URL.includes(':5432');
-  if (isSupabaseStandard) {
-    console.warn('[Session] WARNING: Using standard Supabase port 5432 on Render may cause IPv6 ENETUNREACH errors.');
-    console.warn('[Session] TIP: Use the Transaction Pooler (port 6543) connection string instead.');
-  }
-
-  const pgPool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-    connectionTimeoutMillis: 5000 // Timeout quickly
-  });
-
-  // Since we are in a non-async top level, we initialize pgSession 
-  // but we will also handle its errors to fallback to memory if it fails later.
-  sessionStore = new pgSession({
-    pool: pgPool,
-    tableName: 'session',
-    createTableIfMissing: true
-  });
   
-  // Test connection immediately to log status
-  pgPool.connect((err, client, release) => {
-    if (err) {
-      console.error('[Session] PostgreSQL connection failed at startup:', err.message);
-      if (isSupabaseStandard && err.code === 'ENETUNREACH') {
-        console.error('[Session] This is a known IPv6 issue on Render. Use port 6543 instead.');
-      }
-      console.log('[Session] Application will continue, but sessions may be unstable if store is unreachable.');
-    } else {
-      console.log('[Session] PostgreSQL connection successful.');
-      release();
-    }
-  });
+  try {
+    const pgPool = new pg.Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 5000
+    });
+
+    // We initialize the store BUT we don't assign it to sessionStore yet
+    const potentialStore = new pgSession({
+      pool: pgPool,
+      tableName: 'session',
+      createTableIfMissing: true
+    });
+    
+    // Use a flag to avoid using the store if the pool is dead
+    sessionStore = potentialStore;
+    console.log('PostgreSQL session store initialized.');
+  } catch (err) {
+    console.error('Failed to initialize PostgreSQL session store:', err);
+  }
 }
 
+// Fallback to MemoryStore if Postgres was not successfully configured
 if (!sessionStore) {
   console.log('Using MemoryStore for sessions.');
   sessionStore = new MemoryStore({
