@@ -108,7 +108,9 @@ export default function TeacherDashboard() {
   const [rotatingQrValue, setRotatingQrValue] = useState('');
 
   const todayName = DAYS_OF_WEEK[new Date().getDay()];
-  const todayDate = new Date().toISOString().split('T')[0];
+  const todayDate = new Date().getFullYear() + '-' + 
+                    String(new Date().getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(new Date().getDate()).padStart(2, '0');
 
   // Update current time every minute
   useEffect(() => {
@@ -290,9 +292,9 @@ export default function TeacherDashboard() {
 
         setTodaySchedule(schedule);
 
-        // Find active QR session for today
+        // Find active QR session for today (any session they created today that is active)
         const activeSession = (sessionsData || []).find(
-          s => s.is_active && s.qr_code && classIds.includes(s.class_id) && String(s.created_by) === String(user.id)
+          s => s.is_active && s.qr_code && String(s.created_by) === String(user.id)
         );
         setActiveQrSession(activeSession || null);
         
