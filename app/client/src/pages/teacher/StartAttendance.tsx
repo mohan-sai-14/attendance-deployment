@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import {
@@ -738,7 +738,10 @@ export default function StartAttendance() {
                                        variant="ghost"
                                        size="sm"
                                        className="absolute bottom-4 right-4 h-10 w-10 rounded-2xl bg-white shadow-xl border border-[#E5E7EB] hover:bg-[#F3F4F6] transition-all"
-                                       onClick={() => setShowQrExpanded(true)}
+                                       onClick={() => {
+                                          console.log('Maximize button clicked, setting showQrExpanded to true');
+                                          setShowQrExpanded(true);
+                                       }}
                                     >
                                        <Maximize2 className="h-5 w-5 text-[#374151]" />
                                     </Button>
@@ -857,17 +860,20 @@ export default function StartAttendance() {
          <Dialog open={showQrExpanded} onOpenChange={setShowQrExpanded}>
             <DialogContent className="max-w-[90%] sm:max-w-[400px] md:max-w-[500px] p-0 gap-0 border-none shadow-xl overflow-hidden rounded-2xl bg-white focus:outline-none">
                {/* Header */}
-               <div className="bg-[#374151] px-6 py-6 text-white text-center flex flex-col items-center gap-1.5 min-h-[100px]">
-                  <h3 className="font-extrabold text-xl tracking-tight uppercase">
+               <DialogHeader className="bg-[#374151] px-6 py-6 text-white text-center flex flex-col items-center gap-1.5 min-h-[100px] border-none">
+                  <DialogTitle className="font-extrabold text-xl tracking-tight uppercase text-white">
                      {form.getValues().name || "Attendance Session"}
-                  </h3>
+                  </DialogTitle>
+                  <DialogDescription className="sr-only">
+                     Displays a larger QR code for attendance scanning
+                  </DialogDescription>
                   {timeLeft && timeLeft !== 'Expired' && (
                      <Badge className="bg-white/10 text-white font-bold border-white/20 px-3 py-1 text-[11px] rounded-full">
                         <Clock className="h-3.5 w-3.5 mr-1" />
                         {timeLeft} REMAINING
                      </Badge>
                   )}
-               </div>
+               </DialogHeader>
 
                {/* QR Content */}
                <div className="flex flex-col items-center justify-center p-8 md:p-12 bg-white gap-6">

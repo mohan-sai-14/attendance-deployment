@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { Dialog, DialogContent } from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
   Clock,
@@ -779,17 +779,20 @@ export default function TeacherDashboard() {
       <Dialog open={showQrExpanded} onOpenChange={setShowQrExpanded}>
         <DialogContent className="max-w-[90%] sm:max-w-[400px] md:max-w-[500px] p-0 gap-0 border-none shadow-xl overflow-hidden rounded-2xl bg-white focus:outline-none">
           {/* Header */}
-          <div className="bg-[#374151] px-6 py-4 text-white text-center flex flex-col items-center gap-1.5 min-h-[80px]">
-            <h3 className="font-extrabold text-lg tracking-tight uppercase">
+          <DialogHeader className="bg-[#374151] px-6 py-4 text-white text-center flex flex-col items-center gap-1.5 min-h-[80px] border-none">
+            <DialogTitle className="font-extrabold text-lg tracking-tight uppercase text-white">
               {activeQrSession?.name || "Attendance Session"}
-            </h3>
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Displays a larger QR code for attendance scanning
+            </DialogDescription>
             {qrTimeLeft && qrTimeLeft !== 'Expired' && (
               <Badge className="bg-white/10 text-white font-bold border-white/20 px-2.5 py-0.5 text-[10px] rounded-full">
                 <Clock className="h-3 w-3 mr-1" />
                 {qrTimeLeft} REMAINING
               </Badge>
             )}
-          </div>
+          </DialogHeader>
 
           {/* QR Content */}
           <div className="flex flex-col items-center justify-center p-8 md:p-12 bg-white gap-6">
