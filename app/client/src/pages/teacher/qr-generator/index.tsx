@@ -19,8 +19,8 @@ import { Badge } from "@/components/ui/badge";
 import { Download, QrCode as QrCodeIcon, Check, Loader2, MapPin, Calendar, Clock, Timer, AlertCircle } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useToast } from '@/hooks/use-toast';
-// Removed QRCode import - using browser-compatible solution
 import { supabase } from "@/lib/supabase"; // Import Supabase client
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { format, addMinutes, parseISO } from "date-fns"; // Add this import for date formatting
 import { getCurrentPosition, formatDistance } from "@/lib/location"; // Import location utilities
@@ -43,6 +43,7 @@ export default function QRGenerator() {
   const [qrUrl, setQrUrl] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sessionSaved, setSessionSaved] = useState(false);
+  const { user } = useAuth();
   const { toast } = useToast();
   const qrRef = useRef<HTMLDivElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -241,7 +242,8 @@ export default function QRGenerator() {
         is_active: true,
         teacher_lat: teacherCoords?.lat,
         teacher_lng: teacherCoords?.lng,
-        allowed_radius_meters: 150 // Default 150 meters radius
+        allowed_radius_meters: 150, // Default 150 meters radius
+        created_by: user?.username || 'unknown'
       };
       
       console.log("Session data being sent to server:", sessionData);

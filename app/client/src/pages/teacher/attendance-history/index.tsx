@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 
 interface AttendanceSummary {
@@ -24,6 +25,7 @@ interface AttendanceSummary {
 }
 
 export default function AttendanceHistory() {
+  const { user } = useAuth();
   const [attendanceData, setAttendanceData] = useState<AttendanceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,6 +47,7 @@ export default function AttendanceHistory() {
       const { data: sessions, error: sessionsError } = await supabase
         .from('sessions')
         .select('id, name, date')
+        .eq('created_by', user?.username)
         .order('date', { ascending: false });
 
       if (sessionsError) {
@@ -60,10 +63,12 @@ export default function AttendanceHistory() {
       const sessionMap = new Map(sessions?.map(session => [session.id, session]) || []);
       console.log('🗺️ Session map created with', sessionMap.size, 'entries');
 
-      // Fetch all attendance records
+      // Fetch attendance records only for these sessions
+      const sessionIds = sessions?.map(s => s.id) || [];
       const { data: attendanceRecords, error: attendanceError } = await supabase
         .from('attendance')
         .select('*')
+        .in('session_id', sessionIds)
         .order('date', { ascending: false });
 
       if (attendanceError) {
@@ -80,54 +85,11 @@ export default function AttendanceHistory() {
 
       attendanceRecords?.forEach(record => {
         const session = sessionMap.get(record.session_id);
-        console.log('🔗 Processing record:', record.session_id, 'Session found:', !!session);
-
-        if (!session) {
-          console.log('⚠️ Session not found for session_id:', record.session_id);
-          console.log('Available session IDs:', Array.from(sessionMap.keys()));
-          // Create a fallback summary for records without valid sessions
-          const fallbackKey = `fallback-${record.session_id}-${record.date || 'unknown'}`;
-
-          if (!groupedData.has(fallbackKey)) {
-            groupedData.set(fallbackKey, {
-              date: record.date || new Date().toISOString().split('T')[0],
-              session_id: record.session_id,
-              session_name: record.session_name || 'Unknown Session',
-              present: 0,
-              absent: 0,
-              late: 0,
-              od: 0,
-              ml: 0,
-              total: 0,
-              status: 'completed' as const
-            });
-          }
-
-          const summary = groupedData.get(fallbackKey)!;
-          summary.total++;
-
-          switch (record.status) {
-            case 'present':
-              summary.present++;
-              break;
-            case 'absent':
-              summary.absent++;
-              break;
-            case 'late':
-              summary.late++;
-              break;
-            case 'od':
-              summary.od++;
-              break;
-            case 'ml':
-              summary.ml++;
-              break;
-          }
-          return;
-        }
+        
+        // Skip if session not found (already filtered by created_by in sessions fetch)
+        if (!session) return;
 
         const key = `${session.date}-${record.session_id}`;
-        console.log('🔑 Group key:', key);
 
         if (!groupedData.has(key)) {
           groupedData.set(key, {
@@ -142,12 +104,10 @@ export default function AttendanceHistory() {
             total: 0,
             status: 'completed' as const
           });
-          console.log('📈 Created new summary for key:', key);
         }
 
         const summary = groupedData.get(key)!;
         summary.total++;
-        console.log('📊 Updated total:', summary.total, 'Status:', record.status);
 
         switch (record.status) {
           case 'present':

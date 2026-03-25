@@ -15,11 +15,11 @@ import {
   FormMessage,
   FormDescription,
 } from "@/components/ui/form";
-import { Download, QrCode as QrCodeIcon, Check, Loader2, Clock, Calendar } from "lucide-react";
+import { Download, QrCode as QrCodeIcon, Check, Loader2, Clock, Calendar, AlertCircle, CheckCircle2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useToast } from "@/hooks/use-toast";
-// Removed QRCode import - using browser-compatible solution
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { format, addMinutes, parseISO, differenceInSeconds } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -56,6 +56,7 @@ export default function QRGenerator() {
   const [qrValue, setQrValue] = useState<string>("");
   const [qrUrl, setQrUrl] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
   const [sessionSaved, setSessionSaved] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [expiryTime, setExpiryTime] = useState<Date | null>(null);
@@ -213,7 +214,8 @@ export default function QRGenerator() {
           expires_at: qrData.expiresAt,
           timezone: qrData.timezone,
           qr_code: '{}', // Placeholder
-          is_active: true
+          is_active: true,
+          created_by: user?.username || 'unknown'
         }])
         .select()
         .single();
@@ -229,19 +231,19 @@ export default function QRGenerator() {
       };
 
       // Generate final QR code with the correct numeric ID
-      const qrString = JSON.stringify(finalQrData);
-      const qrUrl = await generateQRCode(qrString);
+      const finalQrString = JSON.stringify(finalQrData);
+      const finalQrUrl = await generateQRCode(finalQrString);
       
       // Update state
-      setQrValue(qrString);
-      setQrUrl(qrUrl);
+      setQrValue(finalQrString);
+      setQrUrl(finalQrUrl);
       setExpiryTime(localExpirationDate);
       setSessionSaved(true);
 
       // Update the record in DB with the final QR JSON
       const { error: updateError } = await supabase
         .from('sessions')
-        .update({ qr_code: qrString })
+        .update({ qr_code: finalQrString })
         .eq('id', newSession.id);
 
       if (updateError) throw updateError;

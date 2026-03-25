@@ -201,7 +201,7 @@ export default function TeacherDashboard() {
           }, {} as Record<string, ClassInfo>);
         }
 
-        // Fetch today's attendance sessions created by this teacher
+        // Fetch today's attendance sessions
         const { data: sessionsData, error: sessError } = await supabase
           .from('sessions')
           .select('*')
@@ -285,7 +285,7 @@ export default function TeacherDashboard() {
 
         // Find active QR session for today
         const activeSession = (sessionsData || []).find(
-          s => s.is_active && s.qr_code && classIds.includes(s.class_id)
+          s => s.is_active && s.qr_code && classIds.includes(s.class_id) && s.created_by === user.username
         );
         setActiveQrSession(activeSession || null);
         

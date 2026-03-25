@@ -1,29 +1,19 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "app/server/src/index.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "app/client/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
+  "buildCommand": "npm run build --prefix app/client",
+  "outputDirectory": "app/client/dist",
+  "installCommand": "npm install --prefix app/client",
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "app/server/src/index.ts"
+      "dest": "/api/$1"
     },
     {
       "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "app/client/index.html"
+      "dest": "/index.html"
     }
   ]
 }

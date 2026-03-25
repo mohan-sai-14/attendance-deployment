@@ -75,6 +75,17 @@ export default function EditAttendance() {
             .single();
 
          if (sessError) throw sessError;
+         
+         if (sessionData.created_by !== user.username) {
+            toast({
+               variant: 'destructive',
+               title: 'Access Denied',
+               description: 'You can only edit attendance for your own sessions.',
+            });
+            navigate('/teacher/dashboard');
+            return;
+         }
+
          setSession(sessionData);
 
          // Check lock status — 1 hour from creation

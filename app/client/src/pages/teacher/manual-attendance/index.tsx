@@ -128,7 +128,11 @@ export default function ManualAttendance() {
           return acc;
         }, {} as Record<string, ClassInfo>);
 
-        const { data: sessionsData } = await supabase.from('sessions').select('*').eq('date', todayDate);
+        const { data: sessionsData } = await supabase
+          .from('sessions')
+          .select('*')
+          .eq('date', todayDate)
+          .eq('created_by', user.username);
 
         const cards: PeriodCard[] = [];
         for (const entry of timetableData) {
@@ -329,6 +333,7 @@ export default function ManualAttendance() {
             class_id: selectedPeriod.entry.class_id,
             section: selectedPeriod.classInfo.section,
             expires_at: new Date().toISOString(),
+            created_by: user.username,
           })
           .select()
           .single();

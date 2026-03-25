@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download, BarChart2, LineChart, PieChart, Calendar, Loader2, TrendingUp, Users, Activity, RefreshCw } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Reports() {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     totalStudents: 0,
@@ -30,17 +32,20 @@ export default function Reports() {
         .select('*', { count: 'exact', head: true })
         .eq('role', 'student');
 
-      // Get total sessions
+      // Get total sessions for this teacher
       const { data: sessions } = await supabase
         .from('sessions')
         .select('*')
+        .eq('created_by', user?.username)
         .order('created_at', { ascending: false });
 
-      // Get today's attendance
+      // Get today's attendance for these sessions
       const today = new Date().toISOString().split('T')[0];
+      const sessionIds = sessions?.map(s => s.id) || [];
       const { data: todayAttendance } = await supabase
         .from('attendance')
         .select('*')
+        .in('session_id', sessionIds)
         .gte('check_in_time', `${today}T00:00:00`)
         .lte('check_in_time', `${today}T23:59:59`);
 

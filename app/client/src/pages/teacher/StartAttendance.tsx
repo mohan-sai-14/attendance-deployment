@@ -412,7 +412,8 @@ export default function StartAttendance() {
                allowed_radius_meters: 150,
                class_id: classInfo?.id || currentEntry.class_id,
                section: classInfo?.section || null,
-               teacher_ip: teacherIp || null
+               teacher_ip: teacherIp || null,
+               created_by: user.username
             })
             .select()
             .single();
@@ -491,7 +492,8 @@ export default function StartAttendance() {
                is_active: false,
                expires_at: new Date(now.getTime() + 3600000).toISOString(), // 1 hour
                class_id: classInfo?.id || currentEntry.class_id,
-               section: classInfo?.section || null
+               section: classInfo?.section || null,
+               created_by: user.username
             })
             .select()
             .single();
