@@ -19,7 +19,7 @@ const BottomNav: React.FC = () => {
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#E5E7EB] shadow-[0_-4px_12px_rgba(0,0,0,0.03)] z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.03)] z-50">
         <div className="flex items-center justify-around h-16 px-2 max-w-md mx-auto">
           {navItems.map((item) => {
             const active = isActive(item.path);
@@ -28,11 +28,11 @@ const BottomNav: React.FC = () => {
                 <button
                   className={`flex flex-col items-center justify-center w-full py-1.5 rounded-xl transition-all duration-200 ${
                     active
-                      ? 'text-[#10B981]'
-                      : 'text-gray-400 hover:text-gray-600'
+                      ? 'text-primary'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  <div className={`p-1 rounded-lg transition-colors ${active ? 'bg-[#10B981]/10' : ''}`}>
+                  <div className={`p-1 rounded-lg transition-colors ${active ? 'bg-primary/10' : ''}`}>
                     <item.icon className={`h-5 w-5 ${active ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
                   </div>
                   <span className={`text-[10px] font-bold mt-1 uppercase tracking-wider ${active ? 'opacity-100' : 'opacity-60'}`}>
@@ -43,7 +43,7 @@ const BottomNav: React.FC = () => {
             );
           })}
         </div>
-        <div className="h-[env(safe-area-inset-bottom)] bg-white"></div>
+        <div className="h-[env(safe-area-inset-bottom)] bg-card"></div>
       </div>
       {/* Desktop Hidden Spacer */}
       <div className="h-16 md:hidden"></div>

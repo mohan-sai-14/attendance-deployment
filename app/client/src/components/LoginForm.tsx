@@ -76,18 +76,18 @@ export function LoginForm() {
       }}
       className="w-full"
     >
-      <Card className="border-[#E5E7EB] shadow-xl bg-white rounded-2xl overflow-hidden">
-        <CardHeader className="space-y-2 pb-6 pt-8 text-center border-b border-[#F3F4F6]">
-          <motion.div variants={itemVariants} className="flex justify-center mb-2">
-            <div className="h-12 w-12 rounded-xl bg-[#10B981]/10 flex items-center justify-center text-[#10B981]">
+      <Card className="border-border shadow-xl bg-card rounded-2xl overflow-hidden">
+        <CardHeader className="space-y-2 pb-6 pt-8 text-center border-b border-border">
+          <motion.div variants={itemVariants} className="flex justify-center mb-4">
+            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
               <Lock className="h-6 w-6" />
             </div>
           </motion.div>
           <motion.div variants={itemVariants}>
-            <CardTitle className="text-2xl font-bold tracking-tight text-[#111827]">Welcome Back</CardTitle>
+            <CardTitle className="text-2xl font-bold tracking-tight text-foreground">Welcome Back</CardTitle>
           </motion.div>
           <motion.div variants={itemVariants}>
-            <CardDescription className="text-gray-500 text-sm">
+            <CardDescription className="text-muted-foreground text-sm font-medium">
               Enter your credentials to access your dashboard
             </CardDescription>
           </motion.div>
@@ -104,10 +104,10 @@ export function LoginForm() {
                       <FormLabel className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Email or Username</FormLabel>
                       <FormControl>
                         <div className="relative group">
-                          <AtSign className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-[#10B981] transition-colors" />
+                          <AtSign className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                           <Input
                             placeholder="e.g. jdoe@college.edu"
-                            className="pl-10 h-12 bg-gray-50/50 border-[#E5E7EB] focus:border-[#10B981] focus:ring-[#10B981]/20 rounded-xl transition-all"
+                            className="pl-10 h-12 bg-muted/30 border-border focus:border-primary focus:ring-primary/20 rounded-xl transition-all font-medium"
                             disabled={isLoading}
                             {...field}
                           />
@@ -128,18 +128,18 @@ export function LoginForm() {
                       <FormLabel className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Password</FormLabel>
                       <FormControl>
                         <div className="relative group">
-                          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-[#10B981] transition-colors" />
+                          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                           <Input
                             type={showPassword ? 'text' : 'password'}
                             placeholder="••••••••"
-                            className="pl-10 pr-10 h-12 bg-gray-50/50 border-[#E5E7EB] focus:border-[#10B981] focus:ring-[#10B981]/20 rounded-xl transition-all"
+                            className="pl-10 pr-10 h-12 bg-muted/30 border-border focus:border-primary focus:ring-primary/20 rounded-xl transition-all font-medium"
                             disabled={isLoading}
                             {...field}
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none transition-colors"
                           >
                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </button>
@@ -154,7 +154,7 @@ export function LoginForm() {
               <motion.div variants={itemVariants} className="pt-4">
                 <Button
                   type="submit"
-                  className="w-full h-12 bg-[#374151] hover:bg-[#1f2937] text-white font-bold rounded-xl shadow-lg shadow-gray-200 transition-all flex items-center justify-center gap-2"
+                  className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/10 transition-all flex items-center justify-center gap-2"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -172,9 +172,9 @@ export function LoginForm() {
             </form>
           </Form>
         </CardContent>
-        <CardFooter className="pb-8 pt-0 flex justify-center border-t border-[#F3F4F6] mt-2 pt-6">
-          <p className="text-xs text-gray-500">
-            Forgot password? <span className="text-[#10B981] font-semibold cursor-pointer hover:underline uppercase tracking-tight">Contact Admin</span>
+        <CardFooter className="pb-8 pt-0 flex justify-center border-t border-border mt-2 pt-6">
+          <p className="text-xs text-muted-foreground font-medium">
+            Forgot password? <span className="text-primary font-semibold cursor-pointer hover:underline uppercase tracking-tight">Contact Admin</span>
           </p>
         </CardFooter>
       </Card>

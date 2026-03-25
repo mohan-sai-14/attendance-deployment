@@ -11,13 +11,28 @@ if (!globalThis.fetch) {
   globalThis.fetch = fetch;
 }
 
-// Load environment variables using absolute path
+// Load environment variables
 const envPath = path.resolve(__dirname, '../../../.env');
-console.log('Loading environment variables from:', envPath);
-dotenv.config({ path: envPath });
+try {
+  // Only attempt to load .env if it exists, but don't fail if it doesn't 
+  // (Vercel/Production usually provide env vars via process.env)
+  dotenv.config({ path: envPath });
+  console.log('[Storage] Successfully loaded environment variables from:', envPath);
+} catch (error) {
+  console.warn('[Storage] Could not load .env file from:', envPath, '. Proceeding with existing environment variables.');
+}
 
 const supabaseUrl = process.env.SUPABASE_URL;
+// Priority: Service Role Key > Anon Key
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.log('[Storage] Using Supabase SERVICE_ROLE_KEY (authorized for RLS bypass)');
+} else if (process.env.SUPABASE_ANON_KEY) {
+  console.warn('[Storage] Using Supabase ANON_KEY (RLS will be enforced - enrollment may fail)');
+} else {
+  console.error('[Storage] No Supabase API key found in environment variables!');
+}
 
 class SupabaseStorage {
   public supabase: SupabaseClient | null;

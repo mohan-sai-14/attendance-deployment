@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
@@ -977,21 +977,16 @@ const StudentScannerPage: React.FC = () => {
   return (
     <div className="max-w-md mx-auto px-4 py-8 sm:py-12 min-h-[calc(100vh-4rem)] flex flex-col justify-center animate-in fade-in duration-700">
       {/* Header Branding */}
-      <header className="mb-10 text-center space-y-3">
-        <div className="flex items-center justify-center gap-2 mb-2">
-           <div className="h-1 w-8 rounded-full bg-emerald-500"></div>
-           <Badge className="bg-emerald-50 text-emerald-600 hover:bg-emerald-50 border-emerald-100 text-[9px] font-black uppercase tracking-[0.15em] px-2 py-0.5">Secure Check-in</Badge>
-           <div className="h-1 w-8 rounded-full bg-emerald-500"></div>
-        </div>
+      <header className="mb-10 text-center space-y-2">
         <h1 className="text-3xl font-extrabold text-foreground tracking-tighter">Attendance Portal</h1>
-        <p className="text-gray-500 font-medium text-sm">Verify your identity and location to proceed.</p>
+        <p className="text-muted-foreground font-medium text-sm">Verify your identity and location to proceed.</p>
       </header>
       
       {!activeSession ? (
         <Card className="border-border shadow-xl bg-card rounded-[2rem] overflow-hidden p-10 text-center border-dashed">
           <div className="flex flex-col items-center space-y-6">
-            <div className="w-20 h-20 rounded-3xl bg-amber-50 flex items-center justify-center border border-amber-100 rotate-3">
-              <AlertCircle className="h-10 w-10 text-amber-500 -rotate-3" />
+            <div className="w-20 h-20 rounded-3xl bg-muted flex items-center justify-center border border-border">
+              <AlertCircle className="h-10 w-10 text-muted-foreground" />
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl font-black text-foreground">Station Inactive</h2>
@@ -1001,68 +996,68 @@ const StudentScannerPage: React.FC = () => {
             </div>
             <Button 
                onClick={() => window.location.href = '/student/dashboard'} 
-               className="w-full h-14 bg-primary hover:bg-[#1f2937] text-white font-bold rounded-2xl shadow-xl shadow-gray-200 transition-all active:scale-[0.98]"
+               className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-2xl shadow-xl transition-all active:scale-[0.98]"
             >
               Return to Dashboard
             </Button>
           </div>
         </Card>
       ) : (
-        <Card className="border-border shadow-2xl bg-card rounded-[2.5rem] overflow-hidden border-0 ring-1 ring-gray-100">
+        <Card className="border-border shadow-2xl bg-card rounded-[2.5rem] overflow-hidden border">
           {/* Progress Indicator */}
-          <div className="bg-[#F9FAFB] border-b border-border px-8 py-6">
+          <div className="bg-muted/30 border-b border-border px-8 py-6">
             <div className="flex items-center justify-between relative">
-              <div className="absolute left-0 top-1/2 w-full h-[2px] bg-gray-200 -z-0 -translate-y-[6px]"></div>
+              <div className="absolute left-0 top-1/2 w-full h-[1px] bg-border -z-0 -translate-y-[6px]"></div>
               
               {/* Step 1: Location */}
-              <div className="flex flex-col items-center gap-2 relative z-10 bg-[#F9FAFB] px-1 group">
+              <div className="flex flex-col items-center gap-2 relative z-10 bg-card px-1 group">
                 <div className={cn(
-                  "w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 rotate-45 group-hover:rotate-0",
+                  "w-10 h-10 rounded-2xl flex items-center justify-center border transition-all duration-500",
                   locationVerified || success 
-                    ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-200" 
+                    ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/20" 
                     : !locationVerified && !success 
-                      ? "bg-card border-emerald-500 text-emerald-500 shadow-xl shadow-emerald-100" 
-                      : "bg-card border-gray-200 text-muted-foreground"
+                      ? "bg-card border-primary text-primary" 
+                      : "bg-card border-border text-muted-foreground"
                 )}>
-                  <div className="-rotate-45 group-hover:rotate-0 transition-transform duration-500">
+                  <div className="transition-transform duration-500">
                     {locationVerified || success ? <CheckCircle className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
                   </div>
                 </div>
-                <span className={cn("text-[9px] font-black uppercase tracking-[0.1em] mt-1", (locationVerified || success || (!locationVerified && !success)) ? "text-emerald-600" : "text-muted-foreground")}>Location</span>
+                <span className={cn("text-[9px] font-black uppercase tracking-[0.1em] mt-1", (locationVerified || success || (!locationVerified && !success)) ? "text-primary" : "text-muted-foreground")}>Location</span>
               </div>
               
               {/* Step 2: QR Scan */}
-              <div className="flex flex-col items-center gap-2 relative z-10 bg-[#F9FAFB] px-1 group">
+              <div className="flex flex-col items-center gap-2 relative z-10 bg-card px-1 group">
                 <div className={cn(
-                  "w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 rotate-45 group-hover:rotate-0",
+                  "w-10 h-10 rounded-2xl flex items-center justify-center border transition-all duration-500",
                   showFaceVerification || success 
-                    ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-200" 
+                    ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/20" 
                     : locationVerified && !showFaceVerification && !success 
-                      ? "bg-card border-emerald-500 text-emerald-500 shadow-xl shadow-emerald-100" 
-                      : "bg-card border-gray-200 text-muted-foreground"
+                      ? "bg-card border-primary text-primary" 
+                      : "bg-card border-border text-muted-foreground"
                 )}>
-                  <div className="-rotate-45 group-hover:rotate-0 transition-transform duration-500">
+                  <div className="transition-transform duration-500">
                     {showFaceVerification || success ? <CheckCircle className="w-5 h-5" /> : <QrCode className="w-5 h-5" />}
                   </div>
                 </div>
-                <span className={cn("text-[9px] font-black uppercase tracking-[0.1em] mt-1", (showFaceVerification || success || (locationVerified && !showFaceVerification && !success)) ? "text-emerald-600" : "text-muted-foreground")}>QR SCAN</span>
+                <span className={cn("text-[9px] font-black uppercase tracking-[0.1em] mt-1", (showFaceVerification || success || (locationVerified && !showFaceVerification && !success)) ? "text-primary" : "text-muted-foreground")}>QR SCAN</span>
               </div>
               
               {/* Step 3: Face */}
-              <div className="flex flex-col items-center gap-2 relative z-10 bg-[#F9FAFB] px-1 group">
+              <div className="flex flex-col items-center gap-2 relative z-10 bg-card px-1 group">
                 <div className={cn(
-                  "w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 rotate-45 group-hover:rotate-0",
+                  "w-10 h-10 rounded-2xl flex items-center justify-center border transition-all duration-500",
                   success 
-                    ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-200" 
+                    ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/20" 
                     : showFaceVerification && !success 
-                      ? "bg-card border-emerald-500 text-emerald-500 shadow-xl shadow-emerald-100" 
-                      : "bg-card border-gray-200 text-muted-foreground"
+                      ? "bg-card border-primary text-primary" 
+                      : "bg-card border-border text-muted-foreground"
                 )}>
-                  <div className="-rotate-45 group-hover:rotate-0 transition-transform duration-500">
+                  <div className="transition-transform duration-500">
                     {success ? <CheckCircle className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
                   </div>
                 </div>
-                <span className={cn("text-[9px] font-black uppercase tracking-[0.1em] mt-1", (success || (showFaceVerification && !success)) ? "text-emerald-600" : "text-muted-foreground")}>IDENTITY</span>
+                <span className={cn("text-[9px] font-black uppercase tracking-[0.1em] mt-1", (success || (showFaceVerification && !success)) ? "text-primary" : "text-muted-foreground")}>IDENTITY</span>
               </div>
             </div>
           </div>
@@ -1071,13 +1066,13 @@ const StudentScannerPage: React.FC = () => {
             <div className="space-y-8">
               {/* Session Context Banner */}
               {!success && (
-                <div className="bg-primary rounded-3xl p-5 flex justify-between items-center text-white shadow-xl shadow-gray-200 transition-all hover:scale-[1.02]">
+                <div className="bg-primary rounded-3xl p-5 flex justify-between items-center text-primary-foreground shadow-xl transition-all hover:scale-[1.02]">
                   <div className="space-y-0.5">
-                    <p className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-1">Marking Attendance for</p>
+                    <p className="text-[9px] font-black text-primary-foreground/60 uppercase tracking-[0.2em] mb-1">Marking Attendance for</p>
                     <h4 className="font-extrabold text-lg leading-none tracking-tight">{activeSession.name}</h4>
-                    <p className="text-xs font-bold text-muted-foreground">{activeSession.time}</p>
+                    <p className="text-xs font-bold text-primary-foreground/40">{activeSession.time}</p>
                   </div>
-                  <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 uppercase text-[9px] font-black h-fit py-1 px-2.5">Active</Badge>
+                  <Badge className="bg-primary-foreground/10 text-primary-foreground border border-primary-foreground/20 uppercase text-[9px] font-black h-fit py-1 px-2.5">Active</Badge>
                 </div>
               )}
 
@@ -1086,29 +1081,28 @@ const StudentScannerPage: React.FC = () => {
                   <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
                     <div className="text-center space-y-2">
                        <h3 className="text-2xl font-black text-foreground tracking-tight">Identity Verification</h3>
-                       <p className="text-sm font-medium text-gray-500">Position your face inside the frame.</p>
+                       <p className="text-sm font-medium text-muted-foreground">Position your face inside the frame.</p>
                     </div>
 
                     {isCameraActive && !livenessPassed && !livenessFailed && livenessChallenges.length > 0 && (
                       <motion.div 
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className="bg-emerald-50 border border-emerald-100 p-5 rounded-3xl text-center shadow-lg shadow-emerald-50"
+                        className="bg-muted/30 border border-border p-5 rounded-3xl text-center"
                       >
-                        <p className="text-emerald-700 font-black text-xl mb-1 uppercase tracking-tighter">
+                        <p className="text-foreground font-black text-xl mb-1 uppercase tracking-tighter">
                           {livenessChallenges[currentChallengeIndex].instruction}
                         </p>
                         <div className="flex items-center justify-center gap-1">
                           {[...Array(livenessChallenges.length)].map((_, i) => (
-                            <div key={i} className={cn("h-1 rounded-full transition-all duration-500", i === currentChallengeIndex ? "w-4 bg-emerald-500" : (i < currentChallengeIndex ? "w-2 bg-emerald-300" : "w-1 bg-gray-200"))}></div>
+                            <div key={i} className={cn("h-1 rounded-full transition-all duration-500", i === currentChallengeIndex ? "w-4 bg-primary" : (i < currentChallengeIndex ? "w-2 bg-primary/40" : "w-1 bg-muted"))}></div>
                           ))}
                         </div>
                       </motion.div>
                     )}
 
                     <div className="relative group max-w-[300px] mx-auto">
-                      <div className="absolute inset-0 bg-emerald-500/20 blur-[60px] rounded-full scale-125 opacity-20 group-hover:opacity-40 transition-opacity"></div>
-                      <div className="relative aspect-square rounded-[3rem] overflow-hidden shadow-2xl ring-[12px] ring-gray-50 border-4 border-white">
+                      <div className="relative aspect-square rounded-[3rem] overflow-hidden shadow-2xl ring-1 ring-border border-4 border-card">
                         {isCameraActive ? (
                           <>
                             <video
@@ -1119,8 +1113,8 @@ const StudentScannerPage: React.FC = () => {
                               className="w-full h-full object-cover scale-x-[-1]"
                             />
                             {/* Scanning Guide Overlays */}
-                            <div className="absolute inset-0 border-[3px] border-dashed border-emerald-500/40 rounded-[2.5rem] pointer-events-none animate-[pulse_3s_ease-in-out_infinite]"></div>
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-64 border-[3px] border-white/30 rounded-[6rem] pointer-events-none backdrop-blur-[1px]"></div>
+                            <div className="absolute inset-0 border-[3px] border-dashed border-primary/40 rounded-[2.5rem] pointer-events-none"></div>
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-64 border-[3px] border-foreground/10 rounded-[6rem] pointer-events-none backdrop-blur-[1px]"></div>
                             
                             {/* Camera Toggle */}
                             {faceDevices.length > 1 && (
@@ -1134,9 +1128,9 @@ const StudentScannerPage: React.FC = () => {
                             )}
                           </>
                         ) : (
-                          <div className="flex flex-col items-center justify-center h-full bg-gray-50 text-muted-foreground gap-4">
-                            <div className="h-20 w-20 rounded-full border-4 border-gray-200 border-t-emerald-500 animate-spin"></div>
-                            <span className="text-[10px] font-black uppercase tracking-widest">Waking Sensor...</span>
+                          <div className="flex flex-col items-center justify-center h-full bg-muted/30 text-muted-foreground gap-4">
+                            <div className="h-20 w-20 rounded-full border-4 border-border border-t-primary animate-spin"></div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Waking Sensor...</span>
                           </div>
                         )}
                         <canvas ref={canvasRef} className="hidden" />
@@ -1163,8 +1157,8 @@ const StudentScannerPage: React.FC = () => {
                           className={cn(
                             "w-full h-16 text-lg font-black uppercase tracking-widest rounded-[1.5rem] shadow-2xl transition-all active:scale-[0.98] border-0",
                             !livenessPassed 
-                              ? "bg-gray-100 text-muted-foreground" 
-                              : "bg-[#10B981] text-white shadow-emerald-200"
+                              ? "bg-secondary text-muted-foreground" 
+                              : "bg-primary text-primary-foreground shadow-primary/20"
                           )}
                         >
                           {isVerifying ? (
@@ -1191,11 +1185,10 @@ const StudentScannerPage: React.FC = () => {
                 ) : success ? (
                   <div className="text-center space-y-10 py-10 animate-in zoom-in-95 duration-700">
                     <div className="relative w-fit mx-auto">
-                       <div className="absolute inset-0 bg-emerald-500/20 blur-[40px] rounded-full scale-150"></div>
                        <motion.div 
                          initial={{ scale: 0, rotate: -45 }}
                          animate={{ scale: 1, rotate: 0 }}
-                         className="h-28 w-28 rounded-[2.5rem] bg-emerald-500 text-white flex items-center justify-center shadow-2xl relative border-[8px] border-white"
+                         className="h-28 w-28 rounded-[2.5rem] bg-primary text-primary-foreground flex items-center justify-center shadow-2xl relative border-[8px] border-card"
                        >
                           <CheckCircle className="h-12 w-12" />
                        </motion.div>
@@ -1216,9 +1209,9 @@ const StudentScannerPage: React.FC = () => {
                 ) : isLoading ? (
                   <div className="flex flex-col items-center justify-center py-20 space-y-8">
                      <div className="relative">
-                        <div className="h-20 w-20 border-[6px] border-emerald-50 border-t-emerald-500 rounded-full animate-spin"></div>
+                        <div className="h-20 w-20 border-[6px] border-muted border-t-primary rounded-full animate-spin"></div>
                         <div className="absolute inset-0 flex items-center justify-center">
-                           <Shield className="h-8 w-8 text-emerald-500 fill-emerald-50" />
+                           <Shield className="h-8 w-8 text-primary opacity-20" />
                         </div>
                      </div>
                      <div className="text-center space-y-1">
@@ -1229,9 +1222,7 @@ const StudentScannerPage: React.FC = () => {
                 ) : !locationVerified ? (
                   <div className="space-y-10 py-10 animate-in fade-in duration-700">
                     <div className="relative w-fit mx-auto">
-                       <div className="absolute inset-0 bg-emerald-500/10 blur-[40px] rounded-full scale-150"></div>
-                       <div className="h-24 w-24 rounded-[2rem] bg-card border-2 border-emerald-100 flex items-center justify-center text-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.1)] relative overflow-hidden group">
-                          <div className="absolute inset-0 bg-emerald-50 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500"></div>
+                       <div className="h-24 w-24 rounded-[2rem] bg-muted/50 border border-border flex items-center justify-center text-primary relative overflow-hidden group">
                           <MapPin className="h-10 w-10 relative z-10" />
                        </div>
                     </div>
@@ -1258,12 +1249,11 @@ const StudentScannerPage: React.FC = () => {
                   <div className="space-y-8 py-6 animate-in fade-in duration-700">
                     {isScanning ? (
                       <div className="space-y-8">
-                        <div className="bg-emerald-50 rounded-2xl p-4 flex items-center justify-center gap-3 border border-emerald-100">
-                           <Shield className="h-5 w-5 text-emerald-500" />
-                           <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Location Match Verified</span>
+                        <div className="bg-muted/50 rounded-2xl p-4 flex items-center justify-center gap-3 border border-border">
+                           <Shield className="h-5 w-5 text-primary" />
+                           <span className="text-[10px] font-black text-primary uppercase tracking-widest">Location Match Verified</span>
                         </div>
-                        <div className="rounded-[2.5rem] overflow-hidden shadow-2xl ring-[12px] ring-gray-50 border-4 border-white bg-[#F9FAFB] relative group">
-                          <div className="absolute inset-0 border-2 border-emerald-500/20 rounded-[2.2rem] pointer-events-none z-10"></div>
+                        <div className="rounded-[2.5rem] overflow-hidden shadow-2xl ring-1 ring-border border-4 border-card bg-muted/30 relative group">
                           <Html5QrcodePlugin
                             fps={10}
                             qrbox={250}
@@ -1274,11 +1264,11 @@ const StudentScannerPage: React.FC = () => {
                             }}
                           />
                           {/* Modern Scanner Guide */}
-                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-emerald-500/40 rounded-3xl pointer-events-none z-20 animate-pulse">
-                             <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-emerald-500 rounded-tl-lg"></div>
-                             <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-emerald-500 rounded-tr-lg"></div>
-                             <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-emerald-500 rounded-bl-lg"></div>
-                             <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-emerald-500 rounded-br-lg"></div>
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-primary/40 rounded-3xl pointer-events-none z-20">
+                             <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
+                             <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
+                             <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
+                             <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
                           </div>
                         </div>
                         <p className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Scan the code on the teacher's screen</p>
@@ -1290,7 +1280,7 @@ const StudentScannerPage: React.FC = () => {
                         </div>
                         <div className="text-center space-y-1">
                            <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Scanner Sleeping</p>
-                           <Button onClick={handleScanAgain} variant="link" className="text-emerald-500 font-black uppercase text-[10px] tracking-widest hover:no-underline">Wake Scanner</Button>
+                           <Button onClick={handleScanAgain} variant="link" className="text-primary font-black uppercase text-[10px] tracking-widest hover:no-underline">Wake Scanner</Button>
                         </div>
                       </div>
                     )}
@@ -1301,7 +1291,7 @@ const StudentScannerPage: React.FC = () => {
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-8 p-5 bg-rose-50 border border-rose-100 rounded-3xl text-rose-700 text-sm flex items-start gap-4 shadow-lg shadow-rose-100"
+                    className="mt-8 p-5 bg-destructive/10 border border-destructive/20 rounded-3xl text-destructive text-sm flex items-start gap-4 shadow-xl shadow-destructive/5"
                   >
                     <AlertCircle className="w-6 h-6 shrink-0 mt-0.5" />
                     <div className="space-y-1">
@@ -1315,8 +1305,8 @@ const StudentScannerPage: React.FC = () => {
           </CardContent>
           
           <div className="bg-primary px-8 py-4 flex items-center justify-center gap-3">
-             <Shield className="h-3 w-3 text-emerald-400" />
-             <span className="text-[8px] font-black text-white uppercase tracking-[0.3em]">Encrypted Session Endpoint</span>
+             <Shield className="h-3 w-3 text-primary-foreground/60" />
+             <span className="text-[8px] font-black text-primary-foreground uppercase tracking-[0.3em]">Encrypted Session Endpoint</span>
           </div>
         </Card>
       )}
@@ -1342,7 +1332,7 @@ const StudentScannerPage: React.FC = () => {
               <div className="flex flex-col items-center text-center space-y-6">
                 <div className={cn(
                   "w-24 h-24 rounded-[2rem] flex items-center justify-center rotate-6",
-                  permissionStatus === 'denied' ? 'bg-rose-50 text-rose-500 border border-rose-100' : 'bg-emerald-50 text-emerald-500 border border-emerald-100'
+                  permissionStatus === 'denied' ? 'bg-destructive/10 text-destructive border border-destructive/20' : 'bg-primary/10 text-primary border border-primary/20'
                 )}>
                   {permissionStatus === 'denied' ? (
                     <Shield className="h-12 w-12 -rotate-6" />
@@ -1355,7 +1345,7 @@ const StudentScannerPage: React.FC = () => {
                   <h3 className="text-3xl font-black text-foreground tracking-tighter leading-none">
                     {permissionStatus === 'denied' ? "Sensor Blocked" : "Sensor Access"}
                   </h3>
-                  <p className="text-gray-500 font-medium text-sm">
+                  <p className="text-muted-foreground font-medium text-sm">
                     {permissionType === 'location'
                       ? 'Confirming your physical presence in the lecture hall.'
                       : 'Activating biometric sensors for identity validation.'
@@ -1365,9 +1355,9 @@ const StudentScannerPage: React.FC = () => {
               </div>
 
               {permissionStatus === 'denied' ? (
-                <div className="bg-gray-50 rounded-3xl p-6 space-y-4">
+                <div className="bg-muted/30 rounded-3xl p-6 space-y-4">
                   <p className="text-[10px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
-                    <Settings className="w-4 h-4 text-emerald-500" />
+                    <Settings className="w-4 h-4 text-primary" />
                     How to Unblock
                   </p>
                   <ol className="text-xs text-muted-foreground space-y-3 font-medium">
@@ -1412,7 +1402,7 @@ const StudentScannerPage: React.FC = () => {
       
       {redirectUrl && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-primary text-white px-6 py-3 rounded-full shadow-2xl z-[150] animate-in slide-in-from-bottom-5">
-          <div className="h-4 w-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+          <div className="h-4 w-4 border-2 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin"></div>
           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Redirecting...</span>
         </div>
       )}

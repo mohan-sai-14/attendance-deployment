@@ -12,11 +12,11 @@ export default function Login() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] relative flex items-center justify-center p-4 overflow-hidden">
+    <div className="min-h-screen bg-background relative flex items-center justify-center p-4 overflow-hidden">
       {/* Decorative Background Elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] rounded-full bg-[#10B981]/5 blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-[-5%] w-[40%] h-[40%] rounded-full bg-[#374151]/5 blur-[120px]" />
+        <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-[-5%] w-[40%] h-[40%] rounded-full bg-muted/5 blur-[120px]" />
       </div>
 
       <div className="relative z-10 w-full max-w-md">
@@ -34,11 +34,8 @@ export default function Login() {
               </div>
               <span className="text-xl font-bold tracking-tight text-foreground pr-2">Attendance Portal</span>
             </div>
-            <div className="flex items-center gap-4">
-               <div className="h-px w-8 bg-border" />
-               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Student Access</span>
-               <div className="h-px w-8 bg-border" />
-            </div>
+            <div className="h-px w-12 bg-border" />
+
           </div>
 
           {/* Login Form Container */}
@@ -59,8 +56,8 @@ export default function Login() {
       </div>
 
       {/* Version Tag */}
-      <div className="absolute bottom-6 right-8 text-[10px] font-bold text-gray-300 uppercase tracking-widest hidden md:block">
-        Version 2.4.0 • Student Access
+      <div className="absolute bottom-6 right-8 text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest hidden md:block">
+        Version 2.4.0
       </div>
     </div>
   );

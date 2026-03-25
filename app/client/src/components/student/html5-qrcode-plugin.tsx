@@ -208,7 +208,7 @@ export function Html5QrcodePlugin({
     <div className="w-full relative">
       <div 
         id={qrcodeRegionId}
-        className="w-full max-w-[300px] mx-auto aspect-square bg-gray-100 rounded-lg overflow-hidden"
+        className="w-full max-w-[300px] mx-auto aspect-square bg-muted/50 rounded-lg overflow-hidden"
       />
       
       {/* Camera Switch Button */}
@@ -249,18 +249,18 @@ export function Html5QrcodePlugin({
       )}
       
       {isStarting && (
-        <p className="text-sm text-center mt-2 text-blue-500">
+        <p className="text-sm text-center mt-2 text-primary font-medium">
           Starting camera... Please wait.
         </p>
       )}
       
       {cameraError && (
-        <div className="text-sm text-center mt-2 text-red-500 p-2 bg-red-50 rounded">
+        <div className="text-sm text-center mt-2 text-destructive p-2 bg-destructive/10 rounded-xl">
           {cameraError}
         </div>
       )}
       
-      <p className="text-xs text-center mt-2 text-gray-500">
+      <p className="text-xs text-center mt-2 text-muted-foreground">
         Position the QR code within the box to scan
       </p>
     </div>

@@ -175,6 +175,58 @@ router.post('/verify-face', isAuthenticated, async (req: Request, res: Response)
   }
 });
 
+// Face Enrollment Route (Admin Only)
+router.post('/enroll-face', ...isAdmin, async (req: Request, res: Response) => {
+  try {
+    const { studentId, face_embeddings, face_images_count, face_quality_score } = req.body;
+    
+    if (!studentId || !face_embeddings) {
+      return res.status(400).json({ success: false, message: 'studentId and face_embeddings are required' });
+    }
+
+    console.log(`[Enrollment] Enrolling face for student ID: ${studentId}`);
+    
+    // Convert studentId to number if it's a numeric string, as the DB id is a number
+    const numericId = parseInt(studentId, 10);
+    const identifier = !isNaN(numericId) && String(numericId) === String(studentId) ? numericId : studentId;
+    
+    console.log(`[Enrollment] Using identifier: ${identifier} (type: ${typeof identifier})`);
+
+    const { data, error } = await storage.supabase
+      .from('users')
+      .update({
+        face_embeddings,
+        face_enrollment_status: 'enrolled',
+        face_enrollment_date: new Date().toISOString(),
+        face_images_count: face_images_count || 0,
+        face_quality_score: face_quality_score || 0
+      })
+      .eq('id', identifier)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[Enrollment] Supabase update error:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to update user enrollment in database',
+        error: error.message 
+      });
+    }
+
+    if (!data) {
+      console.warn(`[Enrollment] No user found with ID: ${identifier}`);
+      return res.status(404).json({ success: false, message: `Student with ID ${identifier} not found` });
+    }
+
+    console.log(`[Enrollment] Successfully enrolled face for: ${data.username}`);
+    res.json({ success: true, message: 'Face enrolled successfully', studentId: identifier });
+  } catch (error: any) {
+    console.error('[Enrollment] Internal server error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error during enrollment' });
+  }
+});
+
 // Login endpoint
 router.post('/login', async (req: Request, res: Response) => {
   console.log('=== Login Request ===');
