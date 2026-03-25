@@ -36,7 +36,7 @@ export default function Reports() {
       const { data: sessions } = await supabase
         .from('sessions')
         .select('*')
-        .eq('created_by', user?.username)
+        .eq('created_by', user?.id)
         .order('created_at', { ascending: false });
 
       // Get today's attendance for these sessions

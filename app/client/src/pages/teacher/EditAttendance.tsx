@@ -76,7 +76,7 @@ export default function EditAttendance() {
 
          if (sessError) throw sessError;
          
-         if (sessionData.created_by !== user.username) {
+         if (sessionData.created_by !== user.id) {
             toast({
                variant: 'destructive',
                title: 'Access Denied',
