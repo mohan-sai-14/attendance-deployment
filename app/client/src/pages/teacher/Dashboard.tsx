@@ -729,7 +729,7 @@ export default function TeacherDashboard() {
                               }
                             }}
                           >
-                            {isTaken ? "Taken" : isOngoing ? "Attend" : "Open"}
+                            {isTaken ? (period.matchingSession?.is_active === false ? "Completed" : "Taken") : isOngoing ? "Attend" : "Open"}
                           </Button>
                         )}
                       </div>

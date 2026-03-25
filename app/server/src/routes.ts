@@ -136,6 +136,15 @@ router.post('/verify-face', isAuthenticated, async (req: Request, res: Response)
        return res.json({ success: true, message: 'Attendance already recorded' });
     }
     
+    // Try to extract period number from session name if available (e.g., "Subject - Period 8")
+    let extractedPeriod = null;
+    if (session.name && session.name.includes('Period')) {
+      const match = session.name.match(/Period\s+(\d+)/i);
+      if (match && match[1]) {
+        extractedPeriod = parseInt(match[1], 10);
+      }
+    }
+
     // Insert robust attendance data
     const attendanceData = {
       username: user.username,
@@ -151,6 +160,7 @@ router.post('/verify-face', isAuthenticated, async (req: Request, res: Response)
       status: 'present',
       name: userProfile.name || user.name || 'Student',
       session_name: session.name,
+      period_number: extractedPeriod,
       face_verified: true,
       verification_confidence: similarity,
       student_lat: studentLat,

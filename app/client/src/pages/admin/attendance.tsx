@@ -40,6 +40,7 @@ interface AttendanceRecord {
   username: string;
   status: string;
   check_in_time: string;
+  session_id?: string | number;
   period_number?: number;
   edit_reason?: string;
   session_name?: string;
@@ -156,6 +157,8 @@ export default function Attendance() {
     }
   };
 
+  const [todaySessions, setTodaySessions] = useState<any[]>([]);
+
   const fetchPeriodsData = async () => {
     if (!selectedClass) return;
     setIsLoadingPeriods(true);
@@ -163,6 +166,7 @@ export default function Attendance() {
       const dayOfWeek = format(selectedDate, 'EEEE');
       const dateString = format(selectedDate, 'yyyy-MM-dd');
 
+      // 1. Fetch timetable
       const { data: ttData, error: ttError } = await supabase
         .from('timetables')
         .select('*')
@@ -172,6 +176,16 @@ export default function Attendance() {
       if (ttError) throw ttError;
       setClassTimetable(ttData || []);
 
+      // 2. Fetch sessions for this class today
+      const { data: sessionsData } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('date', dateString)
+        .eq('class_id', selectedClass.id);
+      
+      setTodaySessions(sessionsData || []);
+
+      // 3. Fetch attendance records
       const { data: attData, error: attError } = await supabase
         .from('attendance')
         .select('*')
@@ -185,7 +199,7 @@ export default function Attendance() {
       setClassAttendance(attData || []);
     } catch (error: any) {
       console.error("Fetch Periods Error", error);
-      toast({ title: "Check Console", description: "Could not fetch periods data.", variant: "destructive" });
+      toast({ title: "Error", description: "Could not fetch periods data.", variant: "destructive" });
     } finally {
       setIsLoadingPeriods(false);
     }
@@ -353,9 +367,12 @@ export default function Attendance() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {PERIODS_CONFIG.map((period) => {
               const ttSlot = classTimetable.find(tt => tt.start_time.startsWith(period.start));
+              const matchingSession = todaySessions.find(s => s.time?.startsWith(period.start));
+              
               const periodAttendance = classAttendance.filter(a => 
-                a.period_number === period.period_number || 
-                (ttSlot && a.session_name?.toLowerCase().includes(ttSlot.subject_name.toLowerCase()))
+                (a.period_number === period.period_number) || 
+                (matchingSession && String(a.session_id) === String(matchingSession.id)) ||
+                (ttSlot && !matchingSession && a.session_name?.split(' - ')[0] === ttSlot.subject_name)
               );
 
               const isTaken = periodAttendance.length > 0;
@@ -482,10 +499,12 @@ export default function Attendance() {
                       </thead>
                       <tbody className="divide-y divide-border/40">
                         {classStudents.map((student) => {
+                          const matchingSession = todaySessions.find(s => s.time?.startsWith(activePeriod.start));
                           const record = classAttendance.find(a => 
                             a.username === student.username && 
-                            (a.period_number === activePeriod.period_number || 
-                             a.session_name?.toLowerCase().includes(ttSlot?.subject_name?.toLowerCase() || ""))
+                            ((a.period_number === activePeriod.period_number) || 
+                             (matchingSession && String(a.session_id) === String(matchingSession.id)) ||
+                             (ttSlot && !matchingSession && a.session_name?.split(' - ')[0] === ttSlot?.subject_name))
                           );
                           const status = record?.status?.toLowerCase() || "unmarked";
 

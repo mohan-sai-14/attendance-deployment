@@ -77,37 +77,28 @@ app.use(corsMiddleware);
 // Add preflight handler for all routes
 app.options('*', corsMiddleware);
 
-// Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key', // Change this to a secure secret in production
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    domain: process.env.NODE_ENV === 'production' ? undefined : undefined // Let browser handle domain
-  },
-  name: 'connect.sid', // Use standard session name
-  proxy: true, // Trust first proxy (important for Render)
-  rolling: true // Reset expiration on each request
-}));
-
-// Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'production' ? 'An error occurred' : err.message
-  });
-});
+// Trust first proxy (for secure cookies in production/Render)
+app.set('trust proxy', 1);
 
 // Parse JSON bodies
 app.use(express.json());
 
-// Trust first proxy (for secure cookies in production)
-app.set('trust proxy', 1);
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  proxy: true,
+  name: 'connect.sid',
+  rolling: true,
+  cookie: {
+    // Force secure and sameSite: 'none' if we're not on localhost to allow cookies between Vercel and Render
+    secure: process.env.NODE_ENV === 'production' || (process.env.VERCEL === '1' || !!process.env.PORT),
+    httpOnly: true,
+    sameSite: (process.env.NODE_ENV === 'production' || !!process.env.PORT) ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // Extend to 7 days
+  }
+}));
 
 // CORS pre-flight is already handled by corsMiddleware
 // No need for additional CORS configuration
