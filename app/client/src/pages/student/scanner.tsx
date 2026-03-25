@@ -213,7 +213,7 @@ const StudentScannerPage: React.FC = () => {
               return false;
             }
           } catch {
-            // Some browsers don't support camera permission query â€” proceed normally
+            // Some browsers don't support camera permission query — proceed normally
           }
         }
       }
@@ -303,7 +303,7 @@ const StudentScannerPage: React.FC = () => {
       }
 
       toast({
-        title: "Location Verified âœ“",
+        title: "Location Verified ✓",
         description: `You are ${formatDistance(locationCheck.distance)} from class location. You can now scan the QR code.`,
         duration: 5000
       });
@@ -458,7 +458,7 @@ const StudentScannerPage: React.FC = () => {
           }
           console.log("QR token validated successfully");
         } else if (activeSessionData.qr_secret && !sessionData.token) {
-          // Session has rotation enabled but QR doesn't have a token â€” old/static QR
+          // Session has rotation enabled but QR doesn't have a token — old/static QR
           setErrorMessage('This QR code is outdated. Please scan the live rotating code displayed by your teacher.');
           setIsLoading(false);
           setIsScanning(true);
@@ -484,7 +484,7 @@ const StudentScannerPage: React.FC = () => {
             if (!ipMatch) {
               toast({
                 variant: "default",
-                title: "âš ï¸ Different Network Detected",
+                title: "\u26A0️ Different Network Detected",
                 description: "You appear to be on a different network than the teacher. Attendance will proceed but this is logged.",
                 duration: 5000
               });
@@ -1356,12 +1356,12 @@ const StudentScannerPage: React.FC = () => {
 
               {permissionStatus === 'denied' ? (
                 <div className="bg-muted/30 rounded-3xl p-6 space-y-4">
-                  <p className="text-[10px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
+                  <div className="text-[10px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
                     <Settings className="w-4 h-4 text-primary" />
                     How to Unblock
-                  </p>
+                  </div>
                   <ol className="text-xs text-muted-foreground space-y-3 font-medium">
-                    <li className="flex gap-2"><span>1.</span> <span>Tap the <strong>Lock icon</strong> (ðŸ”’) in address bar.</span></li>
+                    <li className="flex gap-2"><span>1.</span> <span>Tap the <strong>Lock icon</strong> ({"\u{1F512}"}) in address bar.</span></li>
                     <li className="flex gap-2"><span>2.</span> <span>Allow <strong>{permissionType === 'location' ? 'Location' : 'Camera'}</strong>.</span></li>
                     <li className="flex gap-2"><span>3.</span> <span>Reload to sync permissions.</span></li>
                   </ol>
@@ -1370,8 +1370,8 @@ const StudentScannerPage: React.FC = () => {
                 <div className="bg-emerald-50 rounded-3xl p-6">
                   <p className="text-xs text-emerald-700 font-bold leading-relaxed text-center italic">
                     {permissionType === 'location'
-                      ? 'ðŸ“ Tap "Allow" when the browser asks for your location.'
-                      : 'ðŸ“· Tap "Allow" when the browser asks for camera access.'
+                      ? '\u{1F4CD} Tap "Allow" when the browser asks for your location.'
+                      : '\u{1F4F7} Tap "Allow" when the browser asks for camera access.'
                     }
                   </p>
                 </div>

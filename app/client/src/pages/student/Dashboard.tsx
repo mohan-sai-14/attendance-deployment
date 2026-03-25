@@ -277,7 +277,7 @@ export default function StudentDashboard() {
              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{userProfile?.section || '--'} Section</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight">
-            Hi, {userProfile?.name?.split(' ')[0] || 'there'}! 👋
+            Hi, {userProfile?.name?.split(' ')[0] || 'there'}! {"\u{1F44B}"}
           </h1>
           <p className="text-gray-500 font-medium">Here's your academic summary for today.</p>
         </div>
@@ -348,7 +348,7 @@ export default function StudentDashboard() {
               {classesNeeded > 0 ? (
                 <p className="text-xs font-semibold">Attend <span className="underline decoration-2">{classesNeeded}</span> more classes to secure 75%</p>
               ) : (
-                <p className="text-xs font-semibold text-emerald-600">Goal achieved! Keep it up. âœ¨</p>
+                <p className="text-xs font-semibold text-emerald-600">Goal achieved! Keep it up. ✨</p>
               )}
             </div>
           </CardContent>
@@ -493,7 +493,7 @@ export default function StudentDashboard() {
 
       {/* Footer Branding */}
       <footer className="pt-8 pb-4 flex flex-col items-center justify-center gap-4 text-center border-t border-border">
-        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Â© 2024 TU Attendance System â€¢ Academic Continuity Office</p>
+        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">© 2024 TU Attendance System • Academic Continuity Office</p>
       </footer>
     </div>
   );

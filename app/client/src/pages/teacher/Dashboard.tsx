@@ -201,11 +201,12 @@ export default function TeacherDashboard() {
           }, {} as Record<string, ClassInfo>);
         }
 
-        // Fetch today's attendance sessions
+        // Fetch today's attendance sessions created by this teacher
         const { data: sessionsData, error: sessError } = await supabase
           .from('sessions')
           .select('*')
-          .eq('date', todayDate);
+          .eq('date', todayDate)
+          .eq('created_by', user.username);
 
         if (sessError) throw sessError;
 
