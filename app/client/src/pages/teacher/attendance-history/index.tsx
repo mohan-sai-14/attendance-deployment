@@ -15,6 +15,9 @@ interface AttendanceSummary {
   date: string;
   session_id: string;
   session_name: string;
+  class_name: string;
+  class_id: string;
+  section: string;
   present: number;
   absent: number;
   late: number;
@@ -46,7 +49,7 @@ export default function AttendanceHistory() {
       // First, fetch all sessions to get session details
       const { data: sessions, error: sessionsError } = await supabase
         .from('sessions')
-        .select('id, name, date')
+        .select('id, name, date, class_id, section')
         .eq('created_by', user?.id)
         .order('date', { ascending: false });
 
@@ -55,47 +58,51 @@ export default function AttendanceHistory() {
         return;
       }
 
-      console.log('📅 Sessions fetched:', sessions?.length || 0);
-      console.log('Sample sessions:', sessions?.slice(0, 3));
-      console.log('All session IDs:', sessions?.map(s => s.id));
+      // Fetch class details for these sessions
+      const classIds = [...new Set(sessions?.map(s => s.class_id).filter(Boolean))];
+      const { data: classesData } = await supabase
+        .from('classes')
+        .select('*')
+        .in('id', classIds);
+      
+      const classesMap = new Map(classesData?.map(c => [c.id, c]) || []);
 
       // Create a map of session_id to session details
       const sessionMap = new Map(sessions?.map(session => [session.id, session]) || []);
-      console.log('🗺️ Session map created with', sessionMap.size, 'entries');
 
-      // Fetch attendance records only for these sessions
+      // Fetch attendance records for these sessions
       const sessionIds = sessions?.map(s => s.id) || [];
       const { data: attendanceRecords, error: attendanceError } = await supabase
         .from('attendance')
         .select('*')
-        .in('session_id', sessionIds)
-        .order('date', { ascending: false });
+        .in('session_id', sessionIds);
 
       if (attendanceError) {
         console.error('❌ Error fetching attendance:', attendanceError);
         return;
       }
 
-      console.log('📊 Attendance records fetched:', attendanceRecords?.length || 0);
-      console.log('Sample attendance records:', attendanceRecords?.slice(0, 3));
-      console.log('Attendance session IDs:', attendanceRecords?.map(a => a.session_id));
-
       // Group by date and session
       const groupedData = new Map<string, AttendanceSummary>();
 
       attendanceRecords?.forEach(record => {
         const session = sessionMap.get(record.session_id);
-        
-        // Skip if session not found (already filtered by created_by in sessions fetch)
         if (!session) return;
 
         const key = `${session.date}-${record.session_id}`;
-
         if (!groupedData.has(key)) {
+          const classInfo = classesMap.get(session.class_id);
+          const className = classInfo 
+            ? `${classInfo.program} ${classInfo.year} - ${classInfo.section}`
+            : 'Unknown Class';
+
           groupedData.set(key, {
             date: session.date,
             session_id: record.session_id,
-            session_name: record.session_name || session.name || 'Session',
+            session_name: session.name || 'Session',
+            class_name: className,
+            class_id: session.class_id,
+            section: session.section || classInfo?.section || '',
             present: 0,
             absent: 0,
             late: 0,
@@ -108,31 +115,14 @@ export default function AttendanceHistory() {
 
         const summary = groupedData.get(key)!;
         summary.total++;
-
-        switch (record.status) {
-          case 'present':
-            summary.present++;
-            break;
-          case 'absent':
-            summary.absent++;
-            break;
-          case 'late':
-            summary.late++;
-            break;
-          case 'od':
-            summary.od++;
-            break;
-          case 'ml':
-            summary.ml++;
-            break;
-        }
+        if (record.status === 'present') summary.present++;
+        else if (record.status === 'absent') summary.absent++;
+        else if (record.status === 'late') summary.late++;
+        else if (record.status === 'od') summary.od++;
+        else if (record.status === 'ml') summary.ml++;
       });
 
-      const summaries = Array.from(groupedData.values());
-      console.log('📋 Final summaries:', summaries.length);
-      console.log('Summaries data:', summaries);
-
-      setAttendanceData(summaries);
+      setAttendanceData(Array.from(groupedData.values()));
 
     } catch (error) {
       console.error('❌ Error fetching attendance history:', error);
@@ -265,19 +255,6 @@ export default function AttendanceHistory() {
             </Card>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <Card className="border-none ring-1 ring-[#E5E7EB] bg-white shadow-xl shadow-black/5 rounded-[2rem] overflow-hidden">
-              <CardContent className="p-6 flex items-center gap-5">
-                <div className="h-14 w-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                  <Users className="h-7 w-7" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-widest">Students Enrolled</p>
-                  <p className="text-2xl font-black text-[#374151]">{stats.totalStudents}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
         </div>
 
         {/* Filters & Search */}
@@ -320,10 +297,9 @@ export default function AttendanceHistory() {
                   <thead>
                     <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB]">
                       <th className="px-6 py-5 text-left text-[10px] font-black text-[#6B7280] uppercase tracking-widest">Session Info</th>
+                      <th className="px-6 py-5 text-left text-[10px] font-black text-[#6B7280] uppercase tracking-widest">Class Info</th>
                       <th className="px-6 py-5 text-center text-[10px] font-black text-[#6B7280] uppercase tracking-widest">Attendance</th>
                       <th className="px-6 py-5 text-center text-[10px] font-black text-[#6B7280] uppercase tracking-widest">Breakdown</th>
-                      <th className="px-6 py-5 text-center text-[10px] font-black text-[#6B7280] uppercase tracking-widest">Status</th>
-                      <th className="px-6 py-5 text-right text-[10px] font-black text-[#6B7280] uppercase tracking-widest">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E5E7EB]">
@@ -331,13 +307,21 @@ export default function AttendanceHistory() {
                       filteredData.map((item, index) => (
                         <tr
                           key={`${item.date}-${item.session_id}`}
-                          className="hover:bg-[#F9FAFB]/80 transition-colors duration-200 group">
+                          onClick={() => handleViewDetails(item.session_id, item.date)}
+                          className="hover:bg-[#F9FAFB]/80 transition-colors duration-200 group cursor-pointer"
+                        >
                           <td className="px-6 py-5">
                             <div className="flex flex-col">
                               <span className="font-extrabold text-[#374151] text-base group-hover:text-[#10B981] transition-colors">{item.session_name}</span>
                               <span className="text-xs font-bold text-[#9CA3AF] mt-1 uppercase tracking-tighter">
                                 {format(new Date(item.date), 'EEEE, MMM dd, yyyy')}
                               </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-[#374151] text-sm uppercase tracking-tight">{item.class_name}</span>
+                              <span className="text-[10px] font-black text-[#10B981] mt-0.5 uppercase tracking-widest">Section {item.section}</span>
                             </div>
                           </td>
                           <td className="px-6 py-5">
@@ -371,21 +355,6 @@ export default function AttendanceHistory() {
                                 <span className="text-[9px] font-bold text-[#9CA3AF] uppercase">OTH</span>
                               </div>
                             </div>
-                          </td>
-                          <td className="px-6 py-5 text-center">
-                            <Badge className="bg-[#10B981]/10 text-[#059669] font-black border-none px-3 py-1 rounded-full text-[10px] uppercase">
-                              {item.status}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-5 text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewDetails(item.session_id, item.date)}
-                              className="h-10 w-10 p-0 rounded-xl hover:bg-[#10B981]/10 hover:text-[#10B981] transition-all"
-                            >
-                              <Eye className="h-5 w-5" />
-                            </Button>
                           </td>
                         </tr>
                       ))
