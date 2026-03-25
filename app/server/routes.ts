@@ -57,8 +57,17 @@ export async function registerRoutes(app: Express): Promise<void> {
     // Set JSON content type for all responses
     res.setHeader('Content-Type', 'application/json');
     
+    // Log session info for debugging
+    console.log('--- Auth Middleware Check ---');
+    console.log('Path:', req.path);
+    console.log('Session ID:', req.sessionID);
+    console.log('Has Session Object:', !!req.session);
+    console.log('Session UserID:', req.session?.userId);
+    console.log('Passport User:', (req as any).user?.id);
+    
     // Check if there's a valid session
     if (!req.session) {
+      console.log('Auth check failed: No session object');
       return res.status(401).json({
         success: false,
         message: "No session found"
@@ -66,6 +75,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
 
     if (!req.session.userId && !req.user) {
+      console.log('Auth check failed: No user ID in session');
       return res.status(401).json({
         success: false,
         message: "Not authenticated - No user ID found in session"
