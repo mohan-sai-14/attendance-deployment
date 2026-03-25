@@ -46,22 +46,23 @@ export default function AttendanceHistory() {
   const fetchAttendanceHistory = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Fetching attendance history...');
 
-      // First, fetch all sessions to get session details
+      // 1. Fetch all sessions for this teacher
       const { data: sessions, error: sessionsError } = await supabase
         .from('sessions')
         .select('id, name, date, class_id, section')
         .eq('created_by', user?.id)
         .order('date', { ascending: false });
 
-      if (sessionsError) {
-        console.error('❌ Error fetching sessions:', sessionsError);
+      if (sessionsError) throw sessionsError;
+
+      if (!sessions || sessions.length === 0) {
+        setAttendanceData([]);
         return;
       }
 
-      // Fetch class details for these sessions
-      const classIds = [...new Set(sessions?.map(s => s.class_id).filter(Boolean))];
+      // 2. Fetch class details
+      const classIds = [...new Set(sessions.map(s => s.class_id).filter(Boolean))];
       const { data: classesData } = await supabase
         .from('classes')
         .select('*')
@@ -69,59 +70,56 @@ export default function AttendanceHistory() {
       
       const classesMap = new Map(classesData?.map(c => [c.id, c]) || []);
 
-      // Create a map of session_id to session details
-      const sessionMap = new Map(sessions?.map(session => [session.id, session]) || []);
+      // 3. Initialize grouped data with all sessions
+      const groupedData = new Map<string, AttendanceSummary>();
+      
+      sessions.forEach(session => {
+        const key = `${session.date}-${session.id}`;
+        const classInfo = classesMap.get(session.class_id);
+        const className = classInfo 
+          ? `${classInfo.program} ${classInfo.year} - ${classInfo.section}`
+          : 'Unknown Class';
 
-      // Fetch attendance records for these sessions
-      const sessionIds = sessions?.map(s => s.id) || [];
+        groupedData.set(key, {
+          date: session.date,
+          session_id: session.id,
+          session_name: session.name || 'Session',
+          class_name: className,
+          class_id: session.class_id,
+          section: session.section || classInfo?.section || '',
+          present: 0,
+          absent: 0,
+          late: 0,
+          od: 0,
+          ml: 0,
+          total: 0,
+          status: 'completed' as const
+        });
+      });
+
+      // 4. Fetch attendance records and update summaries
+      const sessionIds = sessions.map(s => s.id);
       const { data: attendanceRecords, error: attendanceError } = await supabase
         .from('attendance')
-        .select('*')
+        .select('session_id, status')
         .in('session_id', sessionIds);
 
-      if (attendanceError) {
-        console.error('❌ Error fetching attendance:', attendanceError);
-        return;
-      }
-
-      // Group by date and session
-      const groupedData = new Map<string, AttendanceSummary>();
+      if (attendanceError) throw attendanceError;
 
       attendanceRecords?.forEach(record => {
-        const session = sessionMap.get(record.session_id);
+        const session = sessions.find(s => s.id === record.session_id);
         if (!session) return;
 
         const key = `${session.date}-${record.session_id}`;
-        if (!groupedData.has(key)) {
-          const classInfo = classesMap.get(session.class_id);
-          const className = classInfo 
-            ? `${classInfo.program} ${classInfo.year} - ${classInfo.section}`
-            : 'Unknown Class';
-
-          groupedData.set(key, {
-            date: session.date,
-            session_id: record.session_id,
-            session_name: session.name || 'Session',
-            class_name: className,
-            class_id: session.class_id,
-            section: session.section || classInfo?.section || '',
-            present: 0,
-            absent: 0,
-            late: 0,
-            od: 0,
-            ml: 0,
-            total: 0,
-            status: 'completed' as const
-          });
+        const summary = groupedData.get(key);
+        if (summary) {
+          summary.total++;
+          if (record.status === 'present') summary.present++;
+          else if (record.status === 'absent') summary.absent++;
+          else if (record.status === 'late') summary.late++;
+          else if (record.status === 'od') summary.od++;
+          else if (record.status === 'ml') summary.ml++;
         }
-
-        const summary = groupedData.get(key)!;
-        summary.total++;
-        if (record.status === 'present') summary.present++;
-        else if (record.status === 'absent') summary.absent++;
-        else if (record.status === 'late') summary.late++;
-        else if (record.status === 'od') summary.od++;
-        else if (record.status === 'ml') summary.ml++;
       });
 
       setAttendanceData(Array.from(groupedData.values()));
