@@ -16,19 +16,8 @@ const app = express();
 
 // Build session store: use PostgreSQL if DATABASE_URL exists, otherwise MemoryStore
 let sessionStore: any = undefined; // MemoryStore (default)
-if (process.env.DATABASE_URL) {
-  try {
-    const pgSession = require('connect-pg-simple')(session);
-    const { Pool } = require('pg');
-    const pgPool = new Pool({ connectionString: process.env.DATABASE_URL });
-    sessionStore = new pgSession({ pool: pgPool, tableName: 'session' });
-    console.log('Using PostgreSQL session store');
-  } catch (err) {
-    console.warn('Failed to initialize pg session store, falling back to MemoryStore:', err);
-  }
-} else {
-  console.log('No DATABASE_URL found — using MemoryStore (dev mode)');
-}
+console.log('Using MemoryStore for sessions to avoid IPv6 connectivity issues on Render');
+
 
 // CORS configuration - Temporarily allow all origins for testing
 const corsOptions = {
