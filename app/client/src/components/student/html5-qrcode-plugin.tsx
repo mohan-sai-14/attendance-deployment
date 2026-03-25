@@ -223,6 +223,26 @@ export function Html5QrcodePlugin({
         </button>
       )}
       
+      {/* Zoom control - only show if supported */}
+      {zoomRange && !isStarting && (
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 w-[180px] h-9 px-4 bg-black/40 backdrop-blur-lg rounded-full flex items-center justify-between border border-white/10 shadow-2xl group transition-all hover:bg-black/60">
+          <ZoomOut className="w-4 h-4 text-white/60 group-hover:text-white/90 transition-colors cursor-pointer" onClick={() => applyZoom(Math.max(zoomRange.min, zoomLevel - 0.5))} />
+          <input
+            type="range"
+            min={zoomRange.min}
+            max={zoomRange.max}
+            step={zoomRange.step}
+            value={zoomLevel}
+            onChange={(e) => applyZoom(parseFloat(e.target.value))}
+            className="w-full mx-3 h-1 rounded-full cursor-pointer appearance-none bg-white/20 accent-indigo-400 focus:outline-none transition-all"
+            style={{
+              background: `linear-gradient(to right, #818cf8 ${(zoomLevel - zoomRange.min) / (zoomRange.max - zoomRange.min) * 100}%, rgba(255,255,255,0.2) ${(zoomLevel - zoomRange.min) / (zoomRange.max - zoomRange.min) * 100}%)`
+            }}
+          />
+          <ZoomIn className="w-4 h-4 text-white/60 group-hover:text-white/90 transition-colors cursor-pointer" onClick={() => applyZoom(Math.min(zoomRange.max, zoomLevel + 0.5))} />
+        </div>
+      )}
+
       {isStarting && (
         <p className="text-sm text-center mt-2 text-primary font-medium">
           Starting camera... Please wait.
