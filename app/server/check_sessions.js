@@ -1,22 +1,17 @@
 const { createClient } = require('@supabase/supabase-js');
+const dotenv = require('dotenv');
+const path = require('path');
 
-const supabase = createClient(
-  'https://cbtlnniotuvdfwydrmzm.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNidGxubmlvdHV2ZGZ3eWRybXptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0NTkyODYsImV4cCI6MjA3MjAzNTI4Nn0.U5ipnkQr6aKHY4Oa6ct2ZaG5XtAv-XVV4W-ffUE2JJk'
-);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-async function check() {
-  const { data, count, error } = await supabase
-    .from('sessions')
-    .select('*', { count: 'exact' })
-    .limit(5);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-  if (error) {
-    console.error(error);
-  } else {
-    console.log("Total sessions:", count);
-    console.log(JSON.stringify(data, null, 2));
-  }
+async function checkSessions() {
+    const { data: users, error: userError } = await supabase.from('users').select('id, username');
+    console.log('Users:', users);
+
+    const { data: sessions, error: sessError } = await supabase.from('sessions').select('id, created_by, date').order('created_at', { ascending: false }).limit(10);
+    console.log('Recent Sessions:', sessions);
 }
 
-check();
+checkSessions();

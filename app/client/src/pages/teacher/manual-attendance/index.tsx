@@ -132,7 +132,7 @@ export default function ManualAttendance() {
           .from('sessions')
           .select('*')
           .eq('date', todayDate)
-          .eq('created_by', user.username);
+          .eq('created_by', user.id);
 
         const cards: PeriodCard[] = [];
         for (const entry of timetableData) {

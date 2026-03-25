@@ -155,7 +155,7 @@ export default function StartAttendance() {
    // Detect current class from timetable
    useEffect(() => {
       const detectCurrentClass = async () => {
-         if (!user?.username) return;
+         if (!user?.id) return;
 
          try {
             setIsLoading(true);
@@ -278,7 +278,7 @@ export default function StartAttendance() {
       };
 
       detectCurrentClass();
-   }, [user?.username, toast, forcedSlotId, form]);
+   }, [user?.id, toast, forcedSlotId, form]);
 
    // Countdown timer for QR
    useEffect(() => {
@@ -340,7 +340,7 @@ export default function StartAttendance() {
    }, [qrSecret, expiryTime]);
 
    const onSubmit = async (data: FormValues) => {
-      if (!currentEntry || !user?.username || !currentSlot) return;
+      if (!currentEntry || !user?.id || !currentSlot) return;
 
       try {
          setIsSubmitting(true);
@@ -413,7 +413,7 @@ export default function StartAttendance() {
                class_id: classInfo?.id || currentEntry.class_id,
                section: classInfo?.section || null,
                teacher_ip: teacherIp || null,
-               created_by: user.username
+               created_by: user.id
             })
             .select()
             .single();
@@ -476,7 +476,7 @@ export default function StartAttendance() {
          return;
       }
 
-      if (!currentEntry || !user?.username || !currentSlot) return;
+      if (!currentEntry || !user?.id || !currentSlot) return;
 
       try {
          setIsSubmitting(true);
@@ -493,7 +493,7 @@ export default function StartAttendance() {
                expires_at: new Date(now.getTime() + 3600000).toISOString(), // 1 hour
                class_id: classInfo?.id || currentEntry.class_id,
                section: classInfo?.section || null,
-               created_by: user.username
+               created_by: user.id
             })
             .select()
             .single();

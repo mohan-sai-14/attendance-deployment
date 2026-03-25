@@ -75,6 +75,7 @@ interface PeriodSchedule {
   attendanceStatus: 'taken' | 'ongoing' | 'not_taken' | 'no_class';
   attendanceSubmittedAt: string | null;
   sessionId: string | null;
+  matchingSession?: any | null;
 }
 
 function formatTime12h(time24: string): string {
@@ -261,8 +262,13 @@ export default function TeacherDashboard() {
           const slotEnd = timeToMinutes(slot.end);
 
           let attendanceStatus: PeriodSchedule['attendanceStatus'] = 'not_taken';
-          if (matchingSession) {
+          const session = matchingSession;
+          if (session) {
             attendanceStatus = 'taken';
+            // If session is inactive, it's effectively "completed" or "locked"
+            if (!session.is_active) {
+              attendanceStatus = 'taken'; // Keep as taken, but we'll use session.is_active for the badge
+            }
           } else if (nowMinutes >= slotStart && nowMinutes < slotEnd) {
             attendanceStatus = 'ongoing';
           }
@@ -276,8 +282,9 @@ export default function TeacherDashboard() {
             timetableEntry: entry,
             classInfo: classesMap[entry.class_id] || null,
             attendanceStatus,
-            attendanceSubmittedAt: matchingSession?.created_at || null,
-            sessionId: matchingSession?.id || null,
+            attendanceSubmittedAt: session?.created_at || null,
+            sessionId: session?.id || null,
+            matchingSession: session,
           };
         });
 
@@ -666,7 +673,20 @@ export default function TeacherDashboard() {
                           <h4 className="text-sm font-bold text-[#374151] truncate">
                             {hasClass ? period.timetableEntry!.subject_name : 'No Session'}
                           </h4>
-                          {isOngoing && <Badge className="bg-[#10B981] text-white text-[9px] h-4 rounded-md">ACTIVE</Badge>}
+                          {isOngoing && (
+                            period.matchingSession ? (
+                              period.matchingSession.is_active ? (
+                                <Badge className="bg-[#10B981] text-white text-[9px] h-4 rounded-md">ACTIVE</Badge>
+                              ) : (
+                                <Badge className="bg-[#374151] text-white text-[9px] h-4 rounded-md">COMPLETED</Badge>
+                              )
+                            ) : (
+                              <Badge className="bg-[#10B981] text-white text-[9px] h-4 rounded-md">ACTIVE</Badge>
+                            )
+                          )}
+                          {!isOngoing && isTaken && (
+                            <Badge className="bg-[#374151] text-white text-[9px] h-4 rounded-md">RECORDED</Badge>
+                          )}
                         </div>
                         <p className="text-xs text-[#6B7280] mt-0.5 flex items-center gap-1.5 flex-wrap">
                           <span className="font-bold text-[#4B5563]">{formatTime12h(period.startTime)} – {formatTime12h(period.endTime)}</span>
