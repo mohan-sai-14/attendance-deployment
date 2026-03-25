@@ -314,16 +314,22 @@ export default function StartAttendance() {
          if (expiryTime && Date.now() >= expiryTime.getTime()) return;
 
          try {
-            const sid = sessionIdRef.current;
-            if (!sid || !qrSecret) return;
+            // Parse session data from current QR to keep metadata
+            let extraData: Record<string, any> = {};
+            try {
+               const current = JSON.parse(latestQrVal.current);
+               if (current.name) extraData.name = current.name;
+               if (current.date) extraData.date = current.date;
+               if (current.time) extraData.time = current.time;
+               if (current.duration) extraData.duration = current.duration;
+            } catch {}
 
-            const formValues = form.getValues();
-            const extraData = {
-               name: formValues.name,
-               date: formValues.date,
-               time: formValues.time,
-               duration: formValues.duration,
-            };
+            // Parse sessionId from qrValue
+            let sid = sessionIdRef.current;
+            try {
+               const parsed = JSON.parse(latestQrVal.current);
+               if (parsed.sessionId) sid = parsed.sessionId;
+            } catch {}
 
             const newToken = await generateQRToken(sid, qrSecret, extraData);
             setQrValue(newToken);
@@ -727,18 +733,7 @@ export default function StartAttendance() {
                                        className="text-primary"
                                     />
                                     
-                                    {/* Fullscreen Button Toggle */}
-                                    <Button
-                                       variant="ghost"
-                                       size="sm"
-                                       className="absolute bottom-4 right-4 h-10 w-10 rounded-2xl bg-white shadow-xl border border-[#E5E7EB] hover:bg-[#F3F4F6] transition-all"
-                                       onClick={() => {
-                                          console.log('Maximize button clicked, setting showQrExpanded to true');
-                                          setShowQrExpanded(true);
-                                       }}
-                                    >
-                                       <Maximize2 className="h-5 w-5 text-[#374151]" />
-                                    </Button>
+
 
                                     {/* Rotating Progress Indicator */}
                                     <div className="absolute -inset-2 border-2 border-dashed border-[#E5E7EB] rounded-[3rem] animate-spin-slow opacity-50" />
