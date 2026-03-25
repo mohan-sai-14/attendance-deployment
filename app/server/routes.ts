@@ -127,9 +127,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
 
 
-  // Initialize passport
-  app.use(passport.initialize());
-  app.use(passport.session());
+  // Passport is initialized in index.ts
 
   // Configure passport
   passport.use(

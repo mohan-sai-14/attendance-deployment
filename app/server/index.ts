@@ -8,6 +8,9 @@ dotenv.config(); // Also check cwd .env
 
 const express = require('express');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
+const pg = require('pg');
+const passport = require('passport');
 const cors = require('cors');
 const { registerRoutes } = require('./routes');
 const { storage } = require('./src/storage');
@@ -15,8 +18,28 @@ const { storage } = require('./src/storage');
 const app = express();
 
 // Build session store: use PostgreSQL if DATABASE_URL exists, otherwise MemoryStore
-let sessionStore: any = undefined; // MemoryStore (default)
-console.log('Using MemoryStore for sessions to avoid IPv6 connectivity issues on Render');
+let sessionStore: any = undefined; 
+
+if (process.env.DATABASE_URL) {
+  try {
+    const pgPool = new pg.Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    });
+    
+    sessionStore = new pgSession({
+      pool: pgPool,
+      tableName: 'session',
+      createTableIfMissing: true // Tries to create the table if it's not there
+    });
+    console.log('Using PostgreSQL for persistent sessions');
+  } catch (err) {
+    console.error('Failed to initialize PostgreSQL session store:', err);
+    console.log('Falling back to MemoryStore');
+  }
+} else {
+  console.log('No DATABASE_URL found. Using MemoryStore for sessions.');
+}
 
 
 // CORS configuration - Temporarily allow all origins for testing
@@ -70,6 +93,10 @@ if (sessionStore) {
   sessionConfig.store = sessionStore;
 }
 app.use(session(sessionConfig));
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 // API routes
 registerRoutes(app);
