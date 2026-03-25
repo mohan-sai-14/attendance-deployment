@@ -109,6 +109,37 @@ export async function registerRoutes(app: Express): Promise<void> {
     });
   });
 
+  // Emergency DB setup route
+  app.get('/api/setup-db', async (req: Request, res: Response) => {
+    const { Client } = require('pg');
+    const client = new Client({ connectionString: process.env.DATABASE_URL });
+    try {
+      if (!process.env.DATABASE_URL) throw new Error("No DATABASE_URL");
+      await client.connect();
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS "session" (
+          "sid" varchar NOT NULL COLLATE "default",
+          "sess" json NOT NULL,
+          "expire" timestamp(6) NOT NULL
+        ) WITH (OIDS=FALSE);
+        
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_pkey') THEN
+                ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT VALID;
+            END IF;
+        END $$;
+        CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+      `);
+      res.json({ success: true, message: "Session table verified/created successfully" });
+    } catch (error: any) {
+      console.error(error);
+      res.status(500).json({ success: false, error: error.message });
+    } finally {
+      await client.end().catch(() => {});
+    }
+  });
+
   // Add global middleware to set JSON content type
   app.use((req: Request, res: Response, next: () => void) => {
     res.setHeader('Content-Type', 'application/json');
