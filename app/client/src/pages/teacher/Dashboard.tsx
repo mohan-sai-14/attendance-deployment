@@ -206,7 +206,7 @@ export default function TeacherDashboard() {
           .from('sessions')
           .select('*')
           .eq('date', todayDate)
-          .eq('created_by', user.username);
+          .eq('created_by', user.id);
 
         if (sessError) throw sessError;
 
@@ -285,7 +285,7 @@ export default function TeacherDashboard() {
 
         // Find active QR session for today
         const activeSession = (sessionsData || []).find(
-          s => s.is_active && s.qr_code && classIds.includes(s.class_id) && s.created_by === user.username
+          s => s.is_active && s.qr_code && classIds.includes(s.class_id) && String(s.created_by) === String(user.id)
         );
         setActiveQrSession(activeSession || null);
         

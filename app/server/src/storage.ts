@@ -68,11 +68,12 @@ class SupabaseStorage {
     }
   }
 
-  async getUser(userId: string): Promise<User | null> {
+  async getUser(userId: string | number): Promise<User | null> {
     try {
       if (!this.useSupabase || !this.supabase) {
         // Mock user for development
-        if (userId === 'S1001') {
+        const numericId = typeof userId === 'string' ? parseInt(userId) : userId;
+        if (numericId === 1 || userId === 'S1001') {
           return {
             id: 1,
             username: 'S1001',
@@ -82,7 +83,7 @@ class SupabaseStorage {
             role: 'student',
             status: 'active'
           };
-        } else if (userId === 'admin') {
+        } else if (numericId === 2 || userId === 'admin') {
           return {
             id: 2,
             username: 'admin',
@@ -100,11 +101,11 @@ class SupabaseStorage {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('username', userId)
+        .eq('id', userId)
         .single();
 
       if (error) {
-        console.error('Error getting user:', error);
+        console.error('Error getting user by ID:', error);
         return null;
       }
 

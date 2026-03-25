@@ -47,7 +47,7 @@ export default function AttendanceHistory() {
       const { data: sessions, error: sessionsError } = await supabase
         .from('sessions')
         .select('id, name, date')
-        .eq('created_by', user?.username)
+        .eq('created_by', user?.id)
         .order('date', { ascending: false });
 
       if (sessionsError) {
