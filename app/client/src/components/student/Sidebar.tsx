@@ -4,15 +4,16 @@ import {
   LayoutDashboard,
   QrCode,
   History,
-  FileText,
-  User,
-  Settings,
   X,
-  Calendar
+  Calendar,
+  ShieldCheck,
+  ChevronRight,
+  LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -23,57 +24,22 @@ interface SidebarProps {
 export function Sidebar({ isOpen, setIsOpen, userRole }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-
-  // Log state changes for debugging
-  useEffect(() => {
-    console.log("Student Sidebar isOpen state changed:", isOpen);
-  }, [isOpen]);
-
-  useEffect(() => {
-    const handleEscKey = (event: KeyboardEvent) => {
-      if (isOpen && event.key === 'Escape') {
-        setIsOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleEscKey);
-    return () => {
-      window.removeEventListener('keydown', handleEscKey);
-    };
-  }, [isOpen, setIsOpen]);
+  const { signOut } = useAuth();
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
   }, [setIsOpen]);
 
   const isActive = (path: string) => {
-    if (path === "/student" && location.pathname === "/student") {
-      return true;
-    }
-    return location.pathname.startsWith(path) && path !== "/student";
+    if (path === "/student/dashboard" && location.pathname === "/student") return true;
+    return location.pathname === path;
   };
 
   const navItems = [
-    {
-      name: "Dashboard",
-      icon: LayoutDashboard,
-      href: "/student/dashboard",
-    },
-    {
-      name: "Attendance History",
-      icon: History,
-      href: "/student/attendance-history",
-    },
-    {
-      name: "Scan QR Code",
-      icon: QrCode,
-      href: "/student/scanner",
-    },
-    {
-      name: "Timetable",
-      icon: Calendar,
-      href: "/student/timetable",
-    },
+    { name: "Dashboard", icon: LayoutDashboard, href: "/student/dashboard" },
+    { name: "Scan QR Code", icon: QrCode, href: "/student/scanner" },
+    { name: "Attendance History", icon: History, href: "/student/attendance-history" },
+    { name: "Timetable", icon: Calendar, href: "/student/timetable" },
   ];
 
   return (
@@ -85,8 +51,7 @@ export function Sidebar({ isOpen, setIsOpen, userRole }: SidebarProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            className="fixed inset-0 bg-[#374151]/40 backdrop-blur-sm z-40 lg:hidden"
             onClick={() => setIsOpen(false)}
           />
         )}
@@ -94,99 +59,93 @@ export function Sidebar({ isOpen, setIsOpen, userRole }: SidebarProps) {
 
       {/* Sidebar */}
       <motion.aside
-        initial={{ x: -300 }}
-        animate={{ x: isOpen ? 0 : -300 }}
-        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        initial={{ x: -280 }}
+        animate={{ x: isOpen ? 0 : -280 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={cn(
-          "fixed top-0 left-0 h-screen w-64 bg-background border-r border-border/40 z-50 flex flex-col",
-          "lg:relative lg:translate-x-0 lg:border-r lg:z-auto"
+          "fixed top-0 left-0 h-screen w-72 bg-white border-r border-[#E5E7EB] z-50 flex flex-col shadow-xl lg:shadow-none",
+          "lg:relative lg:translate-x-0 lg:z-auto"
         )}
       >
         {/* Sidebar header */}
-        <div className="flex items-center justify-between p-4 border-b border-border/40 bg-gradient-to-r from-primary/5 to-transparent">
+        <div className="flex items-center justify-between p-6 border-b border-[#F3F4F6]">
           <div 
             onClick={() => navigate('/student/dashboard')}
-            className="flex items-center gap-3 cursor-pointer"
+            className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg">
-              <LayoutDashboard className="h-5 w-5 text-white" />
+            <div className="h-10 w-10 rounded-xl bg-[#374151] flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-200">
+              <ShieldCheck className="h-6 w-6 text-white" />
             </div>
-            <span className="font-display text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary/80 to-primary/60">
-              Student Portal
-            </span>
+            <div className="flex flex-col">
+              <span className="font-bold text-lg text-foreground tracking-tight leading-none">
+                Student Portal
+              </span>
+            </div>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={handleClose}
-            className="lg:hidden rounded-full hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
+            className="lg:hidden rounded-xl hover:bg-gray-100 transition-all duration-200"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5 text-gray-400" />
           </Button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2">
-          <ul className="space-y-1">
-            {navItems.map((item) => (
-              <li key={item.name}>
-                <div
-                  onClick={() => {
-                    navigate(item.href);
-                    if (window.innerWidth < 1024) {
-                      handleClose();
-                    }
-                  }}
-                  className={cn(
-                    "flex items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-all duration-300 cursor-pointer relative group",
-                    isActive(item.href)
-                      ? "bg-gradient-to-r from-primary/15 via-primary/10 to-transparent text-primary font-semibold shadow-sm"
-                      : "text-foreground/70 hover:bg-gradient-to-r hover:from-foreground/5 hover:to-transparent hover:text-foreground"
-                  )}
-                >
-                  {isActive(item.href) && (
-                    <motion.div 
-                      layoutId="studentActiveIndicator"
-                      className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-primary via-primary/80 to-primary/60 rounded-r-full shadow-lg"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                  <div className={cn(
-                    "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-300 mr-3",
-                    isActive(item.href)
-                      ? "bg-primary/10 text-primary shadow-sm"
-                      : "text-foreground/50 group-hover:bg-foreground/5 group-hover:text-foreground/80"
-                  )}>
-                    <item.icon className="h-5 w-5" />
-                  </div>
-                  <span>{item.name}</span>
-                  {!isActive(item.href) && (
-                    <div className="absolute right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary/40" />
-                    </div>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
+        <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-8">
+          <div>
+            <p className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Main Menu</p>
+            <ul className="space-y-1.5">
+              {navItems.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <li key={item.name}>
+                    <button
+                      onClick={() => {
+                        navigate(item.href);
+                        if (window.innerWidth < 1024) handleClose();
+                      }}
+                      className={cn(
+                        "w-full flex items-center px-4 py-3 rounded-xl transition-all duration-200 group relative",
+                        active
+                          ? "bg-[#10B981]/5 text-[#10B981] shadow-[inset_0_0_0_1px_rgba(16,185,129,0.1)]"
+                          : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                      )}
+                    >
+                      <div className={cn(
+                        "flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200 mr-3",
+                        active ? "bg-[#10B981] text-white shadow-lg shadow-[#10B981]/20" : "bg-gray-100 text-gray-400 group-hover:bg-gray-200 group-hover:text-gray-600"
+                      )}>
+                        <item.icon className="h-4 w-4" />
+                      </div>
+                      <span className="text-sm font-bold tracking-tight">{item.name}</span>
+                      {active && (
+                        <ChevronRight className="absolute right-3 h-4 w-4 opacity-100" />
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </nav>
 
-        {/* Footer */}
-        <div className="p-4">
-          <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent border border-green-500/20 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse shadow-lg shadow-green-500/50" />
-              <p className="text-xs font-semibold text-green-700 dark:text-green-400">System Online</p>
+        {/* Account Footer */}
+        <div className="p-4 mt-auto border-t border-[#F3F4F6] bg-gray-50/50">
+           <Button 
+            variant="ghost" 
+            onClick={signOut}
+            className="w-full justify-start gap-3 h-12 rounded-xl text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition-all duration-200 font-bold text-sm"
+          >
+            <div className="h-8 w-8 rounded-lg bg-white border border-[#E5E7EB] flex items-center justify-center shrink-0">
+               <LogOut className="h-4 w-4" />
             </div>
-            <p className="text-xs text-muted-foreground">All services operational</p>
-            <div className="mt-3 pt-3 border-t border-border/20">
-              <p className="text-xs text-muted-foreground">
-                Updated {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </p>
-            </div>
-          </div>
+            Sign Out
+          </Button>
         </div>
       </motion.aside>
     </>
   );
 }
+

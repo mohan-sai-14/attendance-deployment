@@ -150,129 +150,163 @@ export default function TeacherTimetable() {
    }
 
    return (
-      <div className="max-w-6xl mx-auto p-4 sm:p-6 md:p-8 space-y-5">
-         <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/teacher/dashboard')}>
-               <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-               <h1 className="text-xl font-bold text-foreground">My Timetable</h1>
-               <p className="text-sm text-muted-foreground">Your weekly class schedule</p>
+      <div className="min-h-screen bg-[#F9FAFB] pb-12">
+         <div className="max-w-6xl mx-auto p-4 sm:p-6 md:p-8 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+               <div className="flex items-center gap-3">
+                  <Button
+                     variant="ghost"
+                     size="icon"
+                     onClick={() => navigate('/teacher/dashboard')}
+                     className="h-10 w-10 rounded-full border border-[#E5E7EB] bg-white shadow-sm hover:bg-[#F3F4F6]"
+                  >
+                     <ArrowLeft className="h-4 w-4 text-[#374151]" />
+                  </Button>
+                  <div>
+                     <h1 className="text-2xl font-extrabold text-[#374151]">My Timetable</h1>
+                     <p className="text-sm text-[#6B7280]">Weekly overview of your academic sessions</p>
+                  </div>
+               </div>
+               <div className="flex items-center gap-2 px-4 py-2 bg-white border border-[#E5E7EB] rounded-xl shadow-sm">
+                  <CalendarDays className="h-4 w-4 text-[#10B981]" />
+                  <span className="text-xs font-bold text-[#374151] uppercase tracking-wider">Academic Year 2023-24</span>
+               </div>
             </div>
-         </div>
 
-         <Card className="border-border/40 shadow-sm overflow-hidden">
-            <CardContent className="p-0">
-               <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                     <thead>
-                        <tr className="bg-muted/30 border-b">
-                           <th className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r w-28">
-                              Time
-                           </th>
-                           {DAYS_OF_WEEK_NAMES.map(day => (
-                              <th
-                                 key={day}
-                                 className={`px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider border-r min-w-[130px]
-                        ${day === todayDayName
-                                       ? 'bg-primary/5 text-primary'
-                                       : 'text-muted-foreground'
-                                    }
-                      `}
-                              >
-                                 <div className="flex items-center justify-center gap-1.5">
-                                    {day === todayDayName && (
-                                       <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                                    )}
-                                    {day.substring(0, 3)}
-                                 </div>
+            <Card className="border-none ring-1 ring-[#E5E7EB] shadow-xl shadow-black/5 rounded-3xl overflow-hidden bg-white">
+               <CardContent className="p-0">
+                  <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-200">
+                     <table className="w-full text-sm border-collapse">
+                        <thead>
+                           <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB]">
+                              <th className="px-6 py-5 text-left text-[10px] font-black text-[#6B7280] uppercase tracking-widest border-r border-[#E5E7EB] w-32 bg-[#F9FAFB] sticky left-0 z-10">
+                                 Time Slot
                               </th>
-                           ))}
-                        </tr>
-                     </thead>
-                     <tbody>
-                        {periodSlots.map(slot => (
-                           <tr
-                              key={slot.id}
-                              className={`border-b transition-colors ${slot.type === 'break' ? 'bg-muted/5' : 'hover:bg-muted/10'}`}
-                           >
-                              {/* Time column */}
-                              <td className="px-3 py-2.5 border-r">
-                                 <div className="text-xs font-bold text-foreground">{slot.label}</div>
-                                 <div className="text-[10px] text-muted-foreground">
-                                    {formatTime12h(slot.start)} – {formatTime12h(slot.end)}
-                                 </div>
-                              </td>
+                              {DAYS_OF_WEEK_NAMES.map(day => (
+                                 <th
+                                    key={day}
+                                    className={`px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest border-r border-[#E5E7EB] min-w-[160px]
+                                       ${day === todayDayName
+                                          ? 'bg-[#10B981]/5 text-[#059669]'
+                                          : 'text-[#6B7280]'
+                                       }
+                                    `}
+                                 >
+                                    <div className="flex flex-col items-center gap-1">
+                                       <span>{day}</span>
+                                       {day === todayDayName && (
+                                          <div className="h-1 w-6 rounded-full bg-[#10B981]" />
+                                       )}
+                                    </div>
+                                 </th>
+                              ))}
+                           </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#E5E7EB]">
+                           {periodSlots.map((slot, rowIndex) => (
+                              <tr
+                                 key={slot.id}
+                                 className={`group transition-colors ${slot.type === 'break' ? 'bg-[#F3F4F6]/30' : 'bg-white hover:bg-[#F9FAFB]'}`}
+                              >
+                                 {/* Time column */}
+                                 <td className="px-6 py-4 border-r border-[#E5E7EB] bg-[#F9FAFB] sticky left-0 z-10 group-hover:bg-[#F3F4F6] transition-colors">
+                                    <div className="text-xs font-bold text-[#374151]">{slot.label}</div>
+                                    <div className="text-[10px] text-[#9CA3AF] mt-0.5 font-medium">
+                                       {formatTime12h(slot.start)} – {formatTime12h(slot.end)}
+                                    </div>
+                                 </td>
 
-                              {/* Day columns */}
-                              {DAYS_OF_WEEK_NAMES.map(day => {
-                                 if (slot.type === 'break') {
+                                 {/* Day columns */}
+                                 {DAYS_OF_WEEK_NAMES.map(day => {
+                                    if (slot.type === 'break') {
+                                       return (
+                                          <td key={`${day}-${slot.id}`} className="px-4 py-3 border-r border-[#E5E7EB] text-center">
+                                             <div className="flex items-center justify-center gap-2">
+                                                <div className="h-px w-4 bg-[#E5E7EB]" />
+                                                <span className="text-[9px] font-bold text-[#9CA3AF] uppercase tracking-[0.2em]">
+                                                   {slot.label}
+                                                </span>
+                                                <div className="h-px w-4 bg-[#E5E7EB]" />
+                                             </div>
+                                          </td>
+                                       );
+                                    }
+
+                                    const entry = getSlot(day, slot.start);
+                                    const classInfo = entry ? classesMap[entry.class_id] : null;
+                                    const isToday = day === todayDayName;
+
                                     return (
-                                       <td key={`${day}-${slot.id}`} className="px-2 py-1.5 border-r text-center bg-muted/10">
-                                          <span className="text-[9px] font-medium text-muted-foreground/50 uppercase tracking-widest">
-                                             {slot.label}
-                                          </span>
+                                       <td
+                                          key={`${day}-${slot.id}`}
+                                          className={`px-3 py-3 border-r border-[#E5E7EB] text-center align-middle
+                                             ${isToday ? 'bg-[#10B981]/[0.02]' : ''}
+                                          `}
+                                       >
+                                          {entry ? (
+                                             <motion.div
+                                                initial={{ opacity: 0, y: 5 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: 0.02 * rowIndex }}
+                                                className={`
+                                                   group/entry relative rounded-2xl p-4 text-left border transition-all duration-300
+                                                   ${isToday
+                                                      ? 'bg-white border-[#10B981]/30 shadow-lg shadow-[#10B981]/5 ring-1 ring-[#10B981]/10'
+                                                      : 'bg-white border-[#E5E7EB] hover:border-[#D1D5DB] hover:shadow-md'
+                                                   }
+                                                `}
+                                             >
+                                                <div className="space-y-2">
+                                                   <div className="flex items-start justify-between gap-2">
+                                                      <span className="text-xs font-extrabold text-[#374151] leading-tight group-hover/entry:text-[#10B981] transition-colors">
+                                                         {entry.subject_name}
+                                                      </span>
+                                                      {isToday && (
+                                                         <div className="h-1.5 w-1.5 rounded-full bg-[#10B981]" />
+                                                      )}
+                                                   </div>
+                                                   {classInfo && (
+                                                      <div className="space-y-1">
+                                                         <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-tight">
+                                                            {classInfo.program} {classInfo.year}
+                                                         </p>
+                                                         <div className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-[#F3F4F6] text-[9px] font-black text-[#4B5563] uppercase">
+                                                            SEC {classInfo.section}
+                                                         </div>
+                                                      </div>
+                                                   )}
+                                                </div>
+                                             </motion.div>
+                                          ) : (
+                                             <div className="flex items-center justify-center">
+                                                <div className="h-1 w-1 rounded-full bg-[#E5E7EB]" />
+                                             </div>
+                                          )}
                                        </td>
                                     );
-                                 }
+                                 })}
+                              </tr>
+                           ))}
+                        </tbody>
+                     </table>
+                  </div>
+               </CardContent>
+            </Card>
 
-                                 const entry = getSlot(day, slot.start);
-                                 const classInfo = entry ? classesMap[entry.class_id] : null;
-                                 const isToday = day === todayDayName;
-
-                                 return (
-                                    <td
-                                       key={`${day}-${slot.id}`}
-                                       className={`px-2 py-2 border-r text-center align-top
-                            ${isToday ? 'bg-primary/[0.02]' : ''}
-                          `}
-                                    >
-                                       {entry ? (
-                                          <motion.div
-                                             initial={{ opacity: 0, scale: 0.95 }}
-                                             animate={{ opacity: 1, scale: 1 }}
-                                             className={`
-                                rounded-lg p-2 m-0.5 text-left transition-all
-                                ${isToday
-                                                   ? 'bg-primary/10 border border-primary/20 shadow-sm'
-                                                   : 'bg-muted/20 border border-border/30'
-                                                }
-                              `}
-                                          >
-                                             <span className="text-xs font-semibold text-foreground block truncate">
-                                                {entry.subject_name}
-                                             </span>
-                                             {classInfo && (
-                                                <span className="text-[10px] text-muted-foreground block mt-0.5 truncate">
-                                                   {classInfo.program} {classInfo.year} – {classInfo.section}
-                                                </span>
-                                             )}
-                                          </motion.div>
-                                       ) : (
-                                          <div className="text-muted-foreground/20 text-[10px] py-3 italic">
-                                             —
-                                          </div>
-                                       )}
-                                    </td>
-                                 );
-                              })}
-                           </tr>
-                        ))}
-                     </tbody>
-                  </table>
+            {/* Legend Card */}
+            <div className="flex flex-wrap items-center gap-6 pt-2">
+               <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-white border border-[#10B981]/30 shadow-sm shadow-[#10B981]/20 ring-1 ring-[#10B981]/10" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B7280]">Active Day Sessions</span>
                </div>
-            </CardContent>
-         </Card>
-
-         {/* Legend */}
-         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-               <div className="h-3 w-3 rounded-sm bg-primary/10 border border-primary/20" />
-               <span>Today's classes</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-               <div className="h-3 w-3 rounded-sm bg-muted/20 border border-border/30" />
-               <span>Other days</span>
+               <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-white border border-[#E5E7EB]" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B7280]">Scheduled Sessions</span>
+               </div>
+               <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-[#F3F4F6]/50 border border-[#E5E7EB]/50" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B7280]">Break Periods</span>
+               </div>
             </div>
          </div>
       </div>

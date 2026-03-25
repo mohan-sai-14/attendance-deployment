@@ -133,15 +133,15 @@ export async function importStudentsFromExcel(file: File): Promise<Student[]> {
         const jsonData = XLSX.utils.sheet_to_json(firstSheet);
         
         const students = jsonData.map((row: any) => ({
-          username: row['Student ID'],
-          name: row['Name'],
-          email: row['Email'] || `${row['Student ID']}@example.com`,
+          username: String(row['Student ID'] || '').trim(),
+          name: String(row['Name'] || '').trim(),
+          email: String(row['Email'] || `${row['Student ID']}@example.com`).trim(),
           password: 'password123', // Default password
           role: 'student',
-          status: row['Status'] || 'active'
+          status: String(row['Status'] || 'active').trim()
         }));
         
-        resolve(students as Student[]);
+        resolve(students as any);
       } catch (error) {
         reject(new Error('Failed to parse Excel file'));
       }

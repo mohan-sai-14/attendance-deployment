@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Plus, Trash2, Check, ChevronsUpDown } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Check, ChevronsUpDown, Loader2, Table2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -175,28 +175,35 @@ export default function TimetableManagement() {
    };
 
    return (
+      <div className="min-h-full bg-[#F9FAFB]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-            <div>
-               <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            <div className="space-y-1">
+               <div className="inline-flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-white px-3 py-1 text-xs font-medium text-[#6B7280] shadow-sm">
+                  <Table2 className="h-3.5 w-3.5 text-[#10B981]" />
+                  Scheduling
+               </div>
+               <h1 className="text-3xl font-bold tracking-tight text-[#374151]">
                   Timetable Management
                </h1>
-               <p className="text-muted-foreground mt-2">Manage weekly class schedules and faculty assignments</p>
+               <p className="text-[#6B7280] mt-1 text-sm sm:text-base max-w-xl">Manage weekly class schedules and faculty assignments.</p>
             </div>
             <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
                <DialogTrigger asChild>
-                  <Button variant="outline">Configure Time Frames</Button>
+                  <Button variant="outline" className="rounded-xl border-[#E5E7EB] bg-white text-[#374151] hover:bg-[#F3F4F6] shadow-sm shrink-0">
+                     Configure Time Frames
+                  </Button>
                </DialogTrigger>
-               <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+               <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto rounded-2xl border-[#E5E7EB]">
                   <DialogHeader>
-                     <DialogTitle>Configure Daily Slots</DialogTitle>
+                     <DialogTitle className="text-[#374151]">Configure Daily Slots</DialogTitle>
                      <DialogDescription>Define the periods and breaks for the daily schedule.</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
                      {timeSlots.map((slot, index) => (
-                        <div key={slot.id} className="grid grid-cols-12 gap-2 items-end border-b pb-4">
+                        <div key={slot.id} className="grid grid-cols-12 gap-2 items-end border-b border-[#E5E7EB] pb-4 last:border-0">
                            <div className="col-span-3 space-y-1">
-                              <Label className="text-xs">Type</Label>
+                              <Label className="text-xs text-[#374151] font-medium">Type</Label>
                               <Select
                                  value={slot.type}
                                  onValueChange={(val: 'period' | 'break') => {
@@ -205,7 +212,7 @@ export default function TimetableManagement() {
                                     setTimeSlots(newSlots);
                                  }}
                               >
-                                 <SelectTrigger className="h-8">
+                                 <SelectTrigger className="h-9 rounded-xl border-[#E5E7EB] bg-white">
                                     <SelectValue />
                                  </SelectTrigger>
                                  <SelectContent>
@@ -215,9 +222,9 @@ export default function TimetableManagement() {
                               </Select>
                            </div>
                            <div className="col-span-3 space-y-1">
-                              <Label className="text-xs">Label</Label>
+                              <Label className="text-xs text-[#374151] font-medium">Label</Label>
                               <Input
-                                 className="h-8"
+                                 className="h-9 rounded-xl border-[#E5E7EB] bg-white"
                                  value={slot.label}
                                  onChange={(e) => {
                                     const newSlots = [...timeSlots];
@@ -227,9 +234,9 @@ export default function TimetableManagement() {
                               />
                            </div>
                            <div className="col-span-2 space-y-1">
-                              <Label className="text-xs">Start</Label>
+                              <Label className="text-xs text-[#374151] font-medium">Start</Label>
                               <Input
-                                 className="h-8"
+                                 className="h-9 rounded-xl border-[#E5E7EB] bg-white"
                                  value={slot.start}
                                  onChange={(e) => {
                                     const newSlots = [...timeSlots];
@@ -239,9 +246,9 @@ export default function TimetableManagement() {
                               />
                            </div>
                            <div className="col-span-2 space-y-1">
-                              <Label className="text-xs">End</Label>
+                              <Label className="text-xs text-[#374151] font-medium">End</Label>
                               <Input
-                                 className="h-8"
+                                 className="h-9 rounded-xl border-[#E5E7EB] bg-white"
                                  value={slot.end}
                                  onChange={(e) => {
                                     const newSlots = [...timeSlots];
@@ -254,7 +261,7 @@ export default function TimetableManagement() {
                               <Button
                                  variant="ghost"
                                  size="sm"
-                                 className="h-8 text-red-500"
+                                 className="h-9 rounded-xl text-red-600 hover:bg-red-50"
                                  onClick={() => {
                                     setTimeSlots(timeSlots.filter((_, i) => i !== index));
                                  }}
@@ -267,7 +274,7 @@ export default function TimetableManagement() {
                      <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full border-dashed border-2"
+                        className="w-full border-2 border-dashed border-[#E5E7EB] rounded-xl text-[#374151] hover:bg-[#F3F4F6]"
                         onClick={() => {
                            setTimeSlots([...timeSlots, {
                               id: Math.random().toString(36).substr(2, 9),
@@ -285,18 +292,18 @@ export default function TimetableManagement() {
             </Dialog>
          </div>
 
-         <Card className="border-border/40 shadow-sm bg-background/60 backdrop-blur-sm mb-6">
-            <CardContent className="pt-6">
-               <div className="flex items-end gap-4">
-                  <div className="flex-1 max-w-sm">
-                     <Label className="mb-2 block">Select Class</Label>
+         <Card className="border border-[#E5E7EB] shadow-sm bg-white mb-6 rounded-2xl overflow-hidden">
+            <CardContent className="pt-6 pb-6">
+               <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                  <div className="flex-1 max-w-sm w-full">
+                     <Label className="mb-2 block text-sm font-medium text-[#374151]">Select Class</Label>
                      <Popover open={classPopoverOpen} onOpenChange={setClassPopoverOpen}>
                         <PopoverTrigger asChild>
                            <Button
                               variant="outline"
                               role="combobox"
                               aria-expanded={classPopoverOpen}
-                              className="w-full justify-between"
+                              className="w-full justify-between rounded-xl border-[#E5E7EB] bg-white h-11 text-[#374151] hover:bg-[#F9FAFB]"
                            >
                               {selectedClassId
                                  ? classes.find((cls) => cls.id === selectedClassId)?.program + " " + classes.find((cls) => cls.id === selectedClassId)?.year + " - Sec " + classes.find((cls) => cls.id === selectedClassId)?.section
@@ -338,33 +345,34 @@ export default function TimetableManagement() {
                   {selectedClassId && (
                      <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
                         <DialogTrigger asChild>
-                           <Button className="shrink-0">
+                           <Button className="shrink-0 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white shadow-sm">
                               <Plus className="h-4 w-4 mr-2" /> Assign Slot
                            </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="rounded-2xl border-[#E5E7EB]">
                            <DialogHeader>
-                              <DialogTitle>Assign Subject & Faculty</DialogTitle>
+                              <DialogTitle className="text-[#374151]">Assign Subject & Faculty</DialogTitle>
                               <DialogDescription>Add a new entry to this class's timetable.</DialogDescription>
                            </DialogHeader>
                            <form onSubmit={handleAssign} className="space-y-4">
                               <div className="grid gap-2">
-                                 <Label>Subject Name</Label>
+                                 <Label className="text-[#374151] font-medium">Subject Name</Label>
                                  <Input
                                     required
+                                    className="rounded-xl border-[#E5E7EB]"
                                     value={formData.subject_name}
                                     onChange={(e) => setFormData({ ...formData, subject_name: e.target.value })}
                                  />
                               </div>
                               <div className="grid gap-2">
-                                 <Label>Faculty</Label>
+                                 <Label className="text-[#374151] font-medium">Faculty</Label>
                                  <Popover open={facultyPopoverOpen} onOpenChange={setFacultyPopoverOpen}>
                                     <PopoverTrigger asChild>
                                        <Button
                                           variant="outline"
                                           role="combobox"
                                           aria-expanded={facultyPopoverOpen}
-                                          className="w-full justify-between"
+                                          className="w-full justify-between rounded-xl border-[#E5E7EB] h-11"
                                        >
                                           {formData.faculty_id
                                              ? faculty.find((f) => f.username === formData.faculty_id)?.name || formData.faculty_id
@@ -402,11 +410,11 @@ export default function TimetableManagement() {
                                     </PopoverContent>
                                  </Popover>
                               </div>
-                              <div className="grid grid-cols-2 gap-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                  <div className="grid gap-2">
-                                    <Label>Day</Label>
+                                    <Label className="text-[#374151] font-medium">Day</Label>
                                     <Select required value={formData.day_of_week} onValueChange={(val) => setFormData({ ...formData, day_of_week: val })}>
-                                       <SelectTrigger>
+                                       <SelectTrigger className="rounded-xl border-[#E5E7EB]">
                                           <SelectValue />
                                        </SelectTrigger>
                                        <SelectContent>
@@ -415,12 +423,12 @@ export default function TimetableManagement() {
                                     </Select>
                                  </div>
                                  <div className="grid gap-2">
-                                    <Label>Time Slot</Label>
+                                    <Label className="text-[#374151] font-medium">Time Slot</Label>
                                     <Select required value={`${formData.start_time}-${formData.end_time}`} onValueChange={(val) => {
                                        const [start, end] = val.split('-');
                                        setFormData({ ...formData, start_time: start, end_time: end });
                                     }}>
-                                       <SelectTrigger>
+                                       <SelectTrigger className="rounded-xl border-[#E5E7EB]">
                                           <SelectValue />
                                        </SelectTrigger>
                                        <SelectContent>
@@ -433,8 +441,8 @@ export default function TimetableManagement() {
                                     </Select>
                                  </div>
                               </div>
-                              <div className="pt-4 justify-end flex">
-                                 <Button type="submit" disabled={assignMutation.isPending}>
+                              <div className="pt-4 justify-end flex gap-2">
+                                 <Button type="submit" disabled={assignMutation.isPending} className="rounded-xl bg-[#10B981] hover:bg-[#059669] text-white">
                                     {assignMutation.isPending ? "Assigning..." : "Assign"}
                                  </Button>
                               </div>
@@ -446,38 +454,61 @@ export default function TimetableManagement() {
             </CardContent>
          </Card>
 
+         {!selectedClassId && (
+            <Card className="border border-dashed border-[#E5E7EB] bg-white rounded-2xl shadow-sm mb-6">
+               <CardContent className="py-12 px-6 text-center">
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#ECFDF5] text-[#10B981]">
+                     <CalendarDays className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#374151]">Choose a class</h3>
+                  <p className="mt-2 text-sm text-[#6B7280] max-w-md mx-auto">
+                     Select a class above to view and edit its weekly timetable. Use <span className="font-medium text-[#374151]">Assign Slot</span> to add subjects and faculty.
+                  </p>
+               </CardContent>
+            </Card>
+         )}
+
          {
             selectedClassId && (
-               <Card className="border-border/40 shadow-sm overflow-hidden">
-                  <CardHeader className="bg-muted/30">
-                     <CardTitle className="text-lg flex items-center gap-2">
-                        <CalendarDays className="h-5 w-5 text-primary" />
+               <Card className="border border-[#E5E7EB] shadow-sm overflow-hidden rounded-2xl bg-white">
+                  <CardHeader className="border-b border-[#E5E7EB] bg-[#F9FAFB] py-4">
+                     <CardTitle className="text-lg flex items-center gap-2 text-[#374151]">
+                        <CalendarDays className="h-5 w-5 text-[#10B981]" />
                         Weekly Schedule
                      </CardTitle>
+                     <CardDescription className="text-[#6B7280]">
+                        Hover a cell to remove an assignment. Break rows are read-only.
+                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                     <div className="overflow-x-auto">
+                  <CardContent className="p-0">
+                     {isLoadingTimetable ? (
+                        <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#6B7280]">
+                           <Loader2 className="h-8 w-8 animate-spin text-[#10B981]" />
+                           <p className="text-sm">Loading timetable…</p>
+                        </div>
+                     ) : (
+                     <div className="overflow-x-auto max-h-[70vh]">
                         <table className="w-full text-sm text-left">
-                           <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b">
+                           <thead className="text-xs uppercase bg-[#F3F4F6] text-[#6B7280] border-b border-[#E5E7EB] sticky top-0 z-10">
                               <tr>
-                                 <th className="px-4 py-3 font-semibold border-r w-32">Time / Slot</th>
+                                 <th className="px-4 py-3 font-semibold border-r border-[#E5E7EB] w-32 text-[#374151]">Time / Slot</th>
                                  {DAYS_OF_WEEK.map(day => (
-                                    <th key={day} className="px-4 py-3 font-semibold text-center border-r min-w-[150px]">{day}</th>
+                                    <th key={day} className="px-4 py-3 font-semibold text-center border-r border-[#E5E7EB] min-w-[150px] text-[#374151]">{day}</th>
                                  ))}
                               </tr>
                            </thead>
                            <tbody>
                               {timeSlots.map((slot) => (
-                                 <tr key={slot.id} className={`border-b hover:bg-muted/10 transition-colors ${slot.type === 'break' ? 'bg-muted/5' : ''}`}>
-                                    <td className="px-4 py-3 border-r font-medium text-muted-foreground whitespace-nowrap">
-                                       <div className="font-bold text-foreground text-xs">{slot.label}</div>
-                                       <div className="text-[10px]">{slot.start} - {slot.end}</div>
+                                 <tr key={slot.id} className={`border-b border-[#E5E7EB] hover:bg-[#F9FAFB]/80 transition-colors ${slot.type === 'break' ? 'bg-[#F9FAFB]' : ''}`}>
+                                    <td className="px-4 py-3 border-r border-[#E5E7EB] font-medium text-[#6B7280] whitespace-nowrap bg-white">
+                                       <div className="font-bold text-[#111827] text-xs">{slot.label}</div>
+                                       <div className="text-[10px] text-[#9CA3AF]">{slot.start} - {slot.end}</div>
                                     </td>
                                     {DAYS_OF_WEEK.map(day => {
                                        if (slot.type === 'break') {
                                           return (
-                                             <td key={`${day}-${slot.id}`} className="px-2 py-2 border-r text-center align-middle bg-muted/20">
-                                                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{slot.label}</span>
+                                             <td key={`${day}-${slot.id}`} className="px-2 py-2 border-r border-[#E5E7EB] text-center align-middle bg-[#F3F4F6]/80">
+                                                <span className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">{slot.label}</span>
                                              </td>
                                           );
                                        }
@@ -485,24 +516,24 @@ export default function TimetableManagement() {
                                        const fac = faculty.find(f => f.username === assigned?.faculty_id);
 
                                        return (
-                                          <td key={`${day}-${slot.id}`} className="px-2 py-2 border-r text-center align-top relative group">
+                                          <td key={`${day}-${slot.id}`} className="px-2 py-2 border-r border-[#E5E7EB] text-center align-top relative group">
                                              {assigned ? (
-                                                <div className="bg-primary/10 border border-primary/20 rounded-md p-2 m-1 h-full flex flex-col justify-center relative">
-                                                   <span className="font-semibold text-foreground text-xs">{assigned.subject_name}</span>
-                                                   <span className="text-muted-foreground text-[11px] mt-1 line-clamp-1">
+                                                <div className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl p-2 m-1 h-full flex flex-col justify-center relative shadow-sm">
+                                                   <span className="font-semibold text-[#111827] text-xs">{assigned.subject_name}</span>
+                                                   <span className="text-[#6B7280] text-[11px] mt-1 line-clamp-1">
                                                       {fac?.name || assigned.faculty_id}
                                                    </span>
                                                    <Button
                                                       variant="destructive"
                                                       size="icon"
-                                                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity scale-75"
+                                                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity scale-75 shadow-md"
                                                       onClick={() => deleteMutation.mutate(assigned.id)}
                                                    >
                                                       <Trash2 className="h-3 w-3" />
                                                    </Button>
                                                 </div>
                                              ) : (
-                                                <div className="text-muted-foreground/30 text-[10px] py-4 italic">Free</div>
+                                                <div className="text-[#D1D5DB] text-[10px] py-4 italic">Free</div>
                                              )}
                                           </td>
                                        )
@@ -512,10 +543,12 @@ export default function TimetableManagement() {
                            </tbody>
                         </table>
                      </div>
+                     )}
                   </CardContent>
                </Card>
             )
          }
-      </div >
+      </div>
+      </div>
    );
 }

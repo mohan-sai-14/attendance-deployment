@@ -77,7 +77,6 @@ export default function StudentManagement() {
   const [searchParams] = useSearchParams();
 
   // Search and filters
-  const [mainTab, setMainTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState(searchParams.get("department") || "all");
   const [programFilter, setProgramFilter] = useState(searchParams.get("program") || "all");
@@ -173,42 +172,6 @@ export default function StudentManagement() {
     fetchClasses();
   }, []);
 
-  // Fetch students data
-  useEffect(() => {
-    fetchStudents();
-  }, []);
-
-  // Filter students based on search and filters
-  useEffect(() => {
-    let filtered = students.filter(student => {
-      const q = searchQuery.toLowerCase();
-      const matchesSearch = !searchQuery ||
-        (student.name || '').toLowerCase().includes(q) ||
-        (student.username || '').toLowerCase().includes(q) ||
-        String(student.enroll_no || '').toLowerCase().includes(q) ||
-        String(student.registered_no || '').toLowerCase().includes(q) ||
-        (student.email || '').toLowerCase().includes(q);
-
-      const matchesClassSort = classSortFilter === "all" || (
-        student.department + student.program + student.year + student.section === classSortFilter
-      );
-
-      const matchesDepartment = departmentFilter === "all" || student.department === departmentFilter;
-      const matchesProgram = programFilter === "all" || student.program === programFilter;
-      const matchesYear = yearFilter === "all" || student.year === yearFilter;
-      const matchesSection = sectionFilter === "all" || student.section === sectionFilter;
-      const matchesStatus = statusFilter === "all" || student.face_enrollment_status === statusFilter;
-      const matchesMainTab = mainTab === "all" ||
-        (mainTab === "active" && student.status === "active") ||
-        (mainTab === "inactive" && student.status !== "active") ||
-        (mainTab === "face_pending" && student.face_enrollment_status === "pending");
-
-      return matchesSearch && matchesDepartment && matchesProgram && matchesYear && matchesSection && matchesStatus && matchesClassSort && matchesMainTab;
-    });
-
-    setFilteredStudents(filtered);
-  }, [students, searchQuery, departmentFilter, programFilter, yearFilter, sectionFilter, statusFilter, classSortFilter, mainTab]);
-
   const fetchStudents = async () => {
     try {
       setIsLoading(true);
@@ -240,6 +203,70 @@ export default function StudentManagement() {
       setIsLoading(false);
     }
   };
+
+  // Fetch students data
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  // Normalize year for comparison (e.g., "3" and "3RD" should match)
+  const normalizeYear = (yr: string) => {
+    const s = (yr || "").trim().toLowerCase();
+    if (s === "1" || s === "1st") return "1st";
+    if (s === "2" || s === "2nd") return "2nd";
+    if (s === "3" || s === "3rd") return "3rd";
+    if (s === "4" || s === "4th") return "4th";
+    return s;
+  };
+
+  // Normalize section for comparison (e.g., "CSE B" and "AI&ML- B" should match if they refer to the same group)
+  const normalizeSection = (sec: string) => {
+    let s = (sec || "").trim().toUpperCase();
+    // Handle common mappings/aliases
+    if (s === "CSE A") return "A";
+    if (s === "CSE B") return "B";
+    if (s.includes("AI&ML- A")) return "A";
+    if (s.includes("AI&ML- B")) return "B";
+    if (s === "AI&DS") return "AI&DS"; // Keep specializations unique if needed
+    
+    // If it's a single letter or "Sec X", extract the letter
+    const match = s.match(/(?:SEC|SECTION)?\s*([A-Z])$/i);
+    if (match) return match[1].toUpperCase();
+    
+    return s;
+  };
+
+  // Filter students based on search and filters
+  useEffect(() => {
+    let filtered = students.filter(student => {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = !searchQuery ||
+        (student.name || '').toLowerCase().includes(q) ||
+        (student.username || '').toLowerCase().includes(q) ||
+        String(student.enroll_no || '').toLowerCase().includes(q) ||
+        String(student.registered_no || '').toLowerCase().includes(q) ||
+        (student.email || '').toLowerCase().includes(q);
+
+      const matchesClassSort = classSortFilter === "all" || (
+        student.department + student.program + student.year + student.section === classSortFilter
+      );
+
+      const matchesDepartment = departmentFilter === "all" || 
+        (student.department || "").trim().toLowerCase() === departmentFilter.trim().toLowerCase();
+      const matchesProgram = programFilter === "all" || 
+        (student.program || "").trim().toLowerCase() === programFilter.trim().toLowerCase();
+      const matchesYear = yearFilter === "all" || 
+        normalizeYear(student.year) === normalizeYear(yearFilter);
+      const matchesSection = sectionFilter === "all" || 
+        normalizeSection(student.section) === normalizeSection(sectionFilter);
+      const matchesStatus = statusFilter === "all" || student.face_enrollment_status === statusFilter;
+      
+      return matchesSearch && matchesDepartment && matchesProgram && matchesYear && matchesSection && matchesStatus && matchesClassSort;
+    });
+
+    setFilteredStudents(filtered);
+  }, [students, searchQuery, departmentFilter, programFilter, yearFilter, sectionFilter, statusFilter, classSortFilter]);
+
 
   const handleAddStudent = async () => {
     try {
@@ -629,92 +656,108 @@ export default function StudentManagement() {
   const getFaceStatusBadge = (status: string) => {
     switch (status) {
       case 'enrolled':
-        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">🟢 Enrolled</Badge>;
+        return <Badge className="bg-[#ECFDF5] text-[#047857] border border-[#A7F3D0] font-medium">Enrolled</Badge>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">🟡 Pending</Badge>;
+        return <Badge className="bg-amber-50 text-amber-800 border border-amber-200 font-medium">Pending</Badge>;
       case 'failed':
-        return <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">❌ Failed</Badge>;
+        return <Badge className="bg-red-50 text-red-800 border border-red-200 font-medium">Failed</Badge>;
       default:
-        return <Badge variant="outline" className="text-gray-500">🔴 Not Enrolled</Badge>;
+        return <Badge variant="outline" className="text-[#6B7280] border-[#E5E7EB] bg-white font-medium">Not enrolled</Badge>;
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</Badge>;
+        return <Badge className="bg-[#ECFDF5] text-[#047857] border border-[#A7F3D0] font-medium">Active</Badge>;
       case 'inactive':
-        return <Badge variant="outline" className="text-gray-500">Inactive</Badge>;
+        return <Badge variant="outline" className="text-[#6B7280] border-[#E5E7EB] bg-[#F9FAFB] font-medium">Inactive</Badge>;
       default:
-        return <Badge variant="outline">Unknown</Badge>;
+        return <Badge variant="outline" className="border-[#E5E7EB]">Unknown</Badge>;
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="min-h-full bg-[#F9FAFB]">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 flex flex-col pb-10">
       {/* Header Section */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 shrink-0"
+        className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 shrink-0"
       >
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-white px-3 py-1 text-xs font-medium text-[#6B7280] shadow-sm">
+            <Users className="h-3.5 w-3.5 text-[#10B981]" />
+            Directory
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-[#374151]">
             Student Management
           </h1>
-          <div className="flex items-center gap-4 mt-2">
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Total: <span className="font-semibold text-foreground">{students.length}</span>
-            </p>
-            <div className="h-4 w-px bg-border" />
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              Enrolled: <span className="font-semibold text-green-600">{students.filter(s => s.face_enrollment_status === 'enrolled').length}</span>
-            </p>
+          <p className="text-sm text-[#6B7280] max-w-xl">
+            Browse, add, and manage students. Face enrollment powers attendance check-in.
+          </p>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <div className="inline-flex items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-3 py-1.5 text-sm text-[#374151] shadow-sm">
+              <span className="text-[#6B7280]">Total</span>
+              <span className="font-semibold tabular-nums">{students.length}</span>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-xl border border-[#A7F3D0] bg-[#ECFDF5] px-3 py-1.5 text-sm text-[#047857] shadow-sm">
+              <CheckCircle className="h-4 w-4 shrink-0" />
+              <span className="font-medium tabular-nums">{students.filter(s => s.face_enrollment_status === 'enrolled').length}</span>
+              <span className="text-[#059669]/90">face enrolled</span>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-3 py-1.5 text-sm text-[#374151] shadow-sm">
+              <span className="text-[#6B7280]">Showing</span>
+              <span className="font-semibold tabular-nums">{filteredStudents.length}</span>
+            </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setShowAddModal(true)} className="shadow-lg hover:shadow-xl transition-shadow bg-primary text-white">
+        <div className="flex flex-wrap gap-2 lg:pt-8">
+          <Button onClick={() => setShowAddModal(true)} className="rounded-xl bg-[#10B981] hover:bg-[#059669] text-white shadow-sm">
             <UserPlus className="h-4 w-4 mr-2" />
             Add Student
           </Button>
         </div>
       </motion.div>
 
+
       {/* Search and Filters */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="shrink-0 mt-6"
+        className="shrink-0 mt-4"
       >
-        <Card className="border-border/40 bg-gradient-to-br from-background via-background to-background/50 backdrop-blur-sm shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Filter className="h-4 w-4 text-primary" />
+        <Card className="border border-[#E5E7EB] bg-white shadow-sm rounded-2xl overflow-hidden">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="h-9 w-9 rounded-xl bg-[#F3F4F6] flex items-center justify-center border border-[#E5E7EB]">
+                <Filter className="h-4 w-4 text-[#374151]" />
               </div>
-              <span className="text-sm font-semibold">Search & Class Filters</span>
+              <div>
+                <span className="text-sm font-semibold text-[#374151]">Search & filters</span>
+                <p className="text-xs text-[#6B7280]">Narrow the grid by class, year, or face enrollment status.</p>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
-              <div className="space-y-1">
-                <Label>Search Students</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#374151]">Search students</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#9CA3AF]" />
                   <Input
-                    placeholder="Name, Username, Enroll No..."
-                    className="pl-10 border-border/40 bg-background/50"
+                    placeholder="Name, username, enroll no…"
+                    className="pl-10 h-11 rounded-xl border-[#E5E7EB] bg-white"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <Label>Sort by Class</Label>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#374151]">Sort by class</Label>
                 <Select value={classSortFilter} onValueChange={setClassSortFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11 rounded-xl border-[#E5E7EB] bg-white">
                     <SelectValue placeholder="Select Class" />
                   </SelectTrigger>
                   <SelectContent>
@@ -728,10 +771,10 @@ export default function StudentManagement() {
                 </Select>
               </div>
 
-              <div className="space-y-1">
-                <Label>Year Filter</Label>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#374151]">Year</Label>
                 <Select value={yearFilter} onValueChange={setYearFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11 rounded-xl border-[#E5E7EB] bg-white">
                     <SelectValue placeholder="Select Year" />
                   </SelectTrigger>
                   <SelectContent>
@@ -743,19 +786,36 @@ export default function StudentManagement() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#374151]">Face enrollment</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-11 rounded-xl border-[#E5E7EB] bg-white">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="not_enrolled">Not enrolled</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="enrolled">Enrolled</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Main Content Area - Card Grid */}
-      <div className="flex-1 min-h-0 overflow-y-auto pr-2 mt-2">
+      {/* Main Content Area - Card Grid (scrolls with admin layout main) */}
+      <div className="mt-4 pr-1 sm:pr-2">
         {isLoading ? (
-          <div className="flex items-center justify-center h-40">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="flex flex-col items-center justify-center h-48 rounded-2xl border border-dashed border-[#E5E7EB] bg-white text-[#6B7280] gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-[#10B981]" />
+            <p className="text-sm">Loading students…</p>
           </div>
         ) : filteredStudents.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-8">
             {filteredStudents.map((student) => (
               <motion.div
                 key={student.id}
@@ -764,48 +824,48 @@ export default function StudentManagement() {
                 layout
               >
                 <Card 
-                  className={`h-full flex flex-col cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 overflow-hidden ${
-                    student.status === 'inactive' ? 'border-red-500/30' : 
-                    student.face_enrollment_status === 'pending' ? 'border-yellow-500/30' : ''
+                  className={`h-full flex flex-col cursor-pointer transition-all duration-200 rounded-2xl border bg-white overflow-hidden shadow-sm hover:shadow-md ${
+                    student.status === 'inactive' ? 'border-red-200 hover:border-red-300' : 
+                    student.face_enrollment_status === 'pending' ? 'border-amber-200 hover:border-amber-300' : 'border-[#E5E7EB] hover:border-[#10B981]/40'
                   }`}
                   onClick={() => setSelectedStudent(student)}
                 >
                   <CardContent className="p-5 flex flex-col items-center text-center gap-3 flex-grow">
                     <div className="relative">
-                      <div className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold bg-muted/50 text-muted-foreground ring-2 ring-background">
+                      <div className="h-16 w-16 rounded-2xl flex items-center justify-center text-xl font-bold bg-[#F3F4F6] text-[#374151] ring-2 ring-white shadow-inner">
                         {(student.name || '?').charAt(0).toUpperCase()}
                       </div>
                       <div className="absolute -bottom-1 -right-1">
                         {student.status === 'active' ? (
-                          <div className="h-4 w-4 rounded-full border-2 border-background bg-emerald-500" title="Active" />
+                          <div className="h-4 w-4 rounded-full border-2 border-white bg-[#10B981] shadow-sm" title="Active" />
                         ) : (
-                          <div className="h-4 w-4 rounded-full border-2 border-background bg-red-400" title="Inactive" />
+                          <div className="h-4 w-4 rounded-full border-2 border-white bg-[#F87171] shadow-sm" title="Inactive" />
                         )}
                       </div>
                     </div>
                     
                     <div className="w-full space-y-1">
-                      <h3 className="font-semibold text-foreground truncate" title={student.name}>{student.name}</h3>
-                      <p className="text-xs text-muted-foreground truncate">{student.enroll_no || student.username}</p>
-                      <p className="text-xs text-muted-foreground truncate mt-1">
+                      <h3 className="font-semibold text-[#111827] truncate" title={student.name}>{student.name}</h3>
+                      <p className="text-xs text-[#6B7280] truncate">{student.enroll_no || student.username}</p>
+                      <p className="text-xs text-[#9CA3AF] truncate mt-0.5">
                         {student.department} · {student.year} Yr (Sec {student.section})
                       </p>
                     </div>
                     
-                    <div className="mt-2 flex flex-wrap justify-center gap-1.5 align-baseline">
+                    <div className="mt-1 flex flex-wrap justify-center gap-1.5 align-baseline">
                       {getFaceStatusBadge(student.face_enrollment_status)}
                       {student.status === 'inactive' && (
-                        <Badge variant="destructive" className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 px-1.5 py-0">Inactive</Badge>
+                        <Badge variant="destructive" className="bg-red-50 text-red-800 border border-red-200 px-1.5 py-0 font-medium">Inactive</Badge>
                       )}
                     </div>
                   </CardContent>
                   
-                  <div className="bg-muted/10 p-2 flex justify-center gap-2 border-t mt-auto">
+                  <div className="bg-[#F9FAFB] p-2.5 flex justify-center gap-1 border-t border-[#E5E7EB] mt-auto">
                     <Button 
                       variant="ghost" 
                       size="sm" 
                       onClick={(e) => { e.stopPropagation(); startFaceEnrollment(student); }} 
-                      className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      className="h-9 w-9 p-0 rounded-xl text-[#047857] hover:text-[#065F46] hover:bg-[#ECFDF5]"
                       title="Face Enrollment"
                     >
                       <Camera className="h-4 w-4" />
@@ -814,7 +874,7 @@ export default function StudentManagement() {
                       variant="ghost" 
                       size="sm" 
                       onClick={(e) => { e.stopPropagation(); setEditStudentData(student); setShowEditModal(true); }} 
-                      className="h-8 text-primary hover:text-primary hover:bg-primary/10"
+                      className="h-9 w-9 p-0 rounded-xl text-[#374151] hover:bg-[#E5E7EB]"
                       title="Edit Student"
                     >
                       <Edit className="h-4 w-4" />
@@ -823,7 +883,7 @@ export default function StudentManagement() {
                       variant="ghost" 
                       size="sm" 
                       onClick={(e) => { e.stopPropagation(); setDeleteStudent(student); }} 
-                      className="h-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      className="h-9 w-9 p-0 rounded-xl text-red-600 hover:text-red-700 hover:bg-red-50"
                       title="Delete Student"
                     >
                       <Trash className="h-4 w-4" />
@@ -834,30 +894,34 @@ export default function StudentManagement() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center p-12 text-center h-full">
-            <div className="h-16 w-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
-              <Users className="h-8 w-8 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#E5E7EB] bg-white p-12 text-center">
+            <div className="h-14 w-14 rounded-2xl bg-[#F3F4F6] border border-[#E5E7EB] flex items-center justify-center mb-4">
+              <Users className="h-7 w-7 text-[#9CA3AF]" />
             </div>
-            <h3 className="text-lg font-medium text-foreground">No students found</h3>
-            <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-              We couldn't find any students matching your current search and filters.
+            <h3 className="text-lg font-semibold text-[#374151]">No students match</h3>
+            <p className="text-sm text-[#6B7280] mt-2 max-w-sm">
+              Try clearing search, switching tabs, or choosing “All classes”. You can also add a new student.
             </p>
+            <Button onClick={() => setShowAddModal(true)} className="mt-6 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add student
+            </Button>
           </div>
         )}
       </div>
 
       {/* Student Details Sheet (Drawer) */}
       <Sheet open={!!selectedStudent} onOpenChange={(open) => { if (!open) setSelectedStudent(null); }}>
-        <SheetContent className="w-full sm:max-w-md overflow-y-auto border-l shadow-2xl">
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto border-l border-[#E5E7EB] bg-white shadow-2xl">
           {selectedStudent && (
             <div className="py-6 space-y-8">
               <SheetHeader className="text-left space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="h-16 w-16 rounded-full flex items-center justify-center text-2xl font-bold bg-primary/10 text-primary ring-4 ring-primary/5">
+                  <div className="h-16 w-16 rounded-2xl flex items-center justify-center text-2xl font-bold bg-[#ECFDF5] text-[#047857] ring-2 ring-[#D1FAE5]">
                     {selectedStudent.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <SheetTitle className="text-2xl">{selectedStudent.name}</SheetTitle>
+                    <SheetTitle className="text-2xl text-[#374151]">{selectedStudent.name}</SheetTitle>
                     <div className="text-sm font-medium text-muted-foreground mt-1">
                       {selectedStudent.enroll_no || selectedStudent.username}
                     </div>
@@ -873,23 +937,23 @@ export default function StudentManagement() {
                 <div className="space-y-3">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Academic Profile</h3>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-muted/30 p-3 rounded-lg border border-border/50">
+                    <div className="bg-[#F9FAFB] p-3 rounded-xl border border-[#E5E7EB]">
                       <Label className="text-[10px] text-muted-foreground uppercase">Department</Label>
                       <p className="font-semibold text-sm mt-0.5">{selectedStudent.department}</p>
                     </div>
-                    <div className="bg-muted/30 p-3 rounded-lg border border-border/50">
+                    <div className="bg-[#F9FAFB] p-3 rounded-xl border border-[#E5E7EB]">
                       <Label className="text-[10px] text-muted-foreground uppercase">Program</Label>
                       <p className="font-semibold text-sm mt-0.5">{selectedStudent.program}</p>
                     </div>
-                    <div className="bg-muted/30 p-3 rounded-lg border border-border/50">
+                    <div className="bg-[#F9FAFB] p-3 rounded-xl border border-[#E5E7EB]">
                       <Label className="text-[10px] text-muted-foreground uppercase">Year / Section</Label>
                       <p className="font-semibold text-sm mt-0.5">{selectedStudent.year} Yr / Sec {selectedStudent.section}</p>
                     </div>
-                    <div className="bg-muted/30 p-3 rounded-lg border border-border/50">
+                    <div className="bg-[#F9FAFB] p-3 rounded-xl border border-[#E5E7EB]">
                       <Label className="text-[10px] text-muted-foreground uppercase">Batch</Label>
                       <p className="font-semibold text-sm mt-0.5">{selectedStudent.batch}</p>
                     </div>
-                    <div className="bg-muted/30 p-3 rounded-lg border border-border/50 col-span-2">
+                    <div className="bg-[#F9FAFB] p-3 rounded-xl border border-[#E5E7EB] col-span-2">
                       <Label className="text-[10px] text-muted-foreground uppercase">Registered Number</Label>
                       <p className="font-semibold text-sm mt-0.5">{selectedStudent.registered_no || 'N/A'}</p>
                     </div>
@@ -898,7 +962,7 @@ export default function StudentManagement() {
 
                 <div className="space-y-3">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contact & System</h3>
-                  <div className="bg-muted/30 p-3 rounded-lg border border-border/50 space-y-3">
+                  <div className="bg-[#F9FAFB] p-3 rounded-xl border border-[#E5E7EB] space-y-3">
                     <div>
                       <Label className="text-[10px] text-muted-foreground uppercase">Email Address</Label>
                       <p className="font-medium text-sm mt-0.5">{selectedStudent.email}</p>
@@ -918,9 +982,9 @@ export default function StudentManagement() {
                     <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Face Recognition</h3>
                   </div>
                   
-                  <Card className={`border ${selectedStudent.face_enrollment_status === 'enrolled' ? 'border-green-500/20 bg-green-50/50 dark:bg-green-950/20' : 'border-border bg-muted/20'}`}>
+                  <Card className={`border rounded-xl ${selectedStudent.face_enrollment_status === 'enrolled' ? 'border-[#A7F3D0] bg-[#ECFDF5]/60' : 'border-[#E5E7EB] bg-[#F9FAFB]'}`}>
                     <CardContent className="p-4 flex items-start gap-4">
-                      <div className={`mt-0.5 h-10 w-10 rounded-full flex items-center justify-center ${selectedStudent.face_enrollment_status === 'enrolled' ? 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400' : 'bg-muted text-muted-foreground'}`}>
+                      <div className={`mt-0.5 h-10 w-10 rounded-xl flex items-center justify-center ${selectedStudent.face_enrollment_status === 'enrolled' ? 'bg-white text-[#047857] border border-[#A7F3D0]' : 'bg-white text-[#6B7280] border border-[#E5E7EB]'}`}>
                         {selectedStudent.face_enrollment_status === 'enrolled' ? <Camera className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
                       </div>
                       <div className="flex-1">
@@ -936,7 +1000,7 @@ export default function StudentManagement() {
                         <Button 
                           size="sm" 
                           variant={selectedStudent.face_enrollment_status === 'enrolled' ? 'outline' : 'default'}
-                          className="mt-3 w-full"
+                          className={`mt-3 w-full rounded-xl ${selectedStudent.face_enrollment_status === 'enrolled' ? 'border-[#E5E7EB]' : 'bg-[#10B981] hover:bg-[#059669] text-white'}`}
                           onClick={() => {
                             setSelectedStudent(null);
                             startFaceEnrollment(selectedStudent);
@@ -957,9 +1021,9 @@ export default function StudentManagement() {
 
       {/* Face Enrollment Modal */}
       <Dialog open={showFaceEnrollment} onOpenChange={setShowFaceEnrollment}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border-[#E5E7EB]">
           <DialogHeader>
-            <DialogTitle>Face Enrollment - {selectedStudent?.name}</DialogTitle>
+            <DialogTitle className="text-[#374151]">Face Enrollment - {selectedStudent?.name}</DialogTitle>
             <DialogDescription>
               Capture multiple angles of the student's face for accurate recognition.
             </DialogDescription>
@@ -969,7 +1033,7 @@ export default function StudentManagement() {
             {/* Camera Section */}
             <div className="space-y-4">
               <div className="relative">
-                <div className="relative w-full h-64 bg-gray-100 rounded-lg overflow-hidden">
+                <div className="relative w-full h-64 bg-[#F3F4F6] rounded-2xl overflow-hidden border border-[#E5E7EB]">
                   {isCapturing ? (
                     <video
                       ref={videoRef}
@@ -987,7 +1051,7 @@ export default function StudentManagement() {
                   {/* Face detection overlay */}
                   {isCapturing && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-48 h-48 border-2 border-blue-500 rounded-full opacity-50"></div>
+                      <div className="w-48 h-48 border-2 border-[#10B981] rounded-full opacity-40" />
                     </div>
                   )}
                 </div>
@@ -1024,7 +1088,7 @@ export default function StudentManagement() {
                   <Button
                     onClick={startAutoCapture}
                     disabled={!isCapturing || !modelsLoaded}
-                    className="flex-1"
+                    className="flex-1 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white"
                   >
                     <Camera className="h-4 w-4 mr-2" />
                     Start Auto Capture (50 images)
@@ -1039,7 +1103,7 @@ export default function StudentManagement() {
                     Stop Capture ({capturedImages.length}/50)
                   </Button>
                 )}
-                <Button variant="outline" onClick={stopCamera}>
+                <Button variant="outline" onClick={stopCamera} className="rounded-xl border-[#E5E7EB]">
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -1062,9 +1126,9 @@ export default function StudentManagement() {
             {/* Guidelines and captured images */}
             <div className="space-y-4">
               {/* Guidelines */}
-              <Card>
+              <Card className="rounded-2xl border-[#E5E7EB] shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Enrollment Guidelines</CardTitle>
+                  <CardTitle className="text-lg text-[#374151]">Enrollment Guidelines</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex items-start space-x-2">
@@ -1092,9 +1156,9 @@ export default function StudentManagement() {
 
               {/* Captured images preview */}
               {capturedImages.length > 0 && (
-                <Card>
+                <Card className="rounded-2xl border-[#E5E7EB] shadow-sm">
                   <CardHeader>
-                    <CardTitle className="text-lg">
+                    <CardTitle className="text-lg text-[#374151]">
                       Captured Images Preview
                       <span className="text-sm font-normal text-muted-foreground ml-2">
                         (Last 6 of {capturedImages.length})
@@ -1108,7 +1172,7 @@ export default function StudentManagement() {
                           <img
                             src={img.image}
                             alt={`Capture ${capturedImages.length - 6 + index + 1}`}
-                            className="w-full h-20 object-cover rounded"
+                            className="w-full h-20 object-cover rounded-xl border border-[#E5E7EB]"
                           />
                           <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 text-center">
                             {img.quality_score.toFixed(1)}/10
@@ -1122,181 +1186,183 @@ export default function StudentManagement() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => {
               setShowFaceEnrollment(false);
               stopCamera();
-            }}>
+            }} className="rounded-xl border-[#E5E7EB]">
               Cancel
             </Button>
             <Button
               onClick={saveFaceEmbeddings}
               disabled={faceEmbeddings.length === 0 || isAutoCapturing}
+              className="rounded-xl bg-[#10B981] hover:bg-[#059669] text-white"
             >
               <Save className="h-4 w-4 mr-2" />
               Save Embeddings ({faceEmbeddings.length} embeddings)
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog >
+      </Dialog>
 
       {/* Add Student Modal */}
-      < Dialog open={showAddModal} onOpenChange={setShowAddModal} >
-        <DialogContent className="sm:max-w-[425px]">
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="sm:max-w-[425px] rounded-2xl border-[#E5E7EB]">
           <DialogHeader>
-            <DialogTitle>Add New Student</DialogTitle>
+            <DialogTitle className="text-[#374151]">Add New Student</DialogTitle>
             <DialogDescription>
               Adding student to: {departmentFilter !== 'all' ? departmentFilter : 'N/A'} - {programFilter !== 'all' ? programFilter : 'N/A'} ({yearFilter !== 'all' ? yearFilter : 'N/A'} Year, Section {sectionFilter !== 'all' ? sectionFilter : 'N/A'})
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="username" className="text-right">Username</Label>
+              <Label htmlFor="username" className="text-right text-[#374151]">Username</Label>
               <Input
                 id="username"
-                className="col-span-3"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
                 value={addStudentFormData.username}
                 onChange={(e) => setAddStudentFormData({ ...addStudentFormData, username: e.target.value })}
                 placeholder="e.g. john_doe"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="password" className="text-right">Password</Label>
+              <Label htmlFor="password" className="text-right text-[#374151]">Password</Label>
               <Input
                 id="password"
                 type="password"
-                className="col-span-3"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
                 value={addStudentFormData.password}
                 onChange={(e) => setAddStudentFormData({ ...addStudentFormData, password: e.target.value })}
                 placeholder="••••••••"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">Full Name</Label>
+              <Label htmlFor="name" className="text-right text-[#374151]">Full Name</Label>
               <Input
                 id="name"
-                className="col-span-3"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
                 value={addStudentFormData.name}
                 onChange={(e) => setAddStudentFormData({ ...addStudentFormData, name: e.target.value })}
                 placeholder="John Doe"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">Email</Label>
+              <Label htmlFor="email" className="text-right text-[#374151]">Email</Label>
               <Input
                 id="email"
                 type="email"
-                className="col-span-3"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
                 value={addStudentFormData.email}
                 onChange={(e) => setAddStudentFormData({ ...addStudentFormData, email: e.target.value })}
                 placeholder="john@example.com"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="enroll_no" className="text-right">Enroll No</Label>
+              <Label htmlFor="enroll_no" className="text-right text-[#374151]">Enroll No</Label>
               <Input
                 id="enroll_no"
-                className="col-span-3"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
                 value={addStudentFormData.enroll_no}
                 onChange={(e) => setAddStudentFormData({ ...addStudentFormData, enroll_no: e.target.value })}
                 placeholder="ENR12345"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="registered_no" className="text-right">Reg. No</Label>
+              <Label htmlFor="registered_no" className="text-right text-[#374151]">Reg. No</Label>
               <Input
                 id="registered_no"
-                className="col-span-3"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
                 value={addStudentFormData.registered_no}
                 onChange={(e) => setAddStudentFormData({ ...addStudentFormData, registered_no: e.target.value })}
                 placeholder="REG67890"
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddModal(false)}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowAddModal(false)} className="rounded-xl border-[#E5E7EB]">
               Cancel
             </Button>
-            <Button onClick={handleAddStudent}>
+            <Button onClick={handleAddStudent} className="rounded-xl bg-[#10B981] hover:bg-[#059669] text-white">
               Add Student
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog >
+      </Dialog>
 
       {/* Edit Student Modal */}
-      < Dialog open={showEditModal} onOpenChange={setShowEditModal} >
-        <DialogContent className="sm:max-w-[425px]">
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="sm:max-w-[425px] rounded-2xl border-[#E5E7EB]">
           <DialogHeader>
-            <DialogTitle>Edit Student Details</DialogTitle>
+            <DialogTitle className="text-[#374151]">Edit Student Details</DialogTitle>
             <DialogDescription>
               Update information for {editStudentData?.name}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Full Name</Label>
+              <Label className="text-right text-[#374151]">Full Name</Label>
               <Input
-                className="col-span-3"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
                 value={editStudentData?.name || ''}
                 onChange={(e) => setEditStudentData({ ...editStudentData, name: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Email</Label>
+              <Label className="text-right text-[#374151]">Email</Label>
               <Input
-                className="col-span-3"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
                 value={editStudentData?.email || ''}
                 onChange={(e) => setEditStudentData({ ...editStudentData, email: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Enroll No</Label>
+              <Label className="text-right text-[#374151]">Enroll No</Label>
               <Input
-                className="col-span-3"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
                 value={editStudentData?.enroll_no || ''}
                 onChange={(e) => setEditStudentData({ ...editStudentData, enroll_no: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Reg. No</Label>
+              <Label className="text-right text-[#374151]">Reg. No</Label>
               <Input
-                className="col-span-3"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
                 value={editStudentData?.registered_no || ''}
                 onChange={(e) => setEditStudentData({ ...editStudentData, registered_no: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Password</Label>
+              <Label className="text-right text-[#374151]">Password</Label>
               <Input
                 type="password"
-                className="col-span-3"
+                className="col-span-3 rounded-xl border-[#E5E7EB]"
                 value={editStudentData?.password || ''}
                 onChange={(e) => setEditStudentData({ ...editStudentData, password: e.target.value })}
                 placeholder="Leave blank to keep current"
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancel</Button>
-            <Button onClick={handleUpdateStudent}>Save Changes</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowEditModal(false)} className="rounded-xl border-[#E5E7EB]">Cancel</Button>
+            <Button onClick={handleUpdateStudent} className="rounded-xl bg-[#10B981] hover:bg-[#059669] text-white">Save Changes</Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog >
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteStudent} onOpenChange={(open) => { if (!open) setDeleteStudent(null); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-2xl border-[#E5E7EB]">
           <DialogHeader>
-            <DialogTitle>Delete Student</DialogTitle>
+            <DialogTitle className="text-[#374151]">Delete Student</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete <strong>{deleteStudent?.name || deleteStudent?.username}</strong>? This action cannot be undone and will permanently remove the student record from the database.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteStudent(null)}>Cancel</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteStudent(null)} className="rounded-xl border-[#E5E7EB]">Cancel</Button>
             <Button
               variant="destructive"
+              className="rounded-xl"
               onClick={async () => {
                 if (!deleteStudent) return;
                 try {
@@ -1319,6 +1385,7 @@ export default function StudentManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div >
+    </div>
+    </div>
   );
 }

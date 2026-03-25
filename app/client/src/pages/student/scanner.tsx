@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import * as faceapi from 'face-api.js';
 import { Html5QrcodePlugin } from '../../components/student/html5-qrcode-plugin';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -13,11 +15,13 @@ import { Camera, CheckCircle, XCircle, Loader2, MapPin, AlertCircle, QrCode, Ref
 import { getCurrentPosition, verifyLocation, formatDistance } from '@/lib/location';
 import { getApiUrl } from '@/lib/config';
 import { validateQRToken } from '@/lib/qr-token';
+import { cn } from '@/lib/utils';
 import { 
   getHeadMovement, 
   generateChallenges, 
   LivenessChallenge 
 } from '@/lib/liveness';
+
 
 
 // Simple link component instead of using React Router
@@ -209,7 +213,7 @@ const StudentScannerPage: React.FC = () => {
               return false;
             }
           } catch {
-            // Some browsers don't support camera permission query — proceed normally
+            // Some browsers don't support camera permission query â€” proceed normally
           }
         }
       }
@@ -299,7 +303,7 @@ const StudentScannerPage: React.FC = () => {
       }
 
       toast({
-        title: "Location Verified ✓",
+        title: "Location Verified âœ“",
         description: `You are ${formatDistance(locationCheck.distance)} from class location. You can now scan the QR code.`,
         duration: 5000
       });
@@ -454,7 +458,7 @@ const StudentScannerPage: React.FC = () => {
           }
           console.log("QR token validated successfully");
         } else if (activeSessionData.qr_secret && !sessionData.token) {
-          // Session has rotation enabled but QR doesn't have a token — old/static QR
+          // Session has rotation enabled but QR doesn't have a token â€” old/static QR
           setErrorMessage('This QR code is outdated. Please scan the live rotating code displayed by your teacher.');
           setIsLoading(false);
           setIsScanning(true);
@@ -480,7 +484,7 @@ const StudentScannerPage: React.FC = () => {
             if (!ipMatch) {
               toast({
                 variant: "default",
-                title: "⚠️ Different Network Detected",
+                title: "âš ï¸ Different Network Detected",
                 description: "You appear to be on a different network than the teacher. Attendance will proceed but this is logged.",
                 duration: 5000
               });
@@ -971,286 +975,295 @@ const StudentScannerPage: React.FC = () => {
 
 
   return (
-    <div className="max-w-md mx-auto p-4 sm:p-6 md:p-8 min-h-[calc(100vh-4rem)] flex flex-col justify-center animate-in fade-in duration-500">
-      <div className="mb-6 space-y-2 text-center">
-        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Attendance Check-in</h1>
-        <p className="text-muted-foreground text-sm">Follow the steps to mark your attendance</p>
-      </div>
+    <div className="max-w-md mx-auto px-4 py-8 sm:py-12 min-h-[calc(100vh-4rem)] flex flex-col justify-center animate-in fade-in duration-700">
+      {/* Header Branding */}
+      <header className="mb-10 text-center space-y-3">
+        <div className="flex items-center justify-center gap-2 mb-2">
+           <div className="h-1 w-8 rounded-full bg-emerald-500"></div>
+           <Badge className="bg-emerald-50 text-emerald-600 hover:bg-emerald-50 border-emerald-100 text-[9px] font-black uppercase tracking-[0.15em] px-2 py-0.5">Secure Check-in</Badge>
+           <div className="h-1 w-8 rounded-full bg-emerald-500"></div>
+        </div>
+        <h1 className="text-3xl font-extrabold text-foreground tracking-tighter">Attendance Portal</h1>
+        <p className="text-gray-500 font-medium text-sm">Verify your identity and location to proceed.</p>
+      </header>
       
       {!activeSession ? (
-        <Card className="border border-border/40 shadow-xl bg-gradient-to-br from-background to-background/50 backdrop-blur-sm overflow-hidden">
-          <CardContent className="p-8">
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center mb-2">
-                <AlertCircle className="h-8 w-8 text-yellow-600" />
-              </div>
-              <h2 className="text-xl font-bold text-foreground">No Active Session</h2>
-              <p className="text-muted-foreground text-sm max-w-[250px] mx-auto">
-                There is currently no active attendance session available for you to join.
-              </p>
-              <Button onClick={() => window.location.href = '/student/dashboard'} className="mt-4 w-full h-12">
-                Return to Dashboard
-              </Button>
+        <Card className="border-border shadow-xl bg-card rounded-[2rem] overflow-hidden p-10 text-center border-dashed">
+          <div className="flex flex-col items-center space-y-6">
+            <div className="w-20 h-20 rounded-3xl bg-amber-50 flex items-center justify-center border border-amber-100 rotate-3">
+              <AlertCircle className="h-10 w-10 text-amber-500 -rotate-3" />
             </div>
-          </CardContent>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-foreground">Station Inactive</h2>
+              <p className="text-muted-foreground font-medium text-sm px-6">
+                There are no live attendance sessions currently broadcasted for your section.
+              </p>
+            </div>
+            <Button 
+               onClick={() => window.location.href = '/student/dashboard'} 
+               className="w-full h-14 bg-primary hover:bg-[#1f2937] text-white font-bold rounded-2xl shadow-xl shadow-gray-200 transition-all active:scale-[0.98]"
+            >
+              Return to Dashboard
+            </Button>
+          </div>
         </Card>
       ) : (
-        <Card className="border border-border/40 shadow-xl bg-gradient-to-br from-background to-background/50 backdrop-blur-sm overflow-hidden relative">
-          {/* Step Indicator Top Bar */}
-          <div className="bg-muted/30 border-b border-border/40 p-4 shrink-0">
+        <Card className="border-border shadow-2xl bg-card rounded-[2.5rem] overflow-hidden border-0 ring-1 ring-gray-100">
+          {/* Progress Indicator */}
+          <div className="bg-[#F9FAFB] border-b border-border px-8 py-6">
             <div className="flex items-center justify-between relative">
-              <div className="absolute left-0 top-1/2 w-full h-0.5 bg-border/50 -z-10 -translate-y-1/2"></div>
+              <div className="absolute left-0 top-1/2 w-full h-[2px] bg-gray-200 -z-0 -translate-y-[6px]"></div>
               
               {/* Step 1: Location */}
-              <div className="flex flex-col items-center gap-1.5 bg-background/90 px-2 relative transition-all duration-300">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${locationVerified || success ? 'bg-primary text-primary-foreground border-primary scale-110' : !locationVerified && !success ? 'bg-background border-primary text-primary shadow-[0_0_15px_rgba(59,130,246,0.5)] scale-110' : 'bg-muted border-border text-muted-foreground'}`}>
-                  {locationVerified || success ? <CheckCircle className="w-4 h-4 animate-in zoom-in" /> : <MapPin className="w-4 h-4" />}
+              <div className="flex flex-col items-center gap-2 relative z-10 bg-[#F9FAFB] px-1 group">
+                <div className={cn(
+                  "w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 rotate-45 group-hover:rotate-0",
+                  locationVerified || success 
+                    ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-200" 
+                    : !locationVerified && !success 
+                      ? "bg-card border-emerald-500 text-emerald-500 shadow-xl shadow-emerald-100" 
+                      : "bg-card border-gray-200 text-muted-foreground"
+                )}>
+                  <div className="-rotate-45 group-hover:rotate-0 transition-transform duration-500">
+                    {locationVerified || success ? <CheckCircle className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
+                  </div>
                 </div>
-                <span className={`text-[10px] font-semibold uppercase tracking-wider ${locationVerified || success || (!locationVerified && !success) ? 'text-primary' : 'text-muted-foreground'}`}>Location</span>
+                <span className={cn("text-[9px] font-black uppercase tracking-[0.1em] mt-1", (locationVerified || success || (!locationVerified && !success)) ? "text-emerald-600" : "text-muted-foreground")}>Location</span>
               </div>
               
-              {/* Step 2: Scan */}
-              <div className="flex flex-col items-center gap-1.5 bg-background/90 px-2 relative transition-all duration-300">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${showFaceVerification || success ? 'bg-primary text-primary-foreground border-primary scale-110' : locationVerified && !showFaceVerification && !success ? 'bg-background border-primary text-primary shadow-[0_0_15px_rgba(59,130,246,0.5)] scale-110' : 'bg-muted border-border text-muted-foreground'}`}>
-                  {showFaceVerification || success ? <CheckCircle className="w-4 h-4 animate-in zoom-in" /> : <QrCode className="w-4 h-4" />}
+              {/* Step 2: QR Scan */}
+              <div className="flex flex-col items-center gap-2 relative z-10 bg-[#F9FAFB] px-1 group">
+                <div className={cn(
+                  "w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 rotate-45 group-hover:rotate-0",
+                  showFaceVerification || success 
+                    ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-200" 
+                    : locationVerified && !showFaceVerification && !success 
+                      ? "bg-card border-emerald-500 text-emerald-500 shadow-xl shadow-emerald-100" 
+                      : "bg-card border-gray-200 text-muted-foreground"
+                )}>
+                  <div className="-rotate-45 group-hover:rotate-0 transition-transform duration-500">
+                    {showFaceVerification || success ? <CheckCircle className="w-5 h-5" /> : <QrCode className="w-5 h-5" />}
+                  </div>
                 </div>
-                <span className={`text-[10px] font-semibold uppercase tracking-wider ${showFaceVerification || success || (locationVerified && !showFaceVerification && !success) ? 'text-primary' : 'text-muted-foreground'}`}>Scan QR</span>
+                <span className={cn("text-[9px] font-black uppercase tracking-[0.1em] mt-1", (showFaceVerification || success || (locationVerified && !showFaceVerification && !success)) ? "text-emerald-600" : "text-muted-foreground")}>QR SCAN</span>
               </div>
               
               {/* Step 3: Face */}
-              <div className="flex flex-col items-center gap-1.5 bg-background/90 px-2 relative transition-all duration-300">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${success ? 'bg-primary text-primary-foreground border-primary scale-110' : showFaceVerification && !success ? 'bg-background border-primary text-primary shadow-[0_0_15px_rgba(59,130,246,0.5)] scale-110' : 'bg-muted border-border text-muted-foreground'}`}>
-                  {success ? <CheckCircle className="w-4 h-4 animate-in zoom-in" /> : <Camera className="w-4 h-4" />}
+              <div className="flex flex-col items-center gap-2 relative z-10 bg-[#F9FAFB] px-1 group">
+                <div className={cn(
+                  "w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 rotate-45 group-hover:rotate-0",
+                  success 
+                    ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-200" 
+                    : showFaceVerification && !success 
+                      ? "bg-card border-emerald-500 text-emerald-500 shadow-xl shadow-emerald-100" 
+                      : "bg-card border-gray-200 text-muted-foreground"
+                )}>
+                  <div className="-rotate-45 group-hover:rotate-0 transition-transform duration-500">
+                    {success ? <CheckCircle className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
+                  </div>
                 </div>
-                <span className={`text-[10px] font-semibold uppercase tracking-wider ${success || (showFaceVerification && !success) ? 'text-primary' : 'text-muted-foreground'}`}>Verify Face</span>
+                <span className={cn("text-[9px] font-black uppercase tracking-[0.1em] mt-1", (success || (showFaceVerification && !success)) ? "text-emerald-600" : "text-muted-foreground")}>IDENTITY</span>
               </div>
             </div>
           </div>
           
-          <CardContent className="p-5">
-            <div className="space-y-6">
-              {/* Active Session Info Snippet */}
+          <CardContent className="p-8">
+            <div className="space-y-8">
+              {/* Session Context Banner */}
               {!success && (
-                <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 flex justify-between items-center relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full blur-xl -mr-8 -mt-8"></div>
-                  <div>
-                    <h4 className="font-semibold text-sm relative z-10">{activeSession.name}</h4>
-                    <p className="text-xs text-muted-foreground relative z-10">{activeSession.time}</p>
+                <div className="bg-primary rounded-3xl p-5 flex justify-between items-center text-white shadow-xl shadow-gray-200 transition-all hover:scale-[1.02]">
+                  <div className="space-y-0.5">
+                    <p className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-1">Marking Attendance for</p>
+                    <h4 className="font-extrabold text-lg leading-none tracking-tight">{activeSession.name}</h4>
+                    <p className="text-xs font-bold text-muted-foreground">{activeSession.time}</p>
                   </div>
-                  <Badge variant="outline" className="bg-primary/10 border-primary/20 text-primary uppercase text-[10px] tracking-wider px-2 relative z-10">Live</Badge>
+                  <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 uppercase text-[9px] font-black h-fit py-1 px-2.5">Active</Badge>
                 </div>
               )}
-              <div className="w-full pt-4 min-h-[350px] flex flex-col justify-center">
+
+              <div className="w-full flex flex-col justify-center">
                 {showFaceVerification ? (
-                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="text-center">
-                      <h3 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent mb-2">Face Verification</h3>
-                      {isCameraActive && !livenessPassed && !livenessFailed && livenessChallenges.length > 0 && (
-                        <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg animate-pulse shadow-sm">
-                          <p className="text-primary font-bold text-lg">
-                            {livenessChallenges[currentChallengeIndex].instruction}
-                          </p>
-                          <p className="text-xs text-primary/70 mt-1">
-                            Step {currentChallengeIndex + 1} of {livenessChallenges.length}
-                          </p>
-                        </div>
-                      )}
-                      {livenessPassed && (
-                        <p className="text-sm text-green-600 font-medium">Liveness verified. You may now match your face.</p>
-                      )}
-                      {livenessFailed && (
-                        <p className="text-sm text-red-600 font-medium">Failed to verify liveness in time. Please try again.</p>
-                      )}
-                      {!isCameraActive && (
-                        <p className="text-sm text-muted-foreground">Please position your face within the frame</p>
-                      )}
+                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                    <div className="text-center space-y-2">
+                       <h3 className="text-2xl font-black text-foreground tracking-tight">Identity Verification</h3>
+                       <p className="text-sm font-medium text-gray-500">Position your face inside the frame.</p>
                     </div>
 
-                    <div className="relative w-full max-w-[280px] aspect-square mx-auto rounded-3xl overflow-hidden shadow-2xl ring-4 ring-primary/20 border-4 border-background">
-                      {isCameraActive ? (
-                        <>
-                          <video
-                            ref={videoRef}
-                            autoPlay
-                            playsInline
-                            muted
-                            className="w-full h-full object-cover scale-x-[-1]"
-                          />
-                          <div className="absolute inset-0 border-4 border-dashed border-primary/50 rounded-3xl pointer-events-none animate-[pulse_2s_ease-in-out_infinite]"></div>
-                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-56 border-2 border-primary/40 rounded-[4rem] pointer-events-none"></div>
-                          {/* Camera Switch Button */}
-                          {faceDevices.length > 1 && (
-                            <button
-                              onClick={switchFaceCamera}
-                              disabled={isSwitchingFaceCamera}
-                              className="absolute top-2 right-2 z-10 w-9 h-9 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/80 transition-all active:scale-95 disabled:opacity-50 border border-white/20 shadow-lg"
-                              title="Switch Camera"
-                            >
-                              <RefreshCw className={`w-4 h-4 ${isSwitchingFaceCamera ? 'animate-spin' : ''}`} />
-                            </button>
-                          )}
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full bg-muted/30 text-muted-foreground gap-3">
-                          <Camera className="h-12 w-12 opacity-50" />
-                          <span className="text-sm font-medium">Starting camera...</span>
+                    {isCameraActive && !livenessPassed && !livenessFailed && livenessChallenges.length > 0 && (
+                      <motion.div 
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-emerald-50 border border-emerald-100 p-5 rounded-3xl text-center shadow-lg shadow-emerald-50"
+                      >
+                        <p className="text-emerald-700 font-black text-xl mb-1 uppercase tracking-tighter">
+                          {livenessChallenges[currentChallengeIndex].instruction}
+                        </p>
+                        <div className="flex items-center justify-center gap-1">
+                          {[...Array(livenessChallenges.length)].map((_, i) => (
+                            <div key={i} className={cn("h-1 rounded-full transition-all duration-500", i === currentChallengeIndex ? "w-4 bg-emerald-500" : (i < currentChallengeIndex ? "w-2 bg-emerald-300" : "w-1 bg-gray-200"))}></div>
+                          ))}
                         </div>
-                      )}
-                      <canvas ref={canvasRef} className="hidden" />
+                      </motion.div>
+                    )}
+
+                    <div className="relative group max-w-[300px] mx-auto">
+                      <div className="absolute inset-0 bg-emerald-500/20 blur-[60px] rounded-full scale-125 opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                      <div className="relative aspect-square rounded-[3rem] overflow-hidden shadow-2xl ring-[12px] ring-gray-50 border-4 border-white">
+                        {isCameraActive ? (
+                          <>
+                            <video
+                              ref={videoRef}
+                              autoPlay
+                              playsInline
+                              muted
+                              className="w-full h-full object-cover scale-x-[-1]"
+                            />
+                            {/* Scanning Guide Overlays */}
+                            <div className="absolute inset-0 border-[3px] border-dashed border-emerald-500/40 rounded-[2.5rem] pointer-events-none animate-[pulse_3s_ease-in-out_infinite]"></div>
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-64 border-[3px] border-white/30 rounded-[6rem] pointer-events-none backdrop-blur-[1px]"></div>
+                            
+                            {/* Camera Toggle */}
+                            {faceDevices.length > 1 && (
+                              <button
+                                onClick={switchFaceCamera}
+                                disabled={isSwitchingFaceCamera}
+                                className="absolute top-4 right-4 z-10 w-12 h-12 rounded-2xl bg-card/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-card/40 transition-all active:scale-95 disabled:opacity-50 border border-white/20 shadow-2xl"
+                              >
+                                <RefreshCw className={cn("w-5 h-5", isSwitchingFaceCamera && "animate-spin")} />
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full bg-gray-50 text-muted-foreground gap-4">
+                            <div className="h-20 w-20 rounded-full border-4 border-gray-200 border-t-emerald-500 animate-spin"></div>
+                            <span className="text-[10px] font-black uppercase tracking-widest">Waking Sensor...</span>
+                          </div>
+                        )}
+                        <canvas ref={canvasRef} className="hidden" />
+                      </div>
                     </div>
 
-                    {/* Zoom Controls for Face Camera */}
                     {faceZoomRange && isCameraActive && (
-                      <div className="flex items-center gap-2 mt-3 px-2 max-w-[280px] mx-auto">
-                        <ZoomOut className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <input
-                          type="range"
-                          min={faceZoomRange.min}
-                          max={faceZoomRange.max}
-                          step={faceZoomRange.step}
-                          value={faceZoomLevel}
-                          onChange={(e) => applyFaceZoom(parseFloat(e.target.value))}
-                          className="w-full h-1.5 bg-muted rounded-full appearance-none cursor-pointer accent-primary [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:shadow-md"
-                        />
-                        <ZoomIn className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <span className="text-xs text-muted-foreground font-mono min-w-[2.5rem] text-right">{faceZoomLevel.toFixed(1)}x</span>
+                      <div className="flex items-center gap-4 px-8 max-w-[300px] mx-auto">
+                        <ZoomOut className="w-4 h-4 text-muted-foreground" />
+                        <Progress value={((faceZoomLevel - faceZoomRange.min) / (faceZoomRange.max - faceZoomRange.min)) * 100} className="h-1 bg-gray-100" />
+                        <ZoomIn className="w-4 h-4 text-muted-foreground" />
                       </div>
                     )}
 
-                    {/* Camera Label */}
-                    {faceDevices.length > 1 && isCameraActive && (
-                      <p className="text-[10px] text-center mt-1.5 text-muted-foreground/60 truncate max-w-[280px] mx-auto px-2">
-                        {faceDevices[faceCameraIndex]?.label || `Camera ${faceCameraIndex + 1}`}
-                      </p>
-                    )}
-
-                    <div className="flex flex-col space-y-3">
+                    <div className="flex flex-col gap-4">
                       {!isCameraActive ? (
-                        <Button onClick={() => startCamera()} disabled={!modelsLoaded} className="w-full h-14 text-base rounded-xl shadow-lg shadow-primary/20 group transition-all">
-                          <Camera className="h-5 w-5 mr-3 group-hover:scale-110 transition-transform" />
-                          {modelsLoaded ? 'Start Camera' : 'Loading models...'}
+                        <Button onClick={() => startCamera()} disabled={!modelsLoaded} className="w-full h-16 text-lg font-black uppercase tracking-widest bg-primary text-white rounded-[1.5rem] shadow-xl shadow-gray-200 border-0 transition-all hover:bg-emerald-600 active:scale-[0.98]">
+                          {modelsLoaded ? 'Activate Sensor' : 'Loading Logic...'}
                         </Button>
                       ) : (
                         <Button
                           onClick={verifyFaceAndMarkAttendance}
                           disabled={isVerifying || !livenessPassed || livenessFailed}
-                          className={`w-full h-14 text-base rounded-xl shadow-lg transition-all ${
+                          className={cn(
+                            "w-full h-16 text-lg font-black uppercase tracking-widest rounded-[1.5rem] shadow-2xl transition-all active:scale-[0.98] border-0",
                             !livenessPassed 
-                              ? 'bg-muted text-muted-foreground' 
-                              : 'shadow-primary/20 group'
-                          }`}
+                              ? "bg-gray-100 text-muted-foreground" 
+                              : "bg-[#10B981] text-white shadow-emerald-200"
+                          )}
                         >
                           {isVerifying ? (
-                            <>
-                              <Loader2 className="h-5 w-5 mr-3 animate-spin" />
-                              Verifying face match...
-                            </>
-                          ) : livenessFailed ? (
-                            "Challenge Failed - Try Again"
-                          ) : !livenessPassed ? (
-                            "Complete Challenge First"
-                          ) : (
-                            <>
-                              <CheckCircle className="h-5 w-5 mr-3 group-hover:scale-110 transition-transform" />
-                              Verify Face & Mark Attendance
-                            </>
-                          )}
+                            <div className="flex items-center gap-3">
+                              <Loader2 className="h-6 w-6 animate-spin" />
+                              Validating...
+                            </div>
+                          ) : livenessFailed ? "Failed - Retry" : !livenessPassed ? "Complete Tasks" : "Verify & Sign" }
                         </Button>
                       )}
                       
                       {livenessFailed && (
-                        <Button 
-                          onClick={() => startCamera()} 
-                          variant="secondary"
-                          className="w-full h-12 rounded-xl"
-                        >
+                        <Button onClick={() => startCamera()} variant="ghost" className="text-rose-500 font-bold uppercase tracking-widest text-[10px] h-10 hover:bg-rose-50">
                           <RefreshCw className="h-4 w-4 mr-2" />
-                          Retry Liveness Challenge
+                          Retry Identity Verification
                         </Button>
                       )}
 
-                      <Button variant="outline" onClick={cancelFaceVerification} className="w-full h-12 rounded-xl">
-                        Cancel
+                      <Button variant="ghost" onClick={cancelFaceVerification} className="text-muted-foreground font-bold uppercase tracking-widest text-[10px] h-10">
+                        Cancel Verification
                       </Button>
                     </div>
-
-                    {errorMessage && (
-                      <div className="mt-4 p-4 bg-red-500/10 border-l-4 border-red-500 rounded-r-xl text-red-700 dark:text-red-400 text-sm flex items-start gap-3 w-full">
-                        <AlertCircle className="w-5 h-5 shrink-0" />
-                        <p>{errorMessage}</p>
-                      </div>
-                    )}
                   </div>
                 ) : success ? (
-                  <div className="flex flex-col items-center justify-center p-4 text-center space-y-8 animate-in zoom-in-95 duration-500">
-                    <div className="relative group">
-                      <div className="absolute inset-0 bg-green-500/20 blur-xl rounded-full scale-150 group-hover:bg-green-500/30 transition-colors"></div>
-                      <div className="w-24 h-24 rounded-full bg-green-500 flex items-center justify-center shadow-xl shadow-green-500/30 relative border-4 border-background">
-                        <CheckCircle className="h-12 w-12 text-white" />
-                      </div>
+                  <div className="text-center space-y-10 py-10 animate-in zoom-in-95 duration-700">
+                    <div className="relative w-fit mx-auto">
+                       <div className="absolute inset-0 bg-emerald-500/20 blur-[40px] rounded-full scale-150"></div>
+                       <motion.div 
+                         initial={{ scale: 0, rotate: -45 }}
+                         animate={{ scale: 1, rotate: 0 }}
+                         className="h-28 w-28 rounded-[2.5rem] bg-emerald-500 text-white flex items-center justify-center shadow-2xl relative border-[8px] border-white"
+                       >
+                          <CheckCircle className="h-12 w-12" />
+                       </motion.div>
                     </div>
 
-                    <div>
-                      <h3 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent mb-2">Success!</h3>
-                      <p className="text-muted-foreground text-sm max-w-[250px] mx-auto">
-                        Your attendance has been successfully verified and securely recorded.
-                      </p>
+                    <div className="space-y-3">
+                       <h3 className="text-3xl font-black text-foreground tracking-tighter">Authenticated!</h3>
+                       <p className="text-muted-foreground font-medium px-4">Your attendance record has been signed and securely stored.</p>
                     </div>
 
-                    <div className="flex flex-col w-full gap-3 pt-4">
-                      <Button size="lg" className="w-full h-12" onClick={() => window.location.href = '/student/dashboard'}>
-                        Return to Dashboard
-                      </Button>
-                    </div>
+                    <Button 
+                       onClick={() => window.location.href = '/student/dashboard'}
+                       className="w-full h-16 bg-primary text-white font-black uppercase tracking-widest rounded-[1.5rem] shadow-2xl transition-all active:scale-[0.98]"
+                    >
+                      Dashboard
+                    </Button>
                   </div>
                 ) : isLoading ? (
-                  <div className="flex flex-col items-center justify-center p-8 space-y-4">
-                    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-primary font-medium">Verifying QR code...</p>
+                  <div className="flex flex-col items-center justify-center py-20 space-y-8">
+                     <div className="relative">
+                        <div className="h-20 w-20 border-[6px] border-emerald-50 border-t-emerald-500 rounded-full animate-spin"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                           <Shield className="h-8 w-8 text-emerald-500 fill-emerald-50" />
+                        </div>
+                     </div>
+                     <div className="text-center space-y-1">
+                        <p className="text-lg font-black text-foreground tracking-tight">Syncing Records</p>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Validating QR Signature...</p>
+                     </div>
                   </div>
                 ) : !locationVerified ? (
-                  <div className="flex flex-col items-center justify-center space-y-8 py-6 animate-in fade-in duration-500">
-                    <div className="w-24 h-24 rounded-full bg-blue-500/10 flex items-center justify-center relative shadow-inner">
-                      <div className="absolute inset-0 border border-blue-500/20 rounded-full animate-ping opacity-20"></div>
-                      <MapPin className="h-10 w-10 text-blue-500" />
+                  <div className="space-y-10 py-10 animate-in fade-in duration-700">
+                    <div className="relative w-fit mx-auto">
+                       <div className="absolute inset-0 bg-emerald-500/10 blur-[40px] rounded-full scale-150"></div>
+                       <div className="h-24 w-24 rounded-[2rem] bg-card border-2 border-emerald-100 flex items-center justify-center text-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.1)] relative overflow-hidden group">
+                          <div className="absolute inset-0 bg-emerald-50 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500"></div>
+                          <MapPin className="h-10 w-10 relative z-10" />
+                       </div>
                     </div>
 
-                    <div className="text-center space-y-2">
-                      <h3 className="text-2xl font-bold text-foreground">Location Check</h3>
-                      <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                        Please verify you are physically inside the classroom before scanning.
-                      </p>
+                    <div className="text-center space-y-3">
+                       <h3 className="text-2xl font-black text-foreground tracking-tight">Geofence Check</h3>
+                       <p className="text-sm font-medium text-muted-foreground px-6">We need to confirm you're in the lecture hall before scanning.</p>
                     </div>
 
                     <Button
                       onClick={handleVerifyLocation}
                       disabled={isVerifyingLocation}
-                      className="w-full h-14 text-base rounded-xl shadow-lg group relative overflow-hidden"
+                      className="w-full h-16 bg-primary text-white font-black uppercase tracking-widest rounded-[1.5rem] shadow-2xl transition-all active:scale-[0.98] border-0"
                     >
                       {isVerifyingLocation ? (
-                        <>
-                          <Loader2 className="h-5 w-5 mr-3 animate-spin" />
-                          Pinpointing location...
-                        </>
-                      ) : (
-                        <>
-                          <MapPin className="h-5 w-5 mr-3 group-hover:scale-110 transition-transform" />
-                          Verify My Location
-                        </>
-                      )}
+                        <div className="flex items-center gap-3">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          Locating...
+                        </div>
+                      ) : "Confirm my Location"}
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-6 py-4 animate-in fade-in duration-500">
+                  <div className="space-y-8 py-6 animate-in fade-in duration-700">
                     {isScanning ? (
-                      <div className="space-y-4">
-                        <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 flex items-center justify-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                          <p className="text-sm text-green-700 dark:text-green-400 font-medium tracking-wide">
-                            Location Verified
-                          </p>
+                      <div className="space-y-8">
+                        <div className="bg-emerald-50 rounded-2xl p-4 flex items-center justify-center gap-3 border border-emerald-100">
+                           <Shield className="h-5 w-5 text-emerald-500" />
+                           <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Location Match Verified</span>
                         </div>
-                        <div className="rounded-3xl overflow-hidden shadow-2xl ring-4 ring-primary/10 border-4 border-background bg-black/5">
+                        <div className="rounded-[2.5rem] overflow-hidden shadow-2xl ring-[12px] ring-gray-50 border-4 border-white bg-[#F9FAFB] relative group">
+                          <div className="absolute inset-0 border-2 border-emerald-500/20 rounded-[2.2rem] pointer-events-none z-10"></div>
                           <Html5QrcodePlugin
                             fps={10}
                             qrbox={250}
@@ -1260,134 +1273,153 @@ const StudentScannerPage: React.FC = () => {
                               console.warn("QR Scan Error:", error);
                             }}
                           />
+                          {/* Modern Scanner Guide */}
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-emerald-500/40 rounded-3xl pointer-events-none z-20 animate-pulse">
+                             <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-emerald-500 rounded-tl-lg"></div>
+                             <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-emerald-500 rounded-tr-lg"></div>
+                             <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-emerald-500 rounded-bl-lg"></div>
+                             <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-emerald-500 rounded-br-lg"></div>
+                          </div>
                         </div>
+                        <p className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Scan the code on the teacher's screen</p>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center py-16 gap-4 bg-muted/20 rounded-3xl border border-dashed border-border">
-                        <QrCode className="w-16 h-16 text-muted-foreground opacity-50" />
-                        <p className="text-sm text-muted-foreground font-medium">Scanner paused</p>
-                        <Button variant="secondary" onClick={handleScanAgain} className="mt-2">
-                          Resume Scanning
-                        </Button>
+                      <div className="flex flex-col items-center justify-center py-20 gap-6 bg-gray-50 rounded-[2.5rem] border border-dashed border-border">
+                        <div className="h-20 w-20 rounded-3xl bg-card flex items-center justify-center text-muted-foreground border border-gray-100 shadow-sm">
+                           <QrCode className="h-10 w-10 opacity-40" />
+                        </div>
+                        <div className="text-center space-y-1">
+                           <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Scanner Sleeping</p>
+                           <Button onClick={handleScanAgain} variant="link" className="text-emerald-500 font-black uppercase text-[10px] tracking-widest hover:no-underline">Wake Scanner</Button>
+                        </div>
                       </div>
                     )}
                   </div>
                 )}
 
-                {errorMessage && !showFaceVerification && (
-                  <div className="mt-6 p-4 bg-red-500/10 border-l-4 border-red-500 rounded-r-xl text-red-700 dark:text-red-400 text-sm flex items-start gap-3 w-full">
-                    <AlertCircle className="w-5 h-5 shrink-0" />
-                    <p>{errorMessage}</p>
-                  </div>
+                {errorMessage && !showFaceVerification && !success && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-8 p-5 bg-rose-50 border border-rose-100 rounded-3xl text-rose-700 text-sm flex items-start gap-4 shadow-lg shadow-rose-100"
+                  >
+                    <AlertCircle className="w-6 h-6 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                       <p className="font-black uppercase text-[10px] tracking-widest opacity-60">System Alert</p>
+                       <p className="font-medium leading-relaxed">{errorMessage}</p>
+                    </div>
+                  </motion.div>
                 )}
               </div>
             </div>
           </CardContent>
+          
+          <div className="bg-primary px-8 py-4 flex items-center justify-center gap-3">
+             <Shield className="h-3 w-3 text-emerald-400" />
+             <span className="text-[8px] font-black text-white uppercase tracking-[0.3em]">Encrypted Session Endpoint</span>
+          </div>
         </Card>
       )}
 
       {/* Permission Request Dialog */}
-      {showPermissionDialog && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-background rounded-2xl shadow-2xl border border-border max-w-sm w-full p-6 space-y-5 animate-in zoom-in-95 duration-300">
-            <div className="flex flex-col items-center text-center space-y-3">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${permissionStatus === 'denied' ? 'bg-red-500/10' : 'bg-blue-500/10'}`}>
+      <AnimatePresence>
+        {showPermissionDialog && (
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+              onClick={() => setShowPermissionDialog(false)}
+            />
+            <motion.div 
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="bg-card rounded-t-[3rem] sm:rounded-[3rem] shadow-2xl border border-border w-full max-w-sm p-10 space-y-8 relative z-10"
+            >
+              <div className="flex flex-col items-center text-center space-y-6">
+                <div className={cn(
+                  "w-24 h-24 rounded-[2rem] flex items-center justify-center rotate-6",
+                  permissionStatus === 'denied' ? 'bg-rose-50 text-rose-500 border border-rose-100' : 'bg-emerald-50 text-emerald-500 border border-emerald-100'
+                )}>
+                  {permissionStatus === 'denied' ? (
+                    <Shield className="h-12 w-12 -rotate-6" />
+                  ) : (
+                    permissionType === 'location' ? <MapPin className="h-12 w-12 -rotate-6" /> : <Camera className="h-12 w-12 -rotate-6" />
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <h3 className="text-3xl font-black text-foreground tracking-tighter leading-none">
+                    {permissionStatus === 'denied' ? "Sensor Blocked" : "Sensor Access"}
+                  </h3>
+                  <p className="text-gray-500 font-medium text-sm">
+                    {permissionType === 'location'
+                      ? 'Confirming your physical presence in the lecture hall.'
+                      : 'Activating biometric sensors for identity validation.'
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {permissionStatus === 'denied' ? (
+                <div className="bg-gray-50 rounded-3xl p-6 space-y-4">
+                  <p className="text-[10px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-emerald-500" />
+                    How to Unblock
+                  </p>
+                  <ol className="text-xs text-muted-foreground space-y-3 font-medium">
+                    <li className="flex gap-2"><span>1.</span> <span>Tap the <strong>Lock icon</strong> (ðŸ”’) in address bar.</span></li>
+                    <li className="flex gap-2"><span>2.</span> <span>Allow <strong>{permissionType === 'location' ? 'Location' : 'Camera'}</strong>.</span></li>
+                    <li className="flex gap-2"><span>3.</span> <span>Reload to sync permissions.</span></li>
+                  </ol>
+                </div>
+              ) : (
+                <div className="bg-emerald-50 rounded-3xl p-6">
+                  <p className="text-xs text-emerald-700 font-bold leading-relaxed text-center italic">
+                    {permissionType === 'location'
+                      ? 'ðŸ“ Tap "Allow" when the browser asks for your location.'
+                      : 'ðŸ“· Tap "Allow" when the browser asks for camera access.'
+                    }
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3">
                 {permissionStatus === 'denied' ? (
-                  <Shield className={`h-8 w-8 ${permissionStatus === 'denied' ? 'text-red-500' : 'text-blue-500'}`} />
+                  <>
+                    <Button onClick={() => { setShowPermissionDialog(false); window.location.reload(); }} className="w-full h-16 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-gray-200 border-0">
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Reload Portal
+                    </Button>
+                    <Button variant="ghost" onClick={() => setShowPermissionDialog(false)} className="w-full text-muted-foreground font-bold uppercase tracking-widest text-[10px]">Close</Button>
+                  </>
                 ) : (
-                  permissionType === 'location' ? <MapPin className="h-8 w-8 text-blue-500" /> : <Camera className="h-8 w-8 text-blue-500" />
+                  <>
+                    <Button onClick={handleGrantPermission} className="w-full h-16 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-gray-200 border-0">
+                      I Understand
+                    </Button>
+                    <Button variant="ghost" onClick={() => setShowPermissionDialog(false)} className="w-full text-muted-foreground font-bold uppercase tracking-widest text-[10px]">Cancel</Button>
+                  </>
                 )}
               </div>
-              
-              <h3 className="text-xl font-bold text-foreground">
-                {permissionStatus === 'denied'
-                  ? `${permissionType === 'location' ? 'Location' : 'Camera'} Access Blocked`
-                  : `${permissionType === 'location' ? 'Location' : 'Camera'} Access Required`
-                }
-              </h3>
-              
-              <p className="text-sm text-muted-foreground">
-                {permissionType === 'location'
-                  ? 'We need your location to verify you are inside the classroom before marking attendance.'
-                  : 'Camera access is needed for QR code scanning and face verification.'
-                }
-              </p>
-            </div>
-
-            {permissionStatus === 'denied' ? (
-              <div className="bg-muted/50 rounded-xl p-4 space-y-3">
-                <p className="text-xs font-semibold text-foreground flex items-center gap-2">
-                  <Settings className="w-4 h-4" />
-                  How to enable {permissionType === 'location' ? 'location' : 'camera'}:
-                </p>
-                <ol className="text-xs text-muted-foreground space-y-2 list-decimal list-inside">
-                  <li>Tap the <strong>lock/info icon</strong> (🔒) in your browser's address bar</li>
-                  <li>Find <strong>"{permissionType === 'location' ? 'Location' : 'Camera'}"</strong> in the permissions list</li>
-                  <li>Change it from "Block" to <strong>"Allow"</strong></li>
-                  <li>Reload the page and try again</li>
-                </ol>
-              </div>
-            ) : (
-              <div className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-4">
-                <p className="text-xs text-blue-700 dark:text-blue-400">
-                  {permissionType === 'location'
-                    ? '📍 When you tap "Allow Access", your browser will ask for location permission. Please tap "Allow" to continue.'
-                    : '📷 When you tap "Allow Access", your browser will ask for camera permission. Please tap "Allow" to continue.'
-                  }
-                </p>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-2">
-              {permissionStatus === 'denied' ? (
-                <>
-                  <Button 
-                    onClick={() => { setShowPermissionDialog(false); window.location.reload(); }}
-                    className="w-full h-12 rounded-xl"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Reload Page
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowPermissionDialog(false)}
-                    className="w-full h-10 rounded-xl"
-                  >
-                    Cancel
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button 
-                    onClick={handleGrantPermission}
-                    className="w-full h-12 rounded-xl"
-                  >
-                    {permissionType === 'location' ? <MapPin className="w-4 h-4 mr-2" /> : <Camera className="w-4 h-4 mr-2" />}
-                    Allow Access
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowPermissionDialog(false)}
-                    className="w-full h-10 rounded-xl"
-                  >
-                    Not Now
-                  </Button>
-                </>
-              )}
-            </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
       
       {redirectUrl && (
-        <div className="fixed bottom-4 right-4 flex items-center bg-primary text-white p-3 rounded-lg shadow-lg">
-          <span className="mr-2">Redirecting to dashboard...</span>
-          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-primary text-white px-6 py-3 rounded-full shadow-2xl z-[150] animate-in slide-in-from-bottom-5">
+          <div className="h-4 w-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Redirecting...</span>
         </div>
       )}
     </div>
   );
 };
+
 
 
 export default StudentScannerPage;

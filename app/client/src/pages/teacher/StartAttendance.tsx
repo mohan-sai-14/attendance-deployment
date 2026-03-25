@@ -26,6 +26,8 @@ import {
    QrCode as QrCodeIcon,
    MapPin,
    Timer,
+   CheckCircle2,
+   ShieldAlert,
    Edit,
    Calendar,
    AlertCircle
@@ -538,251 +540,302 @@ export default function StartAttendance() {
    }
 
    return (
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 space-y-6 pb-24">
-         {/* Header */}
-         <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-         >
-            <div>
-               <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent flex items-center gap-3">
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/teacher/dashboard')} className="h-8 w-8 rounded-full border border-border/50">
-                     <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                  QR Code Generator
-               </h1>
-               <p className="text-muted-foreground mt-1 ml-11">Create attendance QR codes with location tracking</p>
-            </div>
-            {isGettingLocation && (
-               <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
-                  <MapPin className="h-3 w-3 mr-1 animate-bounce" />
-                  Acquiring Location...
-               </Badge>
-            )}
-         </motion.div>
-
-         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column: Form Card */}
+      <div className="min-h-screen bg-[#F9FAFB] pb-24">
+         <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 space-y-8">
+            {/* Header */}
             <motion.div
-               initial={{ opacity: 0, x: -20 }}
-               animate={{ opacity: 1, x: 0 }}
-               transition={{ delay: 0.1 }}
-               className="space-y-6"
+               initial={{ opacity: 0, y: -20 }}
+               animate={{ opacity: 1, y: 0 }}
+               className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
             >
-               <Card className="border-border/40 bg-gradient-to-br from-background via-background to-background/50 backdrop-blur-sm shadow-lg h-full">
-                  <CardHeader>
-                     <CardTitle className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-primary" />
-                        Create New Session
-                     </CardTitle>
-                     <CardDescription>Fill in the details to generate a QR code</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                     {errorMessage && (
-                        <div className="mb-4 bg-destructive/10 border border-destructive/20 text-destructive p-3 rounded-md text-sm flex items-start gap-2">
-                           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                           <span>{errorMessage}</span>
-                        </div>
-                     )}
-
-                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                           <FormField
-                              control={form.control}
-                              name="name"
-                              render={({ field }) => (
-                                 <FormItem>
-                                    <FormLabel>Session Name</FormLabel>
-                                    <FormControl>
-                                       <Input disabled className="bg-muted/50 cursor-not-allowed text-foreground" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                 </FormItem>
-                              )}
-                           />
-
-                           <FormField
-                              control={form.control}
-                              name="date"
-                              render={({ field }) => (
-                                 <FormItem>
-                                    <FormLabel>Date</FormLabel>
-                                    <FormControl>
-                                       <Input type="date" disabled className="bg-muted/50 cursor-not-allowed text-foreground" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                 </FormItem>
-                              )}
-                           />
-
-                           <FormField
-                              control={form.control}
-                              name="time"
-                              render={({ field }) => (
-                                 <FormItem>
-                                    <FormLabel>Time</FormLabel>
-                                    <FormControl>
-                                       <Input type="time" disabled className="bg-muted/50 cursor-not-allowed text-foreground" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                 </FormItem>
-                              )}
-                           />
-
-                           <FormField
-                              control={form.control}
-                              name="duration"
-                              render={({ field }) => (
-                                 <FormItem>
-                                    <FormLabel>Duration (minutes)</FormLabel>
-                                    <FormControl>
-                                       <Input type="number" min="1" disabled className="bg-muted/50 cursor-not-allowed text-foreground" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                 </FormItem>
-                              )}
-                           />
-
-                           <FormField
-                              control={form.control}
-                              name="expiresAt"
-                              render={({ field }) => (
-                                 <FormItem>
-                                    <FormLabel>Expiration Time</FormLabel>
-                                    <FormControl>
-                                       <Input type="datetime-local" {...field} />
-                                    </FormControl>
-                                    <p className="text-xs text-muted-foreground mt-1 text-blue-600 dark:text-blue-400">Select when the QR code will stop working</p>
-                                    <FormMessage />
-                                 </FormItem>
-                              )}
-                           />
-
-                           <div className="pt-2">
-                             <LocationPicker 
-                                defaultLocation={manualLocation}
-                                onLocationSelect={(lat, lng) => {
-                                  setManualLocation({ lat, lng });
-                                  toast({ title: 'Manual Location Set', description: 'Pin dropped successfully.' });
-                                }}
-                             />
-                             {manualLocation && (
-                               <p className="text-xs text-muted-foreground mt-2 text-center bg-blue-50/50 p-2 rounded-md">
-                                 ✅ Custom override active: {manualLocation.lat.toFixed(4)}, {manualLocation.lng.toFixed(4)}
-                               </p>
-                             )}
-                           </div>
-
-                           <Button
-                              type="submit"
-                              className="w-full text-md font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg mt-4 h-12"
-                              disabled={isSubmitting}
-                           >
-                              {isGettingLocation ? (
-                                 <><MapPin className="mr-2 h-5 w-5 animate-bounce" /> Capturing Location...</>
-                              ) : isSubmitting ? (
-                                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
-                              ) : (
-                                 <><QrCodeIcon className="mr-2 h-4 w-4" /> Generate QR Code</>
-                              )}
-                           </Button>
-                        </form>
-                     </Form>
-                  </CardContent>
-               </Card>
+               <div className="flex items-center gap-4">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => navigate('/teacher/dashboard')} 
+                    className="h-10 w-10 rounded-full border border-[#E5E7EB] bg-white shadow-sm hover:bg-[#F3F4F6] transition-all shrink-0"
+                  >
+                     <ArrowLeft className="h-4 w-4 text-[#374151]" />
+                  </Button>
+                  <div>
+                     <h1 className="text-3xl font-black text-primary tracking-tight">QR Generator</h1>
+                     <p className="text-sm font-medium text-muted-foreground">Standard attendance tracking with location verification</p>
+                  </div>
+               </div>
+               
+               <div className="flex items-center gap-3">
+                  {isGettingLocation && (
+                     <Badge className="bg-blue-50 text-blue-600 border-none font-black text-[10px] px-3 py-1.5 rounded-xl uppercase tracking-widest animate-pulse flex items-center gap-2">
+                        <MapPin className="h-3.5 w-3.5" />
+                        Acquiring GPS...
+                     </Badge>
+                  )}
+                  {manualLocation && (
+                     <Badge className="bg-emerald-50 text-[#10B981] border-none font-black text-[10px] px-3 py-1.5 rounded-xl uppercase tracking-widest flex items-center gap-2">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        GPS Lock Active
+                     </Badge>
+                  )}
+               </div>
             </motion.div>
 
-            {/* Right Column: QR Code Display Card */}
-            <motion.div
-               initial={{ opacity: 0, x: 20 }}
-               animate={{ opacity: 1, x: 0 }}
-               transition={{ delay: 0.2 }}
-            >
-               <Card className="border-border/40 bg-gradient-to-br from-background via-background to-background/50 backdrop-blur-sm shadow-lg h-full">
-                  <CardHeader>
-                     <CardTitle className="flex items-center gap-2">
-                        <QrCodeIcon className="h-5 w-5 text-primary" />
-                        QR Code Output
-                     </CardTitle>
-                     <CardDescription>Your generated QR code will appear here</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                     {qrValue ? (
-                        <motion.div
-                           initial={{ opacity: 0, scale: 0.9 }}
-                           animate={{ opacity: 1, scale: 1 }}
-                           className="flex flex-col items-center space-y-6"
-                        >
-                           <div className="w-64 h-64 border-4 border-primary/20 p-4 rounded-2xl flex items-center justify-center relative bg-white shadow-2xl">
-                              <QRCodeSVG
-                                 value={qrValue}
-                                 size={240}
-                                 level="H"
-                                 includeMargin={true}
-                              />
-                              {(timeLeft && timeLeft !== 'Expired') ? (
-                                 <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    className="absolute -top-3 -right-3 bg-gradient-to-br from-yellow-500 to-orange-500 text-white font-bold rounded-full w-14 h-14 flex flex-col items-center justify-center shadow-lg"
-                                 >
-                                    <Timer className="h-4 w-4" />
-                                    <span className="text-xs">{timeLeft}</span>
-                                 </motion.div>
-                              ) : timeLeft === 'Expired' && (
-                                 <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] rounded-xl flex items-center justify-center">
-                                    <Badge variant="destructive" className="text-lg py-1 px-4 shadow-lg">Expired</Badge>
-                                 </div>
-                              )}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+               {/* Left Column: Form Card (5 cols) */}
+               <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="lg:col-span-5"
+               >
+                  <Card className="border-none ring-1 ring-[#E5E7EB] bg-white shadow-2xl shadow-black/5 rounded-[2.5rem] overflow-hidden">
+                     <CardHeader className="p-8 pb-4">
+                        <div className="h-12 w-12 rounded-2xl bg-[#374151]/5 flex items-center justify-center mb-4">
+                           <Calendar className="h-6 w-6 text-[#374151]" />
+                        </div>
+                        <CardTitle className="text-2xl font-black text-[#374151]">Session Setup</CardTitle>
+                        <CardDescription className="text-[#9CA3AF] font-bold uppercase text-[10px] tracking-widest mt-1">Configure your attendance window</CardDescription>
+                     </CardHeader>
+                     <CardContent className="p-8 pt-4">
+                        {errorMessage && (
+                           <div className="mb-6 bg-red-50 border border-red-100 text-red-600 p-4 rounded-2xl text-xs font-bold flex items-start gap-3">
+                              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                              <span>{errorMessage}</span>
                            </div>
+                        )}
 
-                           {timeLeft !== 'Expired' && (
-                              <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-center w-full max-w-xs">
-                                 <div className="flex items-center justify-center gap-2 text-sm text-yellow-700 dark:text-yellow-400">
-                                    <Clock className="h-4 w-4" />
-                                    <span>Expires in <span className="font-bold">{timeLeft}</span></span>
+                        <Form {...form}>
+                           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                              <FormField
+                                 control={form.control}
+                                 name="name"
+                                 render={({ field }) => (
+                                    <FormItem>
+                                       <FormLabel className="text-[10px] font-black uppercase text-[#9CA3AF] tracking-[0.2em] ml-1">Class Unit</FormLabel>
+                                       <FormControl>
+                                          <Input disabled className="h-12 bg-[#F9FAFB] border-none ring-1 ring-[#E5E7EB] rounded-xl font-bold text-[#374151] opacity-70" {...field} />
+                                       </FormControl>
+                                       <FormMessage />
+                                    </FormItem>
+                                 )}
+                              />
+
+                              <div className="grid grid-cols-2 gap-4">
+                                 <FormField
+                                    control={form.control}
+                                    name="date"
+                                    render={({ field }) => (
+                                       <FormItem>
+                                          <FormLabel className="text-[10px] font-black uppercase text-[#9CA3AF] tracking-[0.2em] ml-1">Session Date</FormLabel>
+                                          <FormControl>
+                                             <Input type="date" disabled className="h-12 bg-[#F9FAFB] border-none ring-1 ring-[#E5E7EB] rounded-xl font-bold text-[#374151] opacity-70" {...field} />
+                                          </FormControl>
+                                          <FormMessage />
+                                       </FormItem>
+                                    )}
+                                 />
+                                 <FormField
+                                    control={form.control}
+                                    name="time"
+                                    render={({ field }) => (
+                                       <FormItem>
+                                          <FormLabel className="text-[10px] font-black uppercase text-[#9CA3AF] tracking-[0.2em] ml-1">Start Time</FormLabel>
+                                          <FormControl>
+                                             <Input type="time" disabled className="h-12 bg-[#F9FAFB] border-none ring-1 ring-[#E5E7EB] rounded-xl font-bold text-[#374151] opacity-70" {...field} />
+                                          </FormControl>
+                                          <FormMessage />
+                                       </FormItem>
+                                    )}
+                                 />
+                              </div>
+
+                              <FormField
+                                 control={form.control}
+                                 name="expiresAt"
+                                 render={({ field }) => (
+                                    <FormItem>
+                                       <FormLabel className="text-[10px] font-black uppercase text-[#9CA3AF] tracking-[0.2em] ml-1">QR Expiration</FormLabel>
+                                       <FormControl>
+                                          <Input type="datetime-local" className="h-12 bg-white border-none ring-1 ring-[#E5E7EB] rounded-xl font-bold text-[#374151] focus:ring-[#10B981]/50" {...field} />
+                                       </FormControl>
+                                       <p className="text-[10px] font-bold text-blue-500/80 uppercase tracking-tighter mt-1.5 ml-1 flex items-center gap-1.5">
+                                          <Clock className="h-3 w-3" /> QR will stop accepting scans at this time.
+                                       </p>
+                                       <FormMessage />
+                                    </FormItem>
+                                 )}
+                              />
+
+                              <div className="pt-2">
+                                 <LocationPicker 
+                                    defaultLocation={manualLocation}
+                                    onLocationSelect={(lat, lng) => {
+                                      setManualLocation({ lat, lng });
+                                      toast({ title: 'Location Overridden', description: 'GPS coordinates locked via map.' });
+                                    }}
+                                 />
+                              </div>
+
+                              <Button
+                                 type="submit"
+                                 className="w-full h-14 text-sm font-black uppercase tracking-widest bg-[#374151] hover:bg-[#1f2937] text-white rounded-2xl shadow-xl shadow-black/5 mt-4 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                                 disabled={isSubmitting}
+                              >
+                                 {isGettingLocation ? (
+                                    <><Loader2 className="mr-3 h-5 w-5 animate-spin" /> Verifying GPS...</>
+                                 ) : isSubmitting ? (
+                                    <><Loader2 className="mr-3 h-5 w-5 animate-spin" /> Preparing...</>
+                                 ) : (
+                                    <><QrCodeIcon className="mr-3 h-5 w-5" /> Initialize Session</>
+                                 )}
+                              </Button>
+                           </form>
+                        </Form>
+                     </CardContent>
+                  </Card>
+               </motion.div>
+
+               {/* Right Column: QR Code Display Card (7 cols) */}
+               <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="lg:col-span-7"
+               >
+                  <Card className="border-none ring-1 ring-[#E5E7EB] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.06)] rounded-[3rem] overflow-hidden h-full flex flex-col items-center justify-center relative">
+                     {/* Background Pattern */}
+                     <div className="absolute top-0 right-0 w-64 h-64 bg-[#10B981]/5 rounded-full -mr-32 -mt-32 blur-[80px]" />
+                     <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full -ml-32 -mb-32 blur-[80px]" />
+
+                     <CardContent className="p-12 w-full flex flex-col items-center">
+                        {qrValue ? (
+                           <motion.div
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="flex flex-col items-center gap-10 w-full"
+                           >
+                              <div className="relative group">
+                                 {/* Glowing Ring */}
+                                 <div className="absolute inset-0 bg-gradient-to-tr from-[#10B981] to-blue-500 rounded-[2.5rem] blur-2xl opacity-10 group-hover:opacity-20 transition-opacity" />
+                                 
+                                 <div className="relative w-[300px] h-[300px] sm:w-[340px] sm:h-[340px] bg-white border border-[#E5E7EB] p-8 rounded-[2.5rem] shadow-2xl flex items-center justify-center">
+                                    <QRCodeSVG
+                                       value={qrValue}
+                                       size={window.innerWidth < 640 ? 240 : 280}
+                                       level="H"
+                                       includeMargin={false}
+                                       fgColor="currentColor"
+                                       className="text-primary"
+                                    />
+                                    
+                                    {/* Rotating Progress Indicator */}
+                                    <div className="absolute -inset-2 border-2 border-dashed border-[#E5E7EB] rounded-[3rem] animate-spin-slow opacity-50" />
+                                 </div>
+
+                                 {/* Time Badge Overlay */}
+                                 <AnimatePresence>
+                                    {timeLeft && timeLeft !== 'Expired' && (
+                                       <motion.div
+                                          initial={{ scale: 0, y: 20 }}
+                                          animate={{ scale: 1, y: 0 }}
+                                          exit={{ scale: 0, y: 20 }}
+                                          className="absolute -top-4 -right-4 bg-[#374151] text-white p-4 rounded-3xl shadow-2xl flex flex-col items-center justify-center min-w-[80px] border-4 border-white"
+                                       >
+                                          <Timer className="h-4 w-4 mb-1 text-[#10B981]" />
+                                          <span className="text-sm font-black tracking-tighter">{timeLeft}</span>
+                                          <span className="text-[8px] font-black uppercase tracking-[0.2em] opacity-40">Remains</span>
+                                       </motion.div>
+                                    )}
+                                 </AnimatePresence>
+
+                                 {timeLeft === 'Expired' && (
+                                    <div className="absolute inset-0 bg-white/90 backdrop-blur-[4px] rounded-[2.5rem] flex flex-col items-center justify-center gap-4 z-10 border-2 border-dashed border-red-200">
+                                       <div className="h-16 w-16 rounded-full bg-red-50 flex items-center justify-center">
+                                          <Clock className="h-8 w-8 text-red-500" />
+                                       </div>
+                                       <div className="text-center">
+                                          <p className="text-xl font-black text-red-600 uppercase tracking-widest">Session Expired</p>
+                                          <p className="text-xs font-bold text-[#9CA3AF] mt-1">Please generate a new code</p>
+                                       </div>
+                                    </div>
+                                 )}
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
+                                 <div className="bg-[#F9FAFB] p-5 rounded-3xl border border-[#E5E7EB] text-center">
+                                    <p className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest mb-1">Status</p>
+                                    <div className="flex items-center justify-center gap-2">
+                                       <div className="h-2 w-2 rounded-full bg-[#10B981] animate-pulse" />
+                                       <span className="text-sm font-black text-[#374151] uppercase">Broadcasting</span>
+                                    </div>
+                                 </div>
+                                 <div className="bg-[#F9FAFB] p-5 rounded-3xl border border-[#E5E7EB] text-center">
+                                    <p className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest mb-1">Security</p>
+                                    <div className="flex items-center justify-center gap-2">
+                                       <ShieldAlert className="h-3.5 w-3.5 text-[#374151]" />
+                                       <span className="text-sm font-black text-[#374151] uppercase">Enhanced</span>
+                                    </div>
                                  </div>
                               </div>
-                           )}
 
-                           <p className="text-sm font-medium text-muted-foreground mt-2 max-w-[280px] text-center">
-                              Ask students to scan this QR code using their app to mark their attendance.
-                           </p>
-                        </motion.div>
-                     ) : (
-                        <div className="flex flex-col items-center justify-center h-64 text-center">
-                           <div className="h-20 w-20 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                              <QrCodeIcon className="h-10 w-10 text-muted-foreground" />
+                              <p className="text-center text-xs font-medium text-[#9CA3AF] max-w-xs leading-relaxed">
+                                 QR code rotates every <span className="text-[#374151] font-black">5 seconds</span> for maximum security. Students must be within range to scan.
+                              </p>
+                           </motion.div>
+                        ) : (
+                           <div className="flex flex-col items-center text-center gap-6 py-20">
+                              <div className="relative">
+                                 <div className="absolute inset-0 bg-[#E5E7EB] blur-3xl opacity-20 rounded-full" />
+                                 <div className="relative h-32 w-32 rounded-[2rem] bg-[#F9FAFB] border-2 border-dashed border-[#E5E7EB] flex items-center justify-center">
+                                    <QrCodeIcon className="h-12 w-12 text-[#D1D5DB]" />
+                                 </div>
+                              </div>
+                              <div className="space-y-2">
+                                 <h3 className="text-lg font-black text-[#374151]">Ready to Start?</h3>
+                                 <p className="text-xs font-bold text-[#9CA3AF] uppercase tracking-widest max-w-[240px]">
+                                    Complete the form to generate a secure attendance vector
+                                 </p>
+                              </div>
                            </div>
-                           <p className="text-sm font-medium text-muted-foreground">No QR Code Generated</p>
-                           <p className="text-xs text-muted-foreground mt-1">
-                              Fill the form and click generate to create a QR code
-                           </p>
-                        </div>
-                     )}
-                  </CardContent>
-               </Card>
-            </motion.div>
+                        )}
+                     </CardContent>
+                  </Card>
+               </motion.div>
+            </div>
          </div>
 
          {/* Bottom Action Bar — scrolls into view */}
-         <div
-            className={`fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-md border-t z-50 transition-transform duration-300 ${showBottomBar ? 'translate-y-0' : 'translate-y-full'}`}
-         >
-            <div className="max-w-7xl mx-auto flex justify-end">
-               <Button
-                  variant="outline"
-                  size="lg"
-                  className="shadow-lg bg-background border-border/50"
-                  onClick={handleManualAttendance}
-                  disabled={isSubmitting}
+         <AnimatePresence>
+            {showBottomBar && (
+               <motion.div
+                  initial={{ y: 100 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: 100 }}
+                  className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 z-50"
                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  {createdSessionId ? "View / Edit Attendance List" : "Mark Attendance Manually"}
-               </Button>
-            </div>
-         </div>
+                  <Card className="bg-[#374151] border-none shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] rounded-[2.5rem] p-4 text-white overflow-hidden relative">
+                     <div className="flex flex-col sm:flex-row items-center justify-between gap-6 relative z-10 px-4">
+                        <div className="flex items-center gap-4">
+                           <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center">
+                              <Edit className="h-5 w-5" />
+                           </div>
+                           <div>
+                              <p className="text-xs font-black text-white/50 uppercase tracking-widest">Manual Mode</p>
+                              <p className="text-sm font-black">Alternative Attendance</p>
+                           </div>
+                        </div>
+                        
+                        <Button
+                           className="bg-white text-[#374151] hover:bg-gray-100 font-black rounded-2xl h-14 px-8 shadow-xl transition-all active:scale-95"
+                           onClick={handleManualAttendance}
+                           disabled={isSubmitting}
+                        >
+                           {createdSessionId ? "Manage Participants" : "Mark Manually"}
+                        </Button>
+                     </div>
+                  </Card>
+               </motion.div>
+            )}
+         </AnimatePresence>
       </div>
    );
 }

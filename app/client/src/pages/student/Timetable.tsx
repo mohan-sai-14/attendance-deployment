@@ -1,11 +1,27 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { CalendarDays, Clock, BookOpen, User as UserIcon, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  CalendarDays, 
+  Clock, 
+  BookOpen, 
+  User as UserIcon, 
+  Loader2, 
+  ChevronRight, 
+  Search, 
+  MapPin, 
+  Info,
+  Calendar,
+  Coffee,
+  Utensils,
+  Moon
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
 interface TimetableRow {
   id: string;
@@ -30,18 +46,19 @@ interface TimeSlotConfig {
   start: string;
   end: string;
   type: 'period' | 'break';
+  icon?: any;
 }
 
 const TIME_SLOTS: TimeSlotConfig[] = [
   { id: 'p1', label: 'Period 1', start: '09:00', end: '09:50', type: 'period' },
   { id: 'p2', label: 'Period 2', start: '09:50', end: '10:40', type: 'period' },
-  { id: 'b1', label: 'Short Break', start: '10:40', end: '11:00', type: 'break' },
+  { id: 'b1', label: 'Short Break', start: '10:40', end: '11:00', type: 'break', icon: Coffee },
   { id: 'p3', label: 'Period 3', start: '11:00', end: '11:50', type: 'period' },
   { id: 'p4', label: 'Period 4', start: '11:50', end: '12:40', type: 'period' },
-  { id: 'b2', label: 'Lunch Break', start: '12:40', end: '13:30', type: 'break' },
+  { id: 'b2', label: 'Lunch Break', start: '12:40', end: '13:30', type: 'break', icon: Utensils },
   { id: 'p5', label: 'Period 5', start: '13:30', end: '14:20', type: 'period' },
   { id: 'p6', label: 'Period 6', start: '14:20', end: '15:10', type: 'period' },
-  { id: 'b3', label: 'Tea Break', start: '15:10', end: '15:30', type: 'break' },
+  { id: 'b3', label: 'Tea Break', start: '15:10', end: '15:30', type: 'break', icon: Coffee },
   { id: 'p7', label: 'Period 7', start: '15:30', end: '16:20', type: 'period' },
   { id: 'p8', label: 'Period 8', start: '16:20', end: '17:10', type: 'period' },
 ];
@@ -50,8 +67,8 @@ export default function StudentTimetable() {
   const { user } = useAuth();
   const [classId, setClassId] = useState<string | null>(null);
   const [classDetails, setClassDetails] = useState<any>(null);
+  const [selectedDay, setSelectedDay] = useState<string>(DAYS_OF_WEEK[new Date().getDay() - 1] || DAYS_OF_WEEK[0]);
 
-  // 1. Fetch Student Class ID based on profile
   useEffect(() => {
     const fetchClassId = async () => {
       if (!user?.username) return;
@@ -82,7 +99,6 @@ export default function StudentTimetable() {
     fetchClassId();
   }, [user]);
 
-  // 2. Fetch Timetable
   const { data: timetables = [], isLoading } = useQuery<TimetableRow[]>({
     queryKey: ['student-timetable', classId],
     queryFn: async () => {
@@ -94,7 +110,6 @@ export default function StudentTimetable() {
     enabled: !!classId
   });
 
-  // 3. Fetch Faculty Names
   const { data: faculty = [] } = useQuery<FacultyRow[]>({
     queryKey: ['faculty-names'],
     queryFn: async () => {
@@ -110,148 +125,188 @@ export default function StudentTimetable() {
 
   if (isLoading && classId) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Loading your timetable...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 animate-pulse">
+        <div className="relative">
+          <div className="h-16 w-16 border-4 border-gray-100 border-t-emerald-500 rounded-full animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+             <Calendar className="h-6 w-6 text-emerald-500/50" />
+          </div>
+        </div>
+        <div className="text-center space-y-1">
+          <p className="text-sm font-black text-foreground uppercase tracking-widest">Building Schedule</p>
+          <p className="text-xs text-muted-foreground font-medium">Fetching academic blueprint...</p>
+        </div>
       </div>
     );
   }
 
   if (!classId && !isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6 bg-muted/20 rounded-2xl border border-dashed border-muted-foreground/20">
-        <div className="h-20 w-20 rounded-full bg-muted/30 flex items-center justify-center mb-4">
-          <CalendarDays className="h-10 w-10 text-muted-foreground/30" />
+      <div className="max-w-md mx-auto py-20 px-6 text-center space-y-8 animate-in fade-in duration-700">
+        <div className="relative w-fit mx-auto">
+           <div className="absolute inset-0 bg-amber-500/10 blur-[40px] rounded-full scale-150"></div>
+           <div className="h-24 w-24 rounded-[2.5rem] bg-card border border-amber-100 flex items-center justify-center text-amber-500 shadow-xl relative overflow-hidden group">
+              <CalendarDays className="h-12 w-12" />
+           </div>
         </div>
-        <h3 className="text-xl font-bold text-foreground/70">No Class Assigned</h3>
-        <p className="text-sm text-muted-foreground max-w-xs mt-2 italic">
-          We couldn't find a class matching your profile (Department, Year, Section). 
-          Please contact administration to verify your profile details.
-        </p>
+        <div className="space-y-3">
+           <h3 className="text-3xl font-black text-foreground tracking-tighter">Draft Profile</h3>
+           <p className="text-muted-foreground font-medium leading-relaxed">
+             We couldn't link your account to a specific class section. Please synchronize your profile details at the Academic Office.
+           </p>
+        </div>
+        <Button onClick={() => window.location.href = '/student/dashboard'} className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-xl transition-all">
+           Back to Dashboard
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Your Timetable
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Weekly schedule for {classDetails?.program} {classDetails?.year} ({classDetails?.section})
+    <div className="max-w-7xl mx-auto px-4 py-8 sm:py-12 space-y-10 animate-in fade-in duration-700">
+      {/* Premium Header */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+             <div className="h-1 w-8 rounded-full bg-emerald-500"></div>
+             <Badge className="bg-emerald-50 text-emerald-600 hover:bg-emerald-50 border-emerald-100 text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5">Course Schedule</Badge>
+          </div>
+          <h1 className="text-4xl font-black text-foreground tracking-tighter">Academic Timetable</h1>
+          <p className="text-gray-500 font-medium max-w-md">
+            Your structured journey through {classDetails?.department} • {classDetails?.year} {classDetails?.section}
           </p>
         </div>
-        <Badge variant="outline" className="h-fit py-1.5 px-3 bg-primary/5 text-primary border-primary/20 font-semibold uppercase tracking-wider text-[10px]">
-          Academic Year 2023-24
-        </Badge>
-      </div>
-
-      {/* Desktop Timetable View */}
-      <Card className="border-border/40 shadow-xl overflow-hidden bg-background/60 backdrop-blur-md hidden lg:block">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-center border-collapse">
-            <thead>
-              <tr className="bg-muted/40 text-muted-foreground">
-                <th className="px-6 py-4 font-bold border-b border-r w-40 text-left">Period / Session</th>
-                {DAYS_OF_WEEK.map(day => (
-                  <th key={day} className="px-4 py-4 font-bold border-b border-r min-w-[160px]">{day}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/20">
-              {TIME_SLOTS.map((slot) => (
-                <tr key={slot.id} className={`${slot.type === 'break' ? 'bg-muted/10' : 'hover:bg-primary/5 transition-colors'}`}>
-                  <td className="px-6 py-5 border-r font-medium text-left">
-                    <div className="flex items-center gap-2">
-                      <div className={`h-2 w-2 rounded-full ${slot.type === 'break' ? 'bg-orange-400' : 'bg-primary/60'}`} />
-                      <span className="font-bold text-foreground text-sm">{slot.label}</span>
-                    </div>
-                    <div className="text-[11px] text-muted-foreground mt-1 ml-4 flex items-center gap-1.5">
-                      <Clock className="h-3 w-3" />
-                      {slot.start} - {slot.end}
-                    </div>
-                  </td>
-                  {DAYS_OF_WEEK.map(day => {
-                    if (slot.type === 'break') {
-                      return (
-                        <td key={`${day}-${slot.id}`} className="px-2 py-2 border-r bg-muted/5 align-middle">
-                          <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">{slot.label}</span>
-                        </td>
-                      );
-                    }
-                    const assigned = getSlot(day, slot.start);
-                    const fac = faculty.find(f => f.username === assigned?.faculty_id);
-
-                    return (
-                      <td key={`${day}-${slot.id}`} className="px-3 py-4 border-r align-middle">
-                        {assigned ? (
-                          <motion.div 
-                            initial={{ opacity: 0, y: 5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-white dark:bg-muted/20 border border-primary/20 rounded-xl p-3 shadow-sm hover:shadow-md hover:border-primary/40 transition-all group"
-                          >
-                            <div className="flex items-center gap-1.5 mb-2">
-                              <BookOpen className="h-3.5 w-3.5 text-primary group-hover:scale-110 transition-transform" />
-                              <span className="font-bold text-foreground text-xs line-clamp-1">{assigned.subject_name}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-medium">
-                              <UserIcon className="h-3 w-3" />
-                              <span className="line-clamp-1">{fac?.name || assigned.faculty_id}</span>
-                            </div>
-                          </motion.div>
-                        ) : (
-                          <div className="text-muted-foreground/20 text-[10px] italic py-8">Free</div>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        
+        <div className="flex items-center gap-2 p-1.5 bg-card rounded-2xl shadow-sm border border-gray-100">
+           <div className="px-4 py-2 bg-emerald-50 rounded-xl border border-emerald-100">
+              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{classDetails?.program}</span>
+           </div>
+           <div className="px-4 py-2 bg-gray-50 rounded-xl border border-gray-100">
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{classDetails?.year} {classDetails?.section}</span>
+           </div>
         </div>
-      </Card>
+      </header>
 
-      {/* Mobile/Tablet Card View */}
-      <div className="lg:hidden space-y-6">
-        {DAYS_OF_WEEK.map(day => (
-          <div key={day} className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-border/40" />
-              <h3 className="text-sm font-bold uppercase tracking-widest text-primary">{day}</h3>
-              <div className="h-px flex-1 bg-border/40" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {TIME_SLOTS.filter(s => s.type === 'period').map(slot => {
-                const assigned = getSlot(day, slot.start);
-                const fac = faculty.find(f => f.username === assigned?.faculty_id);
-                
-                return (
-                  <Card key={`${day}-${slot.id}`} className={`border-border/40 overflow-hidden shadow-sm ${assigned ? 'bg-background' : 'bg-muted/20 opacity-60'}`}>
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-start gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-primary/10 flex flex-col items-center justify-center text-primary shrink-0">
-                          <span className="text-[10px] font-bold">P{slot.label.split(' ')[1]}</span>
-                          <span className="text-[8px] font-medium leading-tight">{slot.start}</span>
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-sm font-bold text-foreground truncate">{assigned ? assigned.subject_name : 'No Class'}</h4>
-                          <p className="text-[11px] text-muted-foreground truncate">{assigned ? (fac?.name || assigned.faculty_id) : 'Self Study / Free'}</p>
-                        </div>
-                      </div>
-                      <Badge variant="secondary" className={`text-[10px] ${assigned ? 'text-primary' : 'text-muted-foreground'}`}>
-                        {slot.start} - {slot.end}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+      {/* Day Selector (Mobile Priority) */}
+      <div className="flex overflow-x-auto pb-4 sm:pb-0 gap-3 no-scrollbar scroll-smooth">
+         {DAYS_OF_WEEK.map((day) => (
+           <Button
+             key={day}
+             variant={selectedDay === day ? "default" : "ghost"}
+             onClick={() => setSelectedDay(day)}
+             className={cn(
+               "h-12 px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest shrink-0 transition-all",
+               selectedDay === day 
+                 ? "bg-primary text-white shadow-xl scale-105" 
+                 : "text-muted-foreground hover:text-foreground hover:bg-gray-50 border border-transparent hover:border-gray-100"
+             )}
+           >
+             {day}
+           </Button>
+         ))}
       </div>
+
+      {/* Timeline View */}
+      <div className="grid grid-cols-1 gap-6 relative">
+         <div className="absolute left-[39px] sm:left-[119px] top-0 bottom-0 w-px bg-gradient-to-b from-emerald-500/20 via-gray-100 to-transparent hidden sm:block"></div>
+         
+         <AnimatePresence mode="wait">
+           <motion.div
+             key={selectedDay}
+             initial={{ opacity: 0, x: 20 }}
+             animate={{ opacity: 1, x: 0 }}
+             exit={{ opacity: 0, x: -20 }}
+             transition={{ duration: 0.3 }}
+             className="space-y-6"
+           >
+             {TIME_SLOTS.map((slot, i) => {
+               const assigned = getSlot(selectedDay, slot.start);
+               const fac = faculty.find(f => f.username === assigned?.faculty_id);
+               const isBreak = slot.type === 'break';
+               const Icon = slot.icon || BookOpen;
+
+               return (
+                 <div key={slot.id} className="group relative flex gap-6 sm:gap-12 items-start">
+                   {/* Time Column */}
+                   <div className="w-20 sm:w-28 pt-4 flex flex-col items-center sm:items-end shrink-0">
+                      <span className="text-xl font-black text-foreground tracking-tighter leading-none">{slot.start}</span>
+                      <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1 group-hover:text-emerald-500 transition-colors">{slot.end}</span>
+                   </div>
+
+                   {/* Indicator Dot */}
+                   <div className="absolute left-[35px] sm:left-[115px] top-6 w-3 h-3 rounded-full border-2 border-white bg-gray-200 z-10 transition-all group-hover:bg-emerald-500 group-hover:scale-125 group-hover:shadow-[0_0_10px_rgba(16,185,129,0.5)] hidden sm:block"></div>
+
+                   {/* Content Card */}
+                   <Card className={cn(
+                     "flex-1 border-0 shadow-sm transition-all rounded-[2rem] overflow-hidden min-h-[100px] ring-1 ring-border",
+                     assigned ? "bg-card hover:shadow-xl hover:translate-x-1" : "bg-gray-50/50 opacity-60",
+                     isBreak && "bg-emerald-50/30 ring-emerald-100/50"
+                   )}>
+                     <CardContent className="p-6 flex items-center justify-between gap-6">
+                        <div className="flex items-center gap-6">
+                           <div className={cn(
+                             "h-14 w-14 rounded-2xl flex items-center justify-center transition-all",
+                             assigned ? "bg-primary text-white shadow-lg rotate-3 group-hover:rotate-0" : "bg-gray-100 text-muted-foreground",
+                             isBreak && "bg-emerald-500 text-white shadow-emerald-200"
+                           )}>
+                              <Icon className="h-6 w-6" />
+                           </div>
+                           
+                           <div className="space-y-1">
+                              {isBreak ? (
+                                <h4 className="text-lg font-black text-emerald-700 tracking-tight uppercase tracking-widest">{slot.label}</h4>
+                              ) : (
+                                <>
+                                  <h4 className="text-lg font-black text-foreground leading-tight tracking-tight">
+                                    {assigned ? assigned.subject_name : 'No Session Scheduled'}
+                                  </h4>
+                                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                                    {assigned ? (fac?.name || assigned.faculty_id) : 'Self Study / Unassigned'}
+                                  </p>
+                                </>
+                              )}
+                           </div>
+                        </div>
+
+                        {!isBreak && assigned && (
+                          <div className="hidden sm:flex flex-col items-end gap-2">
+                             <div className="flex -space-x-2">
+                                {[...Array(3)].map((_, i) => (
+                                  <div key={i} className="h-6 w-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground">
+                                     <UserIcon className="h-3 w-3" />
+                                  </div>
+                                ))}
+                             </div>
+                          </div>
+                        )}
+                        
+                        {assigned && (
+                          <ChevronRight className="h-5 w-5 text-gray-200 group-hover:text-emerald-500 transition-colors" />
+                        )}
+                     </CardContent>
+                   </Card>
+                 </div>
+               );
+             })}
+           </motion.div>
+         </AnimatePresence>
+      </div>
+
+      {/* Helper Footer */}
+      <footer className="pt-10 border-t border-border flex flex-col md:flex-row items-center justify-between gap-6 opacity-60">
+         <div className="flex items-center gap-3">
+            <Info className="h-5 w-5 text-emerald-500" />
+            <p className="text-xs font-medium text-muted-foreground">
+              Schedule details are derived from the master clinical rotation and academic timetable.
+            </p>
+         </div>
+         <div className="flex items-center gap-4">
+            <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground">
+               <MapPin className="h-4 w-4" />
+            </div>
+         </div>
+      </footer>
     </div>
   );
 }
+

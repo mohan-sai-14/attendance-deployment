@@ -9,6 +9,8 @@ import {
   FileBarChart,
   Clock,
   Loader2,
+  Activity,
+  Timer,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -53,6 +55,7 @@ export default function AdminDashboard() {
     fetchRecentSessions();
     fetchClasses();
   }, []);
+
 
   const fetchClasses = async () => {
     const { data } = await supabase.from('classes').select('*').order('program');
@@ -156,6 +159,7 @@ export default function AdminDashboard() {
       });
 
       setRecentSessions(sessions.slice(0, 10));
+
     } catch (error) {
       console.error("Error fetching recent sessions:", error);
     } finally {
@@ -214,12 +218,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 space-y-6">
-      {/* Page Header — compact */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Admin Control Panel</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Take action or review what just happened.</p>
-      </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 space-y-6 bg-[#F9FAFB]">
 
       {/* SECTION 1: ACTION CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -232,7 +231,7 @@ export default function AdminDashboard() {
           >
             <Card
               onClick={() => navigate(card.href)}
-              className={`group cursor-pointer flex flex-col h-full border-border/40 bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${card.isPrimary ? "ring-1 ring-primary/30 border-primary/20" : ""
+              className={`group cursor-pointer flex flex-col h-full border-[#E5E7EB] bg-white shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${card.isPrimary ? "ring-1 ring-[#10B981]/30 border-[#10B981]/20" : ""
                 }`}
             >
               {card.isPrimary && (
@@ -244,7 +243,7 @@ export default function AdminDashboard() {
                     <card.icon className="h-[18px] w-[18px]" />
                   </div>
                   <div className="min-w-0">
-                    <CardTitle className="text-sm font-semibold leading-tight group-hover:text-primary transition-colors">
+                    <CardTitle className="text-sm font-semibold leading-tight group-hover:text-[#10B981] transition-colors">
                       {card.title}
                     </CardTitle>
                     {card.isPrimary && (
@@ -257,7 +256,7 @@ export default function AdminDashboard() {
                 <p className="text-xs text-muted-foreground leading-relaxed mb-3">
                   {card.description}
                 </p>
-                <div className="flex items-center text-xs font-medium text-primary/80 group-hover:text-primary transition-colors">
+                <div className="flex items-center text-xs font-medium text-[#374151] group-hover:text-[#10B981] transition-colors">
                   {card.cta}
                   <ChevronRight className="h-3.5 w-3.5 ml-1 group-hover:translate-x-0.5 transition-transform" />
                 </div>
@@ -273,14 +272,14 @@ export default function AdminDashboard() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, delay: 0.3 }}
       >
-        <Card className="border-border/40 bg-background/80 backdrop-blur-sm shadow-sm overflow-hidden">
-          <CardHeader className="py-3 px-5 border-b border-border/30">
+        <Card className="border-[#E5E7EB] bg-white shadow-sm overflow-hidden">
+          <CardHeader className="py-3 px-5 border-b border-[#E5E7EB]">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" />
+                <Clock className="h-4 w-4 text-[#374151]" />
                 Recent Attendance Sessions
               </CardTitle>
-              <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-primary px-2" onClick={() => navigate('/admin/attendance')}>
+              <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-[#10B981] px-2" onClick={() => navigate('/admin/attendance')}>
                 View All <ChevronRight className="h-3 w-3 ml-0.5" />
               </Button>
             </div>
@@ -298,8 +297,8 @@ export default function AdminDashboard() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-muted/20 text-muted-foreground">
+                  <thead className="sticky top-0 z-10">
+                    <tr className="bg-[#F3F4F6] text-muted-foreground">
                       <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider">Class</th>
                       <th className="px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider w-16">Period</th>
                       <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider">Subject</th>
@@ -309,11 +308,11 @@ export default function AdminDashboard() {
                       <th className="px-5 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider w-20">%</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/20">
+                  <tbody className="divide-y divide-[#E5E7EB]">
                     {recentSessions.map((session, index) => (
                       <tr
                         key={session.id}
-                        className="group hover:bg-muted/30 transition-colors cursor-pointer"
+                        className="group hover:bg-[#F9FAFB] transition-colors cursor-pointer"
                         onClick={() => navigate('/admin/attendance')}
                       >
                         <td className="px-5 py-2.5">
@@ -348,10 +347,10 @@ export default function AdminDashboard() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, delay: 0.4 }}
       >
-        <Card className="border-border/40 bg-background/80 backdrop-blur-sm shadow-sm overflow-hidden">
-          <CardHeader className="py-3 px-5 border-b border-border/30">
+        <Card className="border-[#E5E7EB] bg-white shadow-sm overflow-hidden">
+          <CardHeader className="py-3 px-5 border-b border-[#E5E7EB]">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Bell className="h-4 w-4 text-primary" />
+              <Bell className="h-4 w-4 text-[#374151]" />
               Post a New Notification
             </CardTitle>
             <CardDescription className="text-xs">
@@ -366,7 +365,7 @@ export default function AdminDashboard() {
                   placeholder="e.g. Holiday Notice, Exam Update" 
                   value={notifTitle}
                   onChange={(e) => setNotifTitle(e.target.value)}
-                  className="bg-background/50"
+                  className="bg-white rounded-xl border-[#E5E7EB]"
                 />
               </div>
             </div>
@@ -376,7 +375,7 @@ export default function AdminDashboard() {
                   <Users className="h-3 w-3" /> Target Class
                 </label>
                 <Select value={notifClassId} onValueChange={setNotifClassId}>
-                  <SelectTrigger className="bg-background/50">
+                  <SelectTrigger className="bg-white rounded-xl border-[#E5E7EB]">
                     <SelectValue placeholder="Select target class" />
                   </SelectTrigger>
                   <SelectContent>
@@ -395,7 +394,7 @@ export default function AdminDashboard() {
                   type="datetime-local" 
                   value={notifExpiry}
                   onChange={(e) => setNotifExpiry(e.target.value)}
-                  className="bg-background/50"
+                  className="bg-white rounded-xl border-[#E5E7EB]"
                 />
               </div>
             </div>
@@ -406,14 +405,14 @@ export default function AdminDashboard() {
                 value={notifMessage}
                 onChange={(e) => setNotifMessage(e.target.value)}
                 rows={3}
-                className="bg-background/50 resize-none"
+                className="bg-white rounded-xl border-[#E5E7EB] resize-none"
               />
             </div>
           </CardContent>
-          <CardFooter className="py-3 px-5 border-t border-border/10 bg-muted/20 flex justify-end">
+          <CardFooter className="py-3 px-5 border-t border-[#E5E7EB] bg-[#F9FAFB] flex justify-end">
             <Button 
               size="sm" 
-              className="gap-2 px-4 font-semibold" 
+              className="gap-2 px-4 font-semibold bg-[#10B981] hover:bg-[#059669] text-white" 
               disabled={isPosting || !notifTitle || !notifMessage || !notifExpiry}
               onClick={async () => {
                 setIsPosting(true);

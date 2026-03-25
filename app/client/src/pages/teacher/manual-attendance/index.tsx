@@ -392,277 +392,338 @@ export default function ManualAttendance() {
     );
   }
 
-  return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 md:p-8 space-y-5">
-      {/* Back + Header */}
-      <Button
-        variant="ghost"
-        className="mb-1"
-        onClick={() => selectedPeriod ? (() => { setSelectedPeriod(null); setRecords([]); setChanges({}); })() : navigate('/teacher/dashboard')}
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        {selectedPeriod ? 'Back to Classes' : 'Back'}
-      </Button>
+   return (
+      <div className="min-h-screen bg-[#F9FAFB] pb-12">
+         <div className="max-w-5xl mx-auto p-4 sm:p-6 md:p-8 space-y-6">
+            {/* Back + Header */}
+            <div className="flex items-center gap-4 mb-2">
+               <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 rounded-full border border-[#E5E7EB] bg-white shadow-sm hover:bg-[#F3F4F6] shrink-0"
+                  onClick={() => selectedPeriod ? (() => { setSelectedPeriod(null); setRecords([]); setChanges({}); })() : navigate('/teacher/dashboard')}
+               >
+                  <ArrowLeft className="h-4 w-4 text-[#374151]" />
+               </Button>
+               <div>
+                  <h1 className="text-2xl font-black text-[#374151]">Manual Attendance</h1>
+                  <p className="text-sm text-[#6B7280]">
+                     {selectedPeriod ? "Update attendance for selected session" : "Select a session to manage attendance"}
+                  </p>
+               </div>
+            </div>
 
-      <AnimatePresence mode="wait">
-        {!selectedPeriod ? (
-          /* ── CLASS CARDS ── */
-          <motion.div
-            key="cards"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            className="space-y-3"
-          >
-            <h1 className="text-2xl font-bold text-foreground mb-1">Manual Attendance</h1>
-            <p className="text-sm text-muted-foreground mb-4">Select a class to edit attendance</p>
-
-            {periodCards.length === 0 ? (
-              <Card className="border-border/40 shadow-lg">
-                <CardContent className="pt-8 pb-8 text-center">
-                  <div className="h-14 w-14 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
-                    <BookOpen className="h-7 w-7 text-muted-foreground" />
-                  </div>
-                  <h2 className="text-lg font-semibold">No Classes Today</h2>
-                  <p className="text-muted-foreground mt-2 text-sm">You have no classes assigned for today.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              periodCards.map((card, index) => {
-                const hasTaken = !!card.session;
-                const now = new Date();
-                const [sH, sM] = card.slot.start.split(':').map(Number);
-                const [eH, eM] = card.slot.end.split(':').map(Number);
-                const ss = new Date(); ss.setHours(sH, sM, 0, 0);
-                const se = new Date(); se.setHours(eH, eM, 0, 0);
-                const isOngoing = now >= ss && now <= se;
-                const locked = !isOngoing && card.session && now > new Date(new Date(card.session.created_at).getTime() + 3600000);
-
-                return (
+            <AnimatePresence mode="wait">
+               {!selectedPeriod ? (
+                  /* ── CLASS CARDS ── */
                   <motion.div
-                    key={card.entry.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
+                     key="cards"
+                     initial={{ opacity: 0, y: 15 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     exit={{ opacity: 0, y: -15 }}
+                     className="grid grid-cols-1 md:grid-cols-2 gap-4"
                   >
-                    <Card
-                      className={`border-border/40 shadow-md cursor-pointer transition-all hover:shadow-lg hover:border-primary/30 overflow-hidden ${locked ? 'opacity-60' : ''}`}
-                      onClick={() => handleSelectPeriod(card)}
-                    >
-                      <div className={`h-1 ${isOngoing ? 'bg-gradient-to-r from-blue-500 to-cyan-500' : hasTaken ? (locked ? 'bg-gradient-to-r from-red-400 to-orange-400' : 'bg-gradient-to-r from-emerald-500 to-teal-500') : 'bg-gradient-to-r from-slate-300 to-slate-200 dark:from-slate-700 dark:to-slate-600'}`} />
-                      <CardContent className="py-4 px-5">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-foreground">{card.classInfo.section}</h3>
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">{card.slot.label}</Badge>
-                              {isOngoing && (
-                                <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20 text-[10px] px-1.5 py-0">
-                                  <Clock className="h-3 w-3 mr-0.5" /> Ongoing
-                                </Badge>
-                              )}
-                              {hasTaken && (
-                                <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 text-[10px] px-1.5 py-0">
-                                  <CheckCircle2 className="h-3 w-3 mr-0.5" /> Taken
-                                </Badge>
-                              )}
-                              {locked && (
-                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                                  <Lock className="h-3 w-3 mr-0.5" /> Locked
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">Subject: {card.entry.subject_name}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                              <Timer className="h-3 w-3" />
-                              {formatTime12h(card.slot.start)} – {formatTime12h(card.slot.end)}
-                              <span className="mx-1">·</span>
-                              {card.classInfo.department} {card.classInfo.program} {card.classInfo.year}
-                            </p>
-                          </div>
-                          <ArrowLeft className="h-4 w-4 text-muted-foreground rotate-180 shrink-0" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })
-            )}
-          </motion.div>
-        ) : (
-          /* ── EDIT ATTENDANCE VIEW (mirrors EditAttendance.tsx) ── */
-          <motion.div
-            key="edit"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            className="space-y-5"
-          >
-            {/* Session Info + Lock Status */}
-            <Card className="border-border/40 shadow-sm overflow-hidden">
-              <div className={`h-1 ${isLocked ? 'bg-gradient-to-r from-red-400 to-orange-400' : 'bg-gradient-to-r from-emerald-500 to-teal-500'}`} />
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h2 className="text-lg font-bold text-foreground">
-                      {selectedPeriod.entry.subject_name}
-                    </h2>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {selectedPeriod.classInfo.program} {selectedPeriod.classInfo.year} – Sec {selectedPeriod.classInfo.section}
-                      <span className="mx-1.5">·</span>
-                      {selectedPeriod.slot.label}
-                      <span className="mx-1.5">·</span>
-                      {formatTime12h(selectedPeriod.slot.start)} – {formatTime12h(selectedPeriod.slot.end)}
-                    </p>
-                  </div>
-                  {isLocked ? (
-                    <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
-                      <Lock className="h-3 w-3 mr-1" /> Locked
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
-                      <Unlock className="h-3 w-3 mr-1" /> Editable
-                    </Badge>
-                  )}
-                </div>
+                     {periodCards.length === 0 ? (
+                        <Card className="col-span-1 md:col-span-2 border-none ring-1 ring-[#E5E7EB] shadow-lg shadow-black/5 rounded-[2.5rem] bg-white">
+                           <CardContent className="pt-20 pb-20 text-center">
+                              <div className="h-20 w-20 rounded-3xl bg-[#F9FAFB] border-2 border-dashed border-[#E5E7EB] flex items-center justify-center mx-auto mb-6">
+                                 <BookOpen className="h-10 w-10 text-[#D1D5DB]" />
+                              </div>
+                              <h2 className="text-xl font-black text-[#374151]">No Classes Today</h2>
+                              <p className="text-[#9CA3AF] mt-2 font-medium max-w-xs mx-auto">You don't have any scheduled sessions for today in your timetable.</p>
+                           </CardContent>
+                        </Card>
+                     ) : (
+                        periodCards.map((card, index) => {
+                           const hasTaken = !!card.session;
+                           const now = new Date();
+                           const [sH, sM] = card.slot.start.split(':').map(Number);
+                           const [eH, eM] = card.slot.end.split(':').map(Number);
+                           const ss = new Date(); ss.setHours(sH, sM, 0, 0);
+                           const se = new Date(); se.setHours(eH, eM, 0, 0);
+                           const isOngoing = now >= ss && now <= se;
+                           const locked = !isOngoing && card.session && now > new Date(new Date(card.session.created_at).getTime() + 3600000);
 
-                {/* Lock/Edit banner */}
-                <div className={`mt-4 p-3 rounded-lg border ${isLocked ? 'bg-red-500/5 border-red-500/20' : 'bg-blue-500/5 border-blue-500/20'}`}>
-                  <div className="flex items-center gap-2">
-                    {isLocked ? (
-                      <>
-                        <ShieldAlert className="h-4 w-4 text-red-500" />
-                        <span className="text-sm text-red-700 dark:text-red-400">
-                          Attendance locked. Contact admin for changes.
-                        </span>
-                      </>
-                    ) : minutesRemaining !== null ? (
-                      <>
-                        <Timer className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <span className="text-sm text-blue-700 dark:text-blue-400">
-                          Editable for {minutesRemaining} more minute{minutesRemaining !== 1 ? 's' : ''}.
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <Timer className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <span className="text-sm text-blue-700 dark:text-blue-400">
-                          New session — click students to mark present.
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 mt-3">
-                  <Badge variant="outline" className="text-xs">{presentCount} Present</Badge>
-                  <Badge variant="outline" className="text-xs">{absentCount} Absent</Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Attendance Records */}
-            <Card className="border-border/40 shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Attendance Records</CardTitle>
-                <div className="relative mt-2">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search students..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="pl-9 h-9"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {isStudentsLoading ? (
-                  <div className="flex items-center justify-center h-40">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : (
-                  <div className="space-y-1 max-h-[400px] overflow-y-auto pr-1">
-                    {filteredRecords.map((record, index) => {
-                      const effectiveStatus = getEffectiveStatus(record);
-                      const isChanged = changes[record.id] !== undefined;
-
-                      return (
-                        <motion.div
-                          key={record.id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: index * 0.02 }}
-                          className={`
-                            flex items-center justify-between py-2.5 px-3 rounded-lg transition-colors
-                            ${isChanged ? 'ring-1 ring-primary/30 bg-primary/5' : ''}
-                            ${effectiveStatus === 'absent' ? 'bg-red-500/5' : 'hover:bg-muted/30'}
-                          `}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className={`
-                              h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0
-                              ${effectiveStatus === 'present' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                                : effectiveStatus === 'late' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400'
-                                  : effectiveStatus === 'od' ? 'bg-violet-500/10 text-violet-700 dark:text-violet-400'
-                                    : effectiveStatus === 'ml' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
-                                      : 'bg-red-500/10 text-red-700 dark:text-red-400'}
-                            `}>
-                              {(record.name || record.username || '?').charAt(0).toUpperCase()}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate">{record.name || record.username || 'Unknown'}</p>
-                              <p className="text-[11px] text-muted-foreground truncate">{record.enroll_no || record.username || 'No ID'}</p>
-                            </div>
-                          </div>
-                          <div className="shrink-0 ml-2 flex items-center gap-1">
-                            {isChanged && <span className="text-[10px] text-primary font-medium mr-1">Modified</span>}
-                            {statusOptions.map(opt => (
-                              <button
-                                key={opt.key}
-                                disabled={isLocked}
-                                onClick={() => setStatus(record.id, opt.key)}
-                                className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all flex items-center gap-0.5 ${effectiveStatus === opt.key
-                                  ? opt.color + ' shadow-sm ring-1 ring-black/5'
-                                  : 'bg-muted/40 text-muted-foreground hover:bg-muted'
-                                  } ${isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                           return (
+                              <motion.div
+                                 key={card.entry.id}
+                                 initial={{ opacity: 0, scale: 0.95 }}
+                                 animate={{ opacity: 1, scale: 1 }}
+                                 transition={{ delay: index * 0.05 }}
                               >
-                                {opt.icon}
-                                <span className="hidden sm:inline ml-0.5">{opt.label}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                                 <Card
+                                    className={`group border-none ring-1 ring-[#E5E7EB] shadow-xl shadow-black/5 rounded-[2rem] cursor-pointer transition-all hover:scale-[1.02] hover:ring-[#10B981]/50 bg-white overflow-hidden relative ${locked ? 'opacity-80' : ''}`}
+                                    onClick={() => handleSelectPeriod(card)}
+                                 >
+                                    <CardContent className="p-6">
+                                       <div className="flex items-start justify-between gap-4">
+                                          <div className="space-y-4 flex-1">
+                                             <div className="flex items-center gap-2">
+                                                <Badge className="bg-[#374151]/5 text-[#374151] border-none font-black text-[10px] px-2 py-0.5 rounded-lg uppercase tracking-wider">
+                                                   {card.slot.label}
+                                                </Badge>
+                                                {isOngoing && (
+                                                   <Badge className="bg-[#10B981]/10 text-[#10B981] border-none font-black text-[10px] px-2 py-0.5 rounded-lg uppercase animate-pulse">
+                                                      Ongoing
+                                                   </Badge>
+                                                )}
+                                                {hasTaken && (
+                                                   <Badge className="bg-blue-50 text-blue-600 border-none font-black text-[10px] px-2 py-0.5 rounded-lg uppercase">
+                                                      Recorded
+                                                   </Badge>
+                                                )}
+                                             </div>
+                                             
+                                             <div>
+                                                <h3 className="text-xl font-black text-[#374151] group-hover:text-[#10B981] transition-colors line-clamp-1">{card.entry.subject_name}</h3>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                   <div className="h-5 w-5 rounded-full bg-[#374151] flex items-center justify-center shrink-0">
+                                                      <span className="text-[10px] font-black text-white">{card.classInfo.section.charAt(0)}</span>
+                                                   </div>
+                                                   <span className="text-xs font-bold text-[#6B7280] uppercase tracking-tighter">SEC {card.classInfo.section} • {card.classInfo.program}</span>
+                                                </div>
+                                             </div>
 
-            {/* Save button */}
-            {!isLocked && hasChanges && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="sticky bottom-4"
-              >
-                <Button
-                  size="lg"
-                  className="w-full shadow-lg"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Saving...</>
-                  ) : (
-                    <><Save className="h-5 w-5 mr-2" /> Save Changes ({Object.keys(changes).length} modified)</>
-                  )}
-                </Button>
-              </motion.div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+                                             <div className="flex items-center gap-3 pt-2">
+                                                <div className="flex items-center gap-1.5 text-[#9CA3AF]">
+                                                   <Timer className="h-3.5 w-3.5" />
+                                                   <span className="text-[10px] font-black uppercase tracking-widest">
+                                                      {formatTime12h(card.slot.start)} – {formatTime12h(card.slot.end)}
+                                                   </span>
+                                                </div>
+                                             </div>
+                                          </div>
+                                          <div className="h-10 w-10 rounded-full bg-[#F9FAFB] border border-[#E5E7EB] flex items-center justify-center group-hover:bg-[#10B981] group-hover:border-[#10B981] group-hover:text-white transition-all shrink-0">
+                                             <ArrowLeft className="h-4 w-4 rotate-180" />
+                                          </div>
+                                       </div>
+                                       
+                                       {locked && (
+                                          <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center">
+                                             <div className="px-4 py-2 bg-[#374151] text-white rounded-full flex items-center gap-2 shadow-xl">
+                                                <Lock className="h-3.5 w-3.5" />
+                                                <span className="text-[10px] font-black uppercase tracking-wider">LOCKED</span>
+                                             </div>
+                                          </div>
+                                       )}
+                                    </CardContent>
+                                 </Card>
+                              </motion.div>
+                           );
+                        })
+                     )}
+                  </motion.div>
+               ) : (
+                  /* ── EDIT ATTENDANCE VIEW ── */
+                  <motion.div
+                     key="edit"
+                     initial={{ opacity: 0, y: 15 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     exit={{ opacity: 0, y: -15 }}
+                     className="space-y-6 pb-24"
+                  >
+                     {/* Session Header Card */}
+                     <Card className="border-none ring-1 ring-[#E5E7EB] bg-white shadow-2xl shadow-black/5 rounded-[2.5rem] overflow-hidden">
+                        <div className="p-8">
+                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                              <div>
+                                 <h2 className="text-2xl font-black text-[#374151] tracking-tight leading-none">
+                                    {selectedPeriod.entry.subject_name}
+                                 </h2>
+                                 <div className="flex flex-wrap items-center gap-3 mt-4">
+                                    <div className="flex items-center gap-2 px-3 py-1 bg-[#F3F4F6] rounded-full text-[10px] font-black text-[#4B5563] uppercase tracking-wider">
+                                       <Timer className="h-3.5 w-3.5" />
+                                       {selectedPeriod.slot.label} • {formatTime12h(selectedPeriod.slot.start)} – {formatTime12h(selectedPeriod.slot.end)}
+                                    </div>
+                                    <div className="flex items-center gap-2 px-3 py-1 bg-[#F3F4F6] rounded-full text-[10px] font-black text-[#4B5563] uppercase tracking-wider">
+                                       <div className="h-2 w-2 rounded-full bg-[#10B981]" />
+                                       SEC {selectedPeriod.classInfo.section}
+                                    </div>
+                                 </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-4">
+                                 {isLocked ? (
+                                    <div className="px-5 py-2.5 bg-red-50 text-red-600 rounded-2xl border border-red-100 flex items-center gap-2">
+                                       <Lock className="h-4 w-4" />
+                                       <span className="text-xs font-black uppercase tracking-widest">Locked</span>
+                                    </div>
+                                 ) : (
+                                    <div className="px-5 py-2.5 bg-emerald-50 text-[#10B981] rounded-2xl border border-[#10B981]/20 flex items-center gap-2">
+                                       <Unlock className="h-4 w-4" />
+                                       <span className="text-xs font-black uppercase tracking-widest">Editable</span>
+                                    </div>
+                                 )}
+                              </div>
+                           </div>
+
+                           {/* Dynamic Status Banner */}
+                           {!isLocked && (
+                              <motion.div 
+                                 initial={{ opacity: 0, height: 0 }}
+                                 animate={{ opacity: 1, height: 'auto' }}
+                                 className="mt-6 p-4 bg-blue-50/50 border border-blue-100 rounded-2xl flex items-center gap-3"
+                              >
+                                 <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center shadow-sm shrink-0">
+                                    <Clock className="h-4 w-4 text-blue-600" />
+                                 </div>
+                                 <p className="text-xs font-bold text-blue-700/80">
+                                    {minutesRemaining !== null 
+                                       ? `Session expires in approx. ${minutesRemaining} minutes.` 
+                                       : "Session active. Changes will be reflected immediately after saving."}
+                                 </p>
+                              </motion.div>
+                           )}
+
+                           <div className="flex items-center gap-6 mt-8 pt-6 border-t border-[#F3F4F6]">
+                              <div className="flex flex-col">
+                                 <span className="text-2xl font-black text-[#10B981]">{presentCount}</span>
+                                 <span className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest">Present</span>
+                              </div>
+                              <div className="h-8 w-px bg-[#F3F4F6]" />
+                              <div className="flex flex-col">
+                                 <span className="text-2xl font-black text-red-500">{absentCount}</span>
+                                 <span className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest">Absent</span>
+                              </div>
+                              <div className="h-8 w-px bg-[#F3F4F6]" />
+                              <div className="flex flex-col">
+                                 <span className="text-2xl font-black text-[#374151]">{records.length}</span>
+                                 <span className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest">Total</span>
+                              </div>
+                           </div>
+                        </div>
+                     </Card>
+
+                     {/* Student Search & List */}
+                     <div className="space-y-4">
+                        <div className="flex flex-col md:flex-row md:items-center gap-4">
+                           <div className="relative flex-1">
+                              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF]" />
+                              <Input
+                                 placeholder="Search by name, ID or enrollment number..."
+                                 value={searchQuery}
+                                 onChange={e => setSearchQuery(e.target.value)}
+                                 className="pl-12 h-14 bg-white border-none ring-1 ring-[#E5E7EB] rounded-2xl shadow-sm focus-visible:ring-[#10B981]/50 focus-visible:ring-2 font-medium text-[#374151]"
+                              />
+                           </div>
+                        </div>
+
+                        {isStudentsLoading ? (
+                           <div className="flex flex-col items-center justify-center h-64 bg-white rounded-[2.5rem] border border-[#E5E7EB] gap-4 shadow-sm">
+                              <div className="h-10 w-10 rounded-2xl bg-[#F9FAFB] flex items-center justify-center border border-[#E5E7EB]">
+                                 <Loader2 className="h-5 w-5 animate-spin text-[#10B981]" />
+                              </div>
+                              <p className="text-xs font-black text-[#9CA3AF] uppercase tracking-widest">Loading student list...</p>
+                           </div>
+                        ) : (
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {filteredRecords.map((record, index) => {
+                                 const effectiveStatus = getEffectiveStatus(record);
+                                 const isChanged = changes[record.id] !== undefined;
+
+                                 return (
+                                    <motion.div
+                                       key={record.id}
+                                       initial={{ opacity: 0, y: 10 }}
+                                       animate={{ opacity: 1, y: 0 }}
+                                       transition={{ delay: index * 0.01 }}
+                                       className={`
+                                          group relative p-5 rounded-[2rem] border transition-all duration-300
+                                          ${effectiveStatus === 'present' 
+                                             ? 'bg-white border-[#10B981]/20 shadow-md shadow-[#10B981]/5' 
+                                             : 'bg-white border-[#E5E7EB] hover:border-[#D1D5DB]'
+                                          }
+                                          ${isChanged ? 'ring-2 ring-blue-500/20 shadow-lg' : ''}
+                                       `}
+                                    >
+                                       <div className="flex items-center gap-4">
+                                          <div className={`
+                                             h-12 w-12 rounded-2xl flex items-center justify-center text-sm font-black shrink-0 transition-colors
+                                             ${effectiveStatus === 'present' ? 'bg-[#10B981] text-white' : 'bg-[#F3F4F6] text-[#6B7280] group-hover:bg-[#E5E7EB]'}
+                                          `}>
+                                             {(record.name || record.username || '?').charAt(0).toUpperCase()}
+                                          </div>
+                                          
+                                          <div className="flex-1 min-w-0">
+                                             <div className="flex items-center gap-2">
+                                                <p className="text-sm font-black text-[#374151] truncate">{record.name || record.username}</p>
+                                                {isChanged && (
+                                                   <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse shrink-0" />
+                                                )}
+                                             </div>
+                                             <p className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter mt-0.5 truncate">
+                                                ID: {record.enroll_no || record.username}
+                                             </p>
+                                          </div>
+                                       </div>
+
+                                       <div className="grid grid-cols-5 gap-1.5 mt-5 pt-4 border-t border-[#F3F4F6]">
+                                          {statusOptions.map(opt => {
+                                             const isActive = effectiveStatus === opt.key;
+                                             return (
+                                                <button
+                                                   key={opt.key}
+                                                   disabled={isLocked}
+                                                   onClick={() => setStatus(record.id, opt.key)}
+                                                   className={`
+                                                      px-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all flex flex-col items-center gap-1
+                                                      ${isActive 
+                                                         ? 'bg-[#374151] text-white shadow-lg' 
+                                                         : 'bg-[#F9FAFB] text-[#9CA3AF] hover:bg-[#F3F4F6] hover:text-[#6B7280]'
+                                                      }
+                                                      ${isLocked ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
+                                                   `}
+                                                >
+                                                   <span className={isActive ? "text-white" : "text-[#D1D5DB]"}>{opt.icon}</span>
+                                                   <span className="scale-90">{opt.label}</span>
+                                                </button>
+                                             );
+                                          })}
+                                       </div>
+                                    </motion.div>
+                                 );
+                              })}
+                           </div>
+                        )}
+                     </div>
+
+                     {/* Save Action Bar */}
+                     {!isLocked && hasChanges && (
+                        <motion.div
+                           initial={{ opacity: 0, y: 50 }}
+                           animate={{ opacity: 1, y: 0 }}
+                           className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-50"
+                        >
+                           <Card className="bg-[#374151] border-none shadow-2xl rounded-[2rem] p-4 text-white overflow-hidden relative">
+                              <div className="flex items-center justify-between gap-4 relative z-10">
+                                 <div className="flex-1">
+                                    <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">Pending Changes</p>
+                                    <p className="text-sm font-black">{Object.keys(changes).length} Profiles Modified</p>
+                                 </div>
+                                 <Button
+                                    size="lg"
+                                    className="bg-[#10B981] hover:bg-[#0D9668] text-white font-black rounded-2xl px-6 min-w-[140px] shadow-lg shadow-emerald-500/20"
+                                    onClick={handleSave}
+                                    disabled={isSaving}
+                                 >
+                                    {isSaving ? (
+                                       <Loader2 className="h-5 w-5 animate-spin" />
+                                    ) : (
+                                       <>
+                                          <Save className="h-4 w-4 mr-2" />
+                                          Commit
+                                       </>
+                                    )}
+                                 </Button>
+                              </div>
+                              <div className="absolute top-0 right-0 h-32 w-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+                           </Card>
+                        </motion.div>
+                     )}
+                  </motion.div>
+               )}
+            </AnimatePresence>
+         </div>
+      </div>
+   );
 }

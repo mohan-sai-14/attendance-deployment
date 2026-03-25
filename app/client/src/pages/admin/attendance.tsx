@@ -243,15 +243,15 @@ export default function Attendance() {
     const totalInstitutionStudents = classes.reduce((sum, cls) => sum + (cls.totalStudents || 0), 0);
 
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 bg-[#F9FAFB]">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold tracking-tight text-[#374151]">
               Attendance Management
             </h1>
             <p className="text-muted-foreground mt-2">Class-wise daily attendance workflow</p>
           </div>
-          <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg flex items-center gap-2">
+          <div className="bg-[#ECFDF5] text-[#047857] px-4 py-2 rounded-lg flex items-center gap-2 border border-[#A7F3D0]">
             <Users className="h-5 w-5" />
             <span className="font-semibold">Total Students: {totalInstitutionStudents}</span>
           </div>
@@ -262,10 +262,10 @@ export default function Attendance() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {classes.map((cls) => (
-              <Card key={cls.id} className="border-border/40 shadow-sm bg-background/60 backdrop-blur-sm hover:shadow-md transition-shadow flex flex-col">
+              <Card key={cls.id} className="border-[#E5E7EB] shadow-sm bg-white hover:shadow-md transition-shadow flex flex-col">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
-                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">{cls.department}</Badge>
+                    <Badge variant="outline" className="bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]">{cls.department}</Badge>
                     <Badge variant="secondary" className="text-xs">Batch {cls.batch}</Badge>
                   </div>
                   <CardTitle className="text-lg mt-2">{cls.program} {cls.year}</CardTitle>
@@ -284,7 +284,7 @@ export default function Attendance() {
                   </div>
                 </CardContent>
                 <CardFooter className="pt-0 gap-2 flex-col xl:flex-row">
-                  <Button className="w-full" variant="default" onClick={() => setSelectedClass(cls)}>
+                  <Button className="w-full bg-[#10B981] hover:bg-[#059669] text-white" variant="default" onClick={() => setSelectedClass(cls)}>
                     <Users className="h-4 w-4 mr-2" /> Class Attendance
                   </Button>
                   <Button className="w-full xl:w-auto" variant="outline" onClick={() => navigate('/admin/timetables')}>
@@ -303,12 +303,12 @@ export default function Attendance() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       {/* Section 2: Header and Date Selector */}
-      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-background/60 backdrop-blur-sm p-4 rounded-xl border border-border/40 shadow-sm">
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-[#E5E7EB] shadow-sm">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => {
             if (activePeriod) setActivePeriod(null);
             else setSelectedClass(null);
-          }} className="shrink-0 bg-muted/50 hover:bg-muted">
+          }} className="shrink-0 bg-[#F3F4F6] hover:bg-[#E5E7EB]">
             <ChevronLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -324,9 +324,9 @@ export default function Attendance() {
             <PopoverTrigger asChild>
               <Button
                 variant={"outline"}
-                className={cn("w-[220px] justify-start text-left font-normal bg-background", !selectedDate && "text-muted-foreground")}
+                className={cn("w-[220px] justify-start text-left font-normal bg-white border-[#E5E7EB] rounded-xl", !selectedDate && "text-muted-foreground")}
               >
-                <CalendarDays className="mr-2 h-4 w-4 text-primary" />
+                <CalendarDays className="mr-2 h-4 w-4 text-[#10B981]" />
                 {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
@@ -348,7 +348,7 @@ export default function Attendance() {
         /* Section 3: Today's Periods */
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <h2 className="text-lg font-semibold tracking-tight text-foreground/80 flex items-center gap-2">
-            <Clock className="h-5 w-5 text-primary" /> Daily Periods for {format(selectedDate, "EEEE")}
+            <Clock className="h-5 w-5 text-[#374151]" /> Daily Periods for {format(selectedDate, "EEEE")}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {PERIODS_CONFIG.map((period) => {
@@ -379,7 +379,7 @@ export default function Attendance() {
               const locked = isPeriodLocked(period);
 
               return (
-                <Card key={period.id} className={cn("relative overflow-hidden flex flex-col transition-all", ttSlot ? "hover:border-primary/40 hover:shadow-md" : "opacity-70")}>
+                <Card key={period.id} className={cn("relative overflow-hidden flex flex-col transition-all border-[#E5E7EB]", ttSlot ? "hover:border-[#10B981]/40 hover:shadow-md" : "opacity-70")}>
                   {locked && isTaken && (
                     <div className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full bg-destructive/10 text-destructive" title="Locked (48h passed)">
                       <Lock className="h-3 w-3" />
@@ -456,7 +456,7 @@ export default function Attendance() {
                 <CardHeader className="bg-muted/10 border-b border-border/40 flex flex-row items-center justify-between py-4">
                   <div>
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Badge variant="default" className="bg-primary/10 text-primary border-primary/20">Period {activePeriod.period_number}</Badge>
+                      <Badge variant="default" className="bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]">Period {activePeriod.period_number}</Badge>
                       {ttSlot?.subject_name}
                     </CardTitle>
                     <CardDescription className="mt-1">
@@ -472,7 +472,7 @@ export default function Attendance() {
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                      <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b">
+                      <thead className="sticky top-0 z-10 text-xs uppercase bg-[#F3F4F6] text-muted-foreground border-b">
                         <tr>
                           <th className="px-6 py-3 font-semibold">Roll Number</th>
                           <th className="px-6 py-3 font-semibold">Student Name</th>
