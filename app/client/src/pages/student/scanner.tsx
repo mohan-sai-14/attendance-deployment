@@ -6,12 +6,10 @@ import * as faceapi from 'face-api.js';
 import { Html5QrcodePlugin } from '../../components/student/html5-qrcode-plugin';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, CheckCircle, XCircle, Loader2, MapPin, AlertCircle, QrCode, RefreshCw, ZoomIn, ZoomOut, Shield, Settings, ExternalLink } from 'lucide-react';
+import { Camera, CheckCircle, Loader2, MapPin, AlertCircle, QrCode, RefreshCw, Shield } from 'lucide-react';
 import { getCurrentPosition, verifyLocation, formatDistance } from '@/lib/location';
 import { getApiUrl } from '@/lib/config';
 import { validateQRToken } from '@/lib/qr-token';
@@ -959,15 +957,28 @@ const StudentScannerPage: React.FC = () => {
 
   if (activeSession === null) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4 p-5 max-w-md text-center">
-          <h2 className="text-2xl font-bold text-red-500 mb-4">No Active Session Found</h2>
-          <p className="text-gray-600 mb-4">
-            There is currently no active attendance session. Please try again when a session is active.
-          </p>
-          <Button onClick={() => window.location.href = '/student'}>
+      <div className="min-h-screen flex items-center justify-center bg-[#F9FAFB] dark:bg-[#0B0F1A] px-6">
+        <div className="flex flex-col items-center gap-6 max-w-sm text-center">
+          <div className="relative">
+            <div className="h-24 w-24 rounded-3xl bg-white dark:bg-[#121826] border border-[#E5E7EB] dark:border-[#1F2937] shadow-xl flex items-center justify-center">
+              <QrCode className="h-10 w-10 text-[#9CA3AF]" />
+            </div>
+            <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-amber-400 flex items-center justify-center shadow-sm">
+              <span className="text-white text-xs font-black">!</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-[#111827] dark:text-[#E5E7EB] tracking-tight">No Active Session</h2>
+            <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">
+              Your teacher hasn't started an attendance session yet. Please check back shortly.
+            </p>
+          </div>
+          <button
+            onClick={() => window.location.href = '/student'}
+            className="w-full h-14 bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/20 transition-all active:scale-[0.98] text-sm tracking-wide"
+          >
             Return to Dashboard
-          </Button>
+          </button>
         </div>
       </div>
     );
@@ -1003,9 +1014,9 @@ const StudentScannerPage: React.FC = () => {
           </div>
         </Card>
       ) : (
-        <Card className="border-border shadow-2xl bg-card rounded-[2.5rem] overflow-hidden border">
+        <Card className="border-[#E5E7EB] dark:border-[#1F2937] shadow-2xl bg-white dark:bg-[#121826] rounded-[2.5rem] overflow-hidden">
           {/* Progress Indicator */}
-          <div className="bg-muted/30 border-b border-border px-8 py-6">
+          <div className="bg-[#F9FAFB] dark:bg-[#0B0F1A] border-b border-[#E5E7EB] dark:border-[#1F2937] px-8 py-6">
             <div className="flex items-center justify-between relative">
               <div className="absolute left-0 top-1/2 w-full h-[1px] bg-border -z-0 -translate-y-[6px]"></div>
               
@@ -1061,48 +1072,77 @@ const StudentScannerPage: React.FC = () => {
               </div>
             </div>
           </div>
-          
-          <CardContent className="p-8">
+
+          <CardContent className="p-6 sm:p-8">
             <div className="space-y-8">
               {/* Session Context Banner */}
               {!success && (
-                <div className="bg-primary rounded-3xl p-5 flex justify-between items-center text-primary-foreground shadow-xl transition-all hover:scale-[1.02]">
+                <div className="bg-gradient-to-r from-indigo-600 to-blue-500 rounded-2xl p-5 flex justify-between items-center text-white shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.01]">
                   <div className="space-y-0.5">
-                    <p className="text-[9px] font-black text-primary-foreground/60 uppercase tracking-[0.2em] mb-1">Marking Attendance for</p>
+                    <p className="text-[9px] font-bold text-white/60 uppercase tracking-[0.2em] mb-1">Marking Attendance for</p>
                     <h4 className="font-extrabold text-lg leading-none tracking-tight">{activeSession.name}</h4>
-                    <p className="text-xs font-bold text-primary-foreground/40">{activeSession.time}</p>
+                    <p className="text-xs font-medium text-white/50">{activeSession.time}</p>
                   </div>
-                  <Badge className="bg-primary-foreground/10 text-primary-foreground border border-primary-foreground/20 uppercase text-[9px] font-black h-fit py-1 px-2.5">Active</Badge>
+                  <div className="h-8 px-3 flex items-center bg-white/15 border border-white/20 rounded-full">
+                    <span className="text-[9px] font-black text-white uppercase tracking-widest">Live</span>
+                    <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                  </div>
                 </div>
               )}
 
               <div className="w-full flex flex-col justify-center">
                 {showFaceVerification ? (
-                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                    <div className="text-center space-y-2">
-                       <h3 className="text-2xl font-black text-foreground tracking-tight">Identity Verification</h3>
-                       <p className="text-sm font-medium text-muted-foreground">Position your face inside the frame.</p>
+                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-500">
+                    <div className="text-center space-y-1">
+                      <p className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-1">Step 2 of 3</p>
+                      <h3 className="text-xl font-black text-[#111827] dark:text-[#E5E7EB] tracking-tight">Face Verification</h3>
+                      <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF]">Follow the prompts to verify your identity.</p>
                     </div>
 
                     {isCameraActive && !livenessPassed && !livenessFailed && livenessChallenges.length > 0 && (
                       <motion.div 
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="bg-muted/30 border border-border p-5 rounded-3xl text-center"
+                        key={currentChallengeIndex}
+                        initial={{ scale: 0.9, opacity: 0, y: 8 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                        className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/50 p-4 rounded-2xl text-center"
                       >
-                        <p className="text-foreground font-black text-xl mb-1 uppercase tracking-tighter">
-                          {livenessChallenges[currentChallengeIndex].instruction}
+                        <p className="text-indigo-700 dark:text-indigo-300 font-bold text-base mb-2">
+                          {(() => {
+                            const inst = livenessChallenges[currentChallengeIndex].instruction;
+                            const map: Record<string, string> = {
+                              'LOOK UP': 'Gently tilt your head up',
+                              'LOOK DOWN': 'Gently tilt your head down',
+                              'LOOK LEFT': 'Turn your head slightly left',
+                              'LOOK RIGHT': 'Turn your head slightly right',
+                              'TURN LEFT': 'Turn your head slightly left',
+                              'TURN RIGHT': 'Turn your head slightly right',
+                            };
+                            return map[inst?.toUpperCase()] || inst;
+                          })()}
                         </p>
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-1.5">
                           {[...Array(livenessChallenges.length)].map((_, i) => (
-                            <div key={i} className={cn("h-1 rounded-full transition-all duration-500", i === currentChallengeIndex ? "w-4 bg-primary" : (i < currentChallengeIndex ? "w-2 bg-primary/40" : "w-1 bg-muted"))}></div>
+                            <div key={i} className={cn("h-1.5 rounded-full transition-all duration-500", i === currentChallengeIndex ? "w-6 bg-indigo-500" : (i < currentChallengeIndex ? "w-2 bg-indigo-300" : "w-2 bg-indigo-200 dark:bg-indigo-800"))}></div>
                           ))}
                         </div>
+                        <p className="text-[10px] text-indigo-500/70 font-medium mt-1.5 uppercase tracking-widest">
+                          Step {currentChallengeIndex + 1} of {livenessChallenges.length}
+                        </p>
                       </motion.div>
                     )}
 
                     <div className="relative group max-w-[300px] mx-auto">
-                      <div className="relative aspect-square rounded-[3rem] overflow-hidden shadow-2xl ring-1 ring-border border-4 border-card">
+                      {/* Glowing border ring when liveness is passing */}
+                      <div className={cn(
+                        "absolute -inset-1 rounded-[3rem] transition-all duration-700",
+                        livenessPassed
+                          ? "bg-gradient-to-br from-green-400 to-emerald-500 opacity-80 blur-sm"
+                          : isCameraActive
+                          ? "bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-400 opacity-40 blur-sm animate-pulse"
+                          : "opacity-0"
+                      )} />
+                      <div className="relative aspect-square rounded-[2.8rem] overflow-hidden shadow-2xl border-2 border-white/10 dark:border-[#1F2937]">
                         {isCameraActive ? (
                           <>
                             <video
@@ -1112,148 +1152,161 @@ const StudentScannerPage: React.FC = () => {
                               muted
                               className="w-full h-full object-cover scale-x-[-1]"
                             />
-                            {/* Scanning Guide Overlays */}
-                            <div className="absolute inset-0 border-[3px] border-dashed border-primary/40 rounded-[2.5rem] pointer-events-none"></div>
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-64 border-[3px] border-foreground/10 rounded-[6rem] pointer-events-none backdrop-blur-[1px]"></div>
-                            
+                            {/* Face oval guide */}
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <div className={cn(
+                                "w-44 h-52 border-2 rounded-[6rem] transition-all duration-700",
+                                livenessPassed ? "border-green-400" : "border-white/30"
+                              )} />
+                            </div>
                             {/* Camera Toggle */}
                             {faceDevices.length > 1 && (
                               <button
                                 onClick={switchFaceCamera}
                                 disabled={isSwitchingFaceCamera}
-                                className="absolute top-4 right-4 z-10 w-12 h-12 rounded-2xl bg-card/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-card/40 transition-all active:scale-95 disabled:opacity-50 border border-white/20 shadow-2xl"
+                                className="absolute top-4 right-4 z-10 w-10 h-10 rounded-2xl bg-black/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/50 transition-all active:scale-95 disabled:opacity-50 border border-white/10 shadow-xl"
+                                aria-label="Switch camera"
                               >
-                                <RefreshCw className={cn("w-5 h-5", isSwitchingFaceCamera && "animate-spin")} />
+                                <RefreshCw className={cn("w-4 h-4", isSwitchingFaceCamera && "animate-spin")} />
                               </button>
+                            )}
+                            {/* Success check overlay */}
+                            {livenessPassed && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.5 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="absolute inset-0 flex items-center justify-center bg-green-500/10 backdrop-blur-[2px]"
+                              >
+                                <div className="h-16 w-16 rounded-full bg-green-500 flex items-center justify-center shadow-xl">
+                                  <CheckCircle className="h-8 w-8 text-white" />
+                                </div>
+                              </motion.div>
                             )}
                           </>
                         ) : (
-                          <div className="flex flex-col items-center justify-center h-full bg-muted/30 text-muted-foreground gap-4">
-                            <div className="h-20 w-20 rounded-full border-4 border-border border-t-primary animate-spin"></div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Waking Sensor...</span>
+                          <div className="flex flex-col items-center justify-center h-full bg-[#0B0F1A] dark:bg-[#0B0F1A] text-[#9CA3AF] gap-4 aspect-square">
+                            <div className="h-16 w-16 rounded-full border-4 border-[#1F2937] border-t-indigo-500 animate-spin" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-[#6B7280]">Initializing...</span>
                           </div>
                         )}
                         <canvas ref={canvasRef} className="hidden" />
                       </div>
                     </div>
 
-                    {faceZoomRange && isCameraActive && (
-                      <div className="flex items-center gap-4 px-8 max-w-[300px] mx-auto">
-                        <ZoomOut className="w-4 h-4 text-muted-foreground" />
-                        <Progress value={((faceZoomLevel - faceZoomRange.min) / (faceZoomRange.max - faceZoomRange.min)) * 100} className="h-1 bg-gray-100" />
-                        <ZoomIn className="w-4 h-4 text-muted-foreground" />
-                      </div>
-                    )}
 
-                    <div className="flex flex-col gap-4">
+
+                    <div className="flex flex-col gap-3 pt-2">
                       {!isCameraActive ? (
-                        <Button onClick={() => startCamera()} disabled={!modelsLoaded} className="w-full h-16 text-lg font-black uppercase tracking-widest bg-primary text-white rounded-[1.5rem] shadow-xl shadow-gray-200 border-0 transition-all hover:bg-emerald-600 active:scale-[0.98]">
-                          {modelsLoaded ? 'Activate Sensor' : 'Loading Logic...'}
-                        </Button>
+                        <button
+                          onClick={() => startCamera()}
+                          disabled={!modelsLoaded}
+                          className="w-full h-14 rounded-2xl font-bold text-base tracking-wide transition-all active:scale-[0.98] disabled:opacity-40 bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-lg shadow-indigo-500/25 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none"
+                        >
+                          {modelsLoaded ? 'Activate Camera' : 'Loading models...'}
+                        </button>
                       ) : (
-                        <Button
+                        <button
                           onClick={verifyFaceAndMarkAttendance}
                           disabled={isVerifying || !livenessPassed || livenessFailed}
                           className={cn(
-                            "w-full h-16 text-lg font-black uppercase tracking-widest rounded-[1.5rem] shadow-2xl transition-all active:scale-[0.98] border-0",
-                            !livenessPassed 
-                              ? "bg-secondary text-muted-foreground" 
-                              : "bg-primary text-primary-foreground shadow-primary/20"
+                            "w-full h-14 rounded-2xl font-bold text-base tracking-wide transition-all active:scale-[0.98]",
+                            !livenessPassed || livenessFailed
+                              ? "bg-[#F3F4F6] dark:bg-[#1F2937] text-[#9CA3AF] cursor-not-allowed opacity-60"
+                              : "bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-lg shadow-indigo-500/25"
                           )}
                         >
                           {isVerifying ? (
-                            <div className="flex items-center gap-3">
-                              <Loader2 className="h-6 w-6 animate-spin" />
-                              Validating...
-                            </div>
-                          ) : livenessFailed ? "Failed - Retry" : !livenessPassed ? "Complete Tasks" : "Verify & Sign" }
-                        </Button>
-                      )}
-                      
-                      {livenessFailed && (
-                        <Button onClick={() => startCamera()} variant="ghost" className="text-rose-500 font-bold uppercase tracking-widest text-[10px] h-10 hover:bg-rose-50">
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                          Retry Identity Verification
-                        </Button>
+                            <span className="flex items-center justify-center gap-2.5">
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                              Verifying...
+                            </span>
+                          ) : livenessFailed ? 'Verification Failed' : !livenessPassed ? 'Complete the steps above' : 'Verify & Sign Attendance'}
+                        </button>
                       )}
 
-                      <Button variant="ghost" onClick={cancelFaceVerification} className="text-muted-foreground font-bold uppercase tracking-widest text-[10px] h-10">
-                        Cancel Verification
-                      </Button>
+                      {livenessFailed && (
+                        <button onClick={() => startCamera()} className="w-full h-10 rounded-xl text-rose-500 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">
+                          <RefreshCw className="h-4 w-4" />
+                          Try Again
+                        </button>
+                      )}
+
+                      <button onClick={cancelFaceVerification} className="w-full h-10 rounded-xl text-[#9CA3AF] font-medium text-sm hover:bg-[#F3F4F6] dark:hover:bg-[#1F2937] transition-colors">
+                        Cancel
+                      </button>
                     </div>
                   </div>
                 ) : success ? (
-                  <div className="text-center space-y-10 py-10 animate-in zoom-in-95 duration-700">
-                    <div className="relative w-fit mx-auto">
-                       <motion.div 
-                         initial={{ scale: 0, rotate: -45 }}
-                         animate={{ scale: 1, rotate: 0 }}
-                         className="h-28 w-28 rounded-[2.5rem] bg-primary text-primary-foreground flex items-center justify-center shadow-2xl relative border-[8px] border-card"
-                       >
-                          <CheckCircle className="h-12 w-12" />
-                       </motion.div>
-                    </div>
-
-                    <div className="space-y-3">
-                       <h3 className="text-3xl font-black text-foreground tracking-tighter">Authenticated!</h3>
-                       <p className="text-muted-foreground font-medium px-4">Your attendance record has been signed and securely stored.</p>
-                    </div>
-
-                    <Button 
-                       onClick={() => window.location.href = '/student/dashboard'}
-                       className="w-full h-16 bg-primary text-white font-black uppercase tracking-widest rounded-[1.5rem] shadow-2xl transition-all active:scale-[0.98]"
+                  <div className="text-center space-y-8 py-10">
+                    <motion.div
+                      initial={{ scale: 0, rotate: -30 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                      className="relative w-fit mx-auto"
                     >
-                      Dashboard
-                    </Button>
+                      <div className="absolute -inset-3 rounded-full bg-green-400/20 blur-xl animate-pulse" />
+                      <div className="h-24 w-24 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 text-white flex items-center justify-center shadow-2xl shadow-green-500/30 relative">
+                        <CheckCircle className="h-12 w-12" strokeWidth={2.5} />
+                      </div>
+                    </motion.div>
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-black text-[#111827] dark:text-[#E5E7EB] tracking-tight">Authenticated!</h3>
+                      <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] px-4">Your attendance has been securely recorded.</p>
+                    </div>
+                    <button
+                      onClick={() => window.location.href = '/student/dashboard'}
+                      className="w-full h-14 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-2xl shadow-lg shadow-green-500/20 transition-all active:scale-[0.98]"
+                    >
+                      Go to Dashboard
+                    </button>
                   </div>
                 ) : isLoading ? (
-                  <div className="flex flex-col items-center justify-center py-20 space-y-8">
-                     <div className="relative">
-                        <div className="h-20 w-20 border-[6px] border-muted border-t-primary rounded-full animate-spin"></div>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                           <Shield className="h-8 w-8 text-primary opacity-20" />
-                        </div>
-                     </div>
-                     <div className="text-center space-y-1">
-                        <p className="text-lg font-black text-foreground tracking-tight">Syncing Records</p>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Validating QR Signature...</p>
-                     </div>
+                  <div className="flex flex-col items-center justify-center py-16 gap-6">
+                    {/* Shimmer skeleton */}
+                    <div className="w-full space-y-3">
+                      <div className="h-16 w-full rounded-2xl bg-gradient-to-r from-[#F3F4F6] via-[#E5E7EB] to-[#F3F4F6] dark:from-[#1F2937] dark:via-[#374151] dark:to-[#1F2937] animate-pulse rounded-2xl" />
+                      <div className="h-48 w-full rounded-2xl bg-gradient-to-r from-[#F3F4F6] via-[#E5E7EB] to-[#F3F4F6] dark:from-[#1F2937] dark:via-[#374151] dark:to-[#1F2937] animate-pulse" />
+                      <div className="h-10 w-2/3 mx-auto rounded-xl bg-gradient-to-r from-[#F3F4F6] via-[#E5E7EB] to-[#F3F4F6] dark:from-[#1F2937] dark:via-[#374151] dark:to-[#1F2937] animate-pulse" />
+                    </div>
+                    <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-widest">Validating QR...</p>
                   </div>
                 ) : !locationVerified ? (
-                  <div className="space-y-10 py-10 animate-in fade-in duration-700">
-                    <div className="relative w-fit mx-auto">
-                       <div className="h-24 w-24 rounded-[2rem] bg-muted/50 border border-border flex items-center justify-center text-primary relative overflow-hidden group">
-                          <MapPin className="h-10 w-10 relative z-10" />
-                       </div>
+                  <div className="space-y-8 py-8">
+                    <div className="text-center space-y-4">
+                      <div className="relative w-fit mx-auto">
+                        <div className="h-20 w-20 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800/40 flex items-center justify-center">
+                          <MapPin className="h-9 w-9 text-indigo-500" />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <h3 className="text-xl font-bold text-[#111827] dark:text-[#E5E7EB] tracking-tight">Location Check</h3>
+                        <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] px-4 leading-relaxed">We need to confirm you're in the lecture hall before scanning.</p>
+                      </div>
                     </div>
-
-                    <div className="text-center space-y-3">
-                       <h3 className="text-2xl font-black text-foreground tracking-tight">Geofence Check</h3>
-                       <p className="text-sm font-medium text-muted-foreground px-6">We need to confirm you're in the lecture hall before scanning.</p>
-                    </div>
-
-                    <Button
+                    <button
                       onClick={handleVerifyLocation}
                       disabled={isVerifyingLocation}
-                      className="w-full h-16 bg-primary text-white font-black uppercase tracking-widest rounded-[1.5rem] shadow-2xl transition-all active:scale-[0.98] border-0"
+                      className="w-full h-14 rounded-2xl font-bold text-base tracking-wide transition-all active:scale-[0.98] disabled:opacity-60 bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-lg shadow-indigo-500/25"
                     >
                       {isVerifyingLocation ? (
-                        <div className="flex items-center gap-3">
+                        <span className="flex items-center justify-center gap-2">
                           <Loader2 className="h-5 w-5 animate-spin" />
-                          Locating...
-                        </div>
-                      ) : "Confirm my Location"}
-                    </Button>
+                          Getting location...
+                        </span>
+                      ) : 'Confirm my Location'}
+                    </button>
                   </div>
                 ) : (
                   <div className="space-y-8 py-6 animate-in fade-in duration-700">
                     {isScanning ? (
-                      <div className="space-y-8">
-                        <div className="bg-muted/50 rounded-2xl p-4 flex items-center justify-center gap-3 border border-border">
-                           <Shield className="h-5 w-5 text-primary" />
-                           <span className="text-[10px] font-black text-primary uppercase tracking-widest">Location Match Verified</span>
+                      <div className="space-y-5">
+                        <div className="bg-indigo-50 dark:bg-indigo-950/30 rounded-xl p-3 flex items-center justify-center gap-2 border border-indigo-100 dark:border-indigo-800/40">
+                          <div className="h-2 w-2 rounded-full bg-indigo-400 animate-pulse" />
+                          <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-widest">Location Verified</span>
                         </div>
-                        <div className="rounded-[2.5rem] overflow-hidden shadow-2xl ring-1 ring-border border-4 border-card bg-muted/30 relative group">
+
+                        {/* QR Scanner with animated frame overlay */}
+                        <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-[#E5E7EB] dark:border-[#1F2937] bg-black">
                           <Html5QrcodePlugin
                             fps={10}
                             qrbox={250}
@@ -1263,15 +1316,17 @@ const StudentScannerPage: React.FC = () => {
                               console.warn("QR Scan Error:", error);
                             }}
                           />
-                          {/* Modern Scanner Guide */}
-                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-primary/40 rounded-3xl pointer-events-none z-20">
-                             <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
-                             <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
-                             <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
-                             <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
+                          {/* Glowing frame overlay */}
+                          <div className="absolute inset-0 pointer-events-none z-10">
+                            {/* Corner accents */}
+                            <div className="absolute top-6 left-6 w-8 h-8 border-t-[3px] border-l-[3px] border-indigo-400 rounded-tl-xl" />
+                            <div className="absolute top-6 right-6 w-8 h-8 border-t-[3px] border-r-[3px] border-indigo-400 rounded-tr-xl" />
+                            <div className="absolute bottom-10 left-6 w-8 h-8 border-b-[3px] border-l-[3px] border-indigo-400 rounded-bl-xl" />
+                            <div className="absolute bottom-10 right-6 w-8 h-8 border-b-[3px] border-r-[3px] border-indigo-400 rounded-br-xl" />
                           </div>
                         </div>
-                        <p className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Scan the code on the teacher's screen</p>
+
+                        <p className="text-center text-[11px] font-medium text-[#9CA3AF] tracking-wide">Point your camera at the teacher's screen</p>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-20 gap-6 bg-gray-50 rounded-[2.5rem] border border-dashed border-border">
@@ -1289,24 +1344,22 @@ const StudentScannerPage: React.FC = () => {
 
                 {errorMessage && !showFaceVerification && !success && (
                   <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-8 p-5 bg-destructive/10 border border-destructive/20 rounded-3xl text-destructive text-sm flex items-start gap-4 shadow-xl shadow-destructive/5"
+                    exit={{ opacity: 0, y: 8 }}
+                    className="mt-5 p-4 bg-[#FEE2E2] dark:bg-red-950/40 border border-[#FECACA] dark:border-red-800/50 rounded-2xl flex items-start gap-3"
                   >
-                    <AlertCircle className="w-6 h-6 shrink-0 mt-0.5" />
-                    <div className="space-y-1">
-                       <p className="font-black uppercase text-[10px] tracking-widest opacity-60">System Alert</p>
-                       <p className="font-medium leading-relaxed">{errorMessage}</p>
-                    </div>
+                    <AlertCircle className="w-4 h-4 text-[#991B1B] dark:text-red-400 shrink-0 mt-0.5" />
+                    <p className="text-sm font-medium text-[#991B1B] dark:text-red-300 leading-snug">{errorMessage}</p>
                   </motion.div>
                 )}
               </div>
             </div>
           </CardContent>
           
-          <div className="bg-primary px-8 py-4 flex items-center justify-center gap-3">
-             <Shield className="h-3 w-3 text-primary-foreground/60" />
-             <span className="text-[8px] font-black text-primary-foreground uppercase tracking-[0.3em]">Encrypted Session Endpoint</span>
+          <div className="bg-gradient-to-r from-indigo-600 to-blue-600 px-8 py-4 flex items-center justify-center gap-3">
+            <Shield className="h-3 w-3 text-white/50" />
+            <span className="text-[8px] font-bold text-white/70 uppercase tracking-[0.3em]">End-to-End Encrypted</span>
           </div>
         </Card>
       )}
@@ -1357,7 +1410,7 @@ const StudentScannerPage: React.FC = () => {
               {permissionStatus === 'denied' ? (
                 <div className="bg-muted/30 rounded-3xl p-6 space-y-4">
                   <div className="text-[10px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
-                    <Settings className="w-4 h-4 text-primary" />
+                    <span className="text-primary">⚙</span>
                     How to Unblock
                   </div>
                   <ol className="text-xs text-muted-foreground space-y-3 font-medium">

@@ -208,44 +208,19 @@ export function Html5QrcodePlugin({
     <div className="w-full relative">
       <div 
         id={qrcodeRegionId}
-        className="w-full max-w-[300px] mx-auto aspect-square bg-muted/50 rounded-lg overflow-hidden"
+        className="w-full max-w-[320px] mx-auto aspect-square rounded-2xl overflow-hidden qr-scanner-region"
       />
       
-      {/* Camera Switch Button */}
+      {/* Camera switch button - icon only, no label */}
       {cameras.length > 1 && !isStarting && (
         <button
           onClick={switchCamera}
           disabled={isSwitching}
-          className="absolute top-2 right-2 z-10 w-9 h-9 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/80 transition-all active:scale-95 disabled:opacity-50 border border-white/20 shadow-lg"
-          title={cameras[currentCameraIndex]?.label || 'Switch Camera'}
+          className="absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-all active:scale-95 disabled:opacity-50 border border-white/20 shadow-lg"
+          aria-label="Switch Camera"
         >
           <RefreshCw className={`w-4 h-4 ${isSwitching ? 'animate-spin' : ''}`} />
         </button>
-      )}
-
-      {/* Zoom Controls */}
-      {zoomRange && !isStarting && (
-        <div className="flex items-center gap-2 mt-3 px-2 max-w-[300px] mx-auto">
-          <ZoomOut className="w-4 h-4 text-muted-foreground shrink-0" />
-          <input
-            type="range"
-            min={zoomRange.min}
-            max={zoomRange.max}
-            step={zoomRange.step}
-            value={zoomLevel}
-            onChange={(e) => applyZoom(parseFloat(e.target.value))}
-            className="w-full h-1.5 bg-muted rounded-full appearance-none cursor-pointer accent-primary [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:shadow-md"
-          />
-          <ZoomIn className="w-4 h-4 text-muted-foreground shrink-0" />
-          <span className="text-xs text-muted-foreground font-mono min-w-[2.5rem] text-right">{zoomLevel.toFixed(1)}x</span>
-        </div>
-      )}
-
-      {/* Camera Label */}
-      {cameras.length > 1 && !isStarting && (
-        <p className="text-[10px] text-center mt-1.5 text-muted-foreground/60 truncate max-w-[300px] mx-auto px-2">
-          {cameras[currentCameraIndex]?.label || `Camera ${currentCameraIndex + 1}`}
-        </p>
       )}
       
       {isStarting && (
@@ -260,8 +235,8 @@ export function Html5QrcodePlugin({
         </div>
       )}
       
-      <p className="text-xs text-center mt-2 text-muted-foreground">
-        Position the QR code within the box to scan
+      <p className="text-xs text-center mt-3 text-muted-foreground/70 font-medium tracking-wide">
+        Align the QR code within the frame
       </p>
     </div>
   );
