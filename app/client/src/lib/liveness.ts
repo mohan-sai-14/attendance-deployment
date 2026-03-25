@@ -71,7 +71,7 @@ export interface LivenessChallenge {
  * Generate a random sequence of head turn challenges
  */
 export function generateChallenges(): LivenessChallenge[] {
-  const types: ChallengeType[] = ['turn_left', 'turn_right', 'turn_up', 'turn_down'];
+  const types: ChallengeType[] = ['turn_left', 'turn_right', 'turn_up'];
   
   // Pick two random unique directions
   const shuffled = [...types].sort(() => 0.5 - Math.random());

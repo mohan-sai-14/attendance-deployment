@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { getApiUrl } from "@/lib/config";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
@@ -56,7 +57,7 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/users/students'] });
+      queryClient.invalidateQueries({ queryKey: [getApiUrl('/api/users/students')] });
       toast({
         title: "Student Added",
         description: "The new student has been added successfully.",

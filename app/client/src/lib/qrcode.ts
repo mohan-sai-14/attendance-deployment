@@ -1,5 +1,6 @@
 import { apiRequest } from "./queryClient";
 import { queryClient } from "./queryClient";
+import { getApiUrl } from "./config";
 
 // QR Code generation
 export async function generateSessionQRCode(sessionData: {
@@ -60,8 +61,8 @@ export async function generateSessionQRCode(sessionData: {
     });
     
     // Invalidate sessions query to refresh data
-    queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/sessions/active'] });
+    queryClient.invalidateQueries({ queryKey: [getApiUrl('/api/sessions')] });
+    queryClient.invalidateQueries({ queryKey: [getApiUrl('/api/sessions/active')] });
 
     return newSession;
   } catch (error) {
@@ -109,9 +110,7 @@ export async function markAttendanceWithQR(qrContent: string, location?: { lat: 
     }
     
     // Verify the session exists and is active
-    const sessionResponse = await fetch(`/api/sessions/${parsedContent.sessionId}`, {
-      credentials: 'include',
-    });
+    const sessionResponse = await apiRequest("GET", `/api/sessions/${parsedContent.sessionId}`);
     
     if (!sessionResponse.ok) {
       const errorData = await sessionResponse.json();
@@ -150,7 +149,7 @@ export async function markAttendanceWithQR(qrContent: string, location?: { lat: 
     const result = await response.json();
     
     // Invalidate attendance queries to refresh data
-    queryClient.invalidateQueries({ queryKey: ['/api/attendance/me'] });
+    queryClient.invalidateQueries({ queryKey: [getApiUrl('/api/attendance/me')] });
     
     return result;
   } catch (error) {

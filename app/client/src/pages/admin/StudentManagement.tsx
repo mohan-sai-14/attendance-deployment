@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { getApiUrl } from "@/lib/config";
 
 // Types
 interface Student {
@@ -585,7 +586,7 @@ export default function StudentManagement() {
     try {
       const avgEmbedding = calculateAverageEmbedding(faceEmbeddings);
 
-      const response = await fetch('/api/enroll-face', {
+      const response = await fetch(getApiUrl('/api/enroll-face'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

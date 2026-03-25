@@ -37,7 +37,8 @@ export async function apiRequest(
 ): Promise<Response> {
   checkOnline();
   
-  const res = await fetch(url, {
+  const apiUrl = url.startsWith('http') ? url : getApiUrl(url);
+  const res = await fetch(apiUrl, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
