@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import {
@@ -30,7 +31,9 @@ import {
    ShieldAlert,
    Edit,
    Calendar,
-   AlertCircle
+   AlertCircle,
+   Maximize2,
+   XCircle
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
@@ -120,6 +123,7 @@ export default function StartAttendance() {
    const [timeLeft, setTimeLeft] = useState('');
    const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
    const [showBottomBar, setShowBottomBar] = useState(false);
+   const [showQrExpanded, setShowQrExpanded] = useState(false);
    const sessionIdRef = useRef<string | null>(null);
 
    const form = useForm<FormValues>({
@@ -729,6 +733,16 @@ export default function StartAttendance() {
                                        className="text-primary"
                                     />
                                     
+                                    {/* Fullscreen Button Toggle */}
+                                    <Button
+                                       variant="ghost"
+                                       size="sm"
+                                       className="absolute bottom-4 right-4 h-10 w-10 rounded-2xl bg-white shadow-xl border border-[#E5E7EB] hover:bg-[#F3F4F6] transition-all"
+                                       onClick={() => setShowQrExpanded(true)}
+                                    >
+                                       <Maximize2 className="h-5 w-5 text-[#374151]" />
+                                    </Button>
+
                                     {/* Rotating Progress Indicator */}
                                     <div className="absolute -inset-2 border-2 border-dashed border-[#E5E7EB] rounded-[3rem] animate-spin-slow opacity-50" />
                                  </div>
@@ -838,6 +852,66 @@ export default function StartAttendance() {
                </motion.div>
             )}
          </AnimatePresence>
+
+         {/* ── QR EXPAND DIALOG ── */}
+         <Dialog open={showQrExpanded} onOpenChange={setShowQrExpanded}>
+            <DialogContent className="max-w-[90%] sm:max-w-[400px] md:max-w-[500px] p-0 gap-0 border-none shadow-xl overflow-hidden rounded-2xl bg-white focus:outline-none">
+               {/* Header */}
+               <div className="bg-[#374151] px-6 py-6 text-white text-center flex flex-col items-center gap-1.5 min-h-[100px]">
+                  <h3 className="font-extrabold text-xl tracking-tight uppercase">
+                     {form.getValues().name || "Attendance Session"}
+                  </h3>
+                  {timeLeft && timeLeft !== 'Expired' && (
+                     <Badge className="bg-white/10 text-white font-bold border-white/20 px-3 py-1 text-[11px] rounded-full">
+                        <Clock className="h-3.5 w-3.5 mr-1" />
+                        {timeLeft} REMAINING
+                     </Badge>
+                  )}
+               </div>
+
+               {/* QR Content */}
+               <div className="flex flex-col items-center justify-center p-8 md:p-12 bg-white gap-6">
+                  {qrValue && (
+                     <div className="relative group w-full flex justify-center">
+                        <div className="p-5 bg-[#F9FAFB] rounded-[2.5rem] shadow-inner ring-1 ring-black/5 w-fit max-w-full overflow-hidden">
+                           <QRCodeSVG
+                              value={qrValue}
+                              size={Math.min(320, window.innerWidth * 0.75)}
+                              level="H"
+                              includeMargin={false}
+                              className="block mx-auto max-w-full h-auto text-primary"
+                           />
+                        </div>
+                        {timeLeft === 'Expired' && (
+                           <div className="absolute inset-0 bg-white/90 backdrop-blur-md flex flex-col items-center justify-center rounded-[2.5rem]">
+                              <XCircle className="h-12 w-12 text-red-500 mb-1" />
+                              <span className="text-lg font-black text-red-500 uppercase tracking-tighter">Code Expired</span>
+                           </div>
+                        )}
+                     </div>
+                  )}
+
+                  {/* Security Info */}
+                  <div className="w-full space-y-4">
+                     <div className="p-5 bg-[#F9FAFB] rounded-2xl border border-[#E5E7EB] text-center space-y-2">
+                        <p className="text-[10px] font-black text-[#9CA3AF] uppercase tracking-[0.2em]">Security Protocol</p>
+                        <p className="text-xs text-[#6B7280] font-medium leading-relaxed">
+                           Students must scan this code using the mobile app within the classroom proximity.
+                        </p>
+                     </div>
+
+                     <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setShowQrExpanded(false)} 
+                        className="w-full text-[#9CA3AF] hover:bg-[#F3F4F6] hover:text-[#374151] rounded-xl font-bold uppercase text-[10px] tracking-widest h-10"
+                     >
+                        Dismiss Preview
+                     </Button>
+                  </div>
+               </div>
+            </DialogContent>
+         </Dialog>
       </div>
    );
 }
