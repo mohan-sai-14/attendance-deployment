@@ -340,17 +340,7 @@ export default function StudentDashboard() {
               </div>
             </div>
 
-            <div className={cn("flex flex-col sm:flex-row items-center justify-between p-4 rounded-xl border border-dashed", eligibility.color, eligibility.bg, "border-current/20")}>
-              <div className="flex items-center gap-3 mb-4 sm:mb-0">
-                <eligibility.icon className="h-5 w-5" />
-                <span className="text-sm font-bold uppercase tracking-wide">Status: {eligibility.label}</span>
-              </div>
-              {classesNeeded > 0 ? (
-                <p className="text-xs font-semibold">Attend <span className="underline decoration-2">{classesNeeded}</span> more classes to secure 75%</p>
-              ) : (
-                <p className="text-xs font-semibold text-emerald-600">Goal achieved! Keep it up. ✨</p>
-              )}
-            </div>
+
           </CardContent>
         </Card>
 
