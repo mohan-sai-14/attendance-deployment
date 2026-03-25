@@ -38,8 +38,10 @@ export default function AttendanceHistory() {
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   useEffect(() => {
-    fetchAttendanceHistory();
-  }, []);
+    if (user?.id) {
+      fetchAttendanceHistory();
+    }
+  }, [user?.id]);
 
   const fetchAttendanceHistory = async () => {
     try {
@@ -154,8 +156,7 @@ export default function AttendanceHistory() {
       const { data: attendanceRecords } = await supabase
         .from('attendance')
         .select('*')
-        .eq('session_id', sessionId)
-        .eq('date', date);
+        .eq('session_id', sessionId);
       
       // Fetch all students
       const { data: allStudents } = await supabase

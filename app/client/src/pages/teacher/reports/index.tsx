@@ -19,8 +19,10 @@ export default function Reports() {
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchReportsData();
-  }, []);
+    if (user?.id) {
+      fetchReportsData();
+    }
+  }, [user?.id]);
 
   const fetchReportsData = async () => {
     try {

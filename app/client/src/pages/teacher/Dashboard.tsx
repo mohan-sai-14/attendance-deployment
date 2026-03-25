@@ -329,8 +329,10 @@ export default function TeacherDashboard() {
       }
     };
 
-    fetchTodaySchedule();
-  }, [user?.username, todayName, todayDate, toast]);
+    if (user?.id) {
+        fetchTodaySchedule();
+    }
+  }, [user?.id, todayName, todayDate, toast]);
 
   // Derive current and next class
   const { currentClass, nextClass } = useMemo(() => {
