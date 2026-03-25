@@ -29,7 +29,12 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABAS
 if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
   console.log('[Storage] Using Supabase SERVICE_ROLE_KEY (authorized for RLS bypass)');
 } else if (process.env.SUPABASE_ANON_KEY) {
-  console.warn('[Storage] Using Supabase ANON_KEY (RLS will be enforced - enrollment may fail)');
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[Storage] CRITICAL: Using Supabase ANON_KEY in production! Face enrollment will likely fail due to RLS.');
+    console.error('[Storage] Please set SUPABASE_SERVICE_ROLE_KEY in your environment variables.');
+  } else {
+    console.warn('[Storage] Using Supabase ANON_KEY (RLS will be enforced - enrollment may fail)');
+  }
 } else {
   console.error('[Storage] No Supabase API key found in environment variables!');
 }

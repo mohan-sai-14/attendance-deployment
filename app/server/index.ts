@@ -60,11 +60,10 @@ const sessionConfig: any = {
   saveUninitialized: false,
   proxy: true,
   cookie: {
-    secure: process.env.NODE_ENV === 'production' ? true : false,
+    secure: process.env.NODE_ENV === 'production' && !process.env.DISABLE_SECURE_COOKIE ? true : false,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
   }
 };
 if (sessionStore) {
@@ -76,7 +75,9 @@ app.use(session(sessionConfig));
 registerRoutes(app);
 
 // Serve static files from client build directory if available
-const clientBuildPath = path.join(__dirname, '../client/dist');
+// When running from dist/server.js, static files are in dist/public (aligned with Vite outDir)
+const clientBuildPath = path.join(__dirname, 'public');
+console.log('Serving static files from:', clientBuildPath);
 app.use(express.static(clientBuildPath));
 
 // Health check route

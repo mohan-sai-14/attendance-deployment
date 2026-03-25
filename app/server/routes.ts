@@ -65,10 +65,10 @@ export async function registerRoutes(app: Express): Promise<void> {
       });
     }
 
-    if (!req.session.userId) {
+    if (!req.session.userId && !req.user) {
       return res.status(401).json({
         success: false,
-        message: "Not authenticated"
+        message: "Not authenticated - No user ID found in session"
       });
     }
 
@@ -173,11 +173,14 @@ export async function registerRoutes(app: Express): Promise<void> {
     // Ensure JSON content type for auth responses
     res.setHeader('Content-Type', 'application/json');
     
-    if (req.session && req.session.userId && req.session.role === "admin") {
+    const userId = req.session?.userId || (req.user as any)?.id;
+    const role = req.session?.role || (req.user as any)?.role;
+
+    if (userId && role === "admin") {
       return next();
     }
-    console.log("Admin authorization failed for user:", req.session?.userId);
-    res.status(403).json({ message: "Forbidden - Admin access required" });
+    console.log("Admin authorization failed for session user:", userId, "role:", role);
+    res.status(403).json({ success: false, message: "Forbidden - Admin access required" });
   };
 
   // Auth routes
@@ -237,13 +240,20 @@ export async function registerRoutes(app: Express): Promise<void> {
             });
           }
           
-          req.session.userId = cleanUser.id;
+          req.session.userId = String(cleanUser.id);
           req.session.role = cleanUser.role;
           
-          console.log("User logged in successfully:", username);
-          return res.status(200).json({ 
-            success: true,
-            data: cleanUser
+          // Explicitly save session before responding
+          req.session.save((err) => {
+            if (err) {
+              console.error("Session save error after login:", err);
+            }
+            console.log("User logged in successfully and session saved:", username);
+            return res.status(200).json({ 
+              success: true, 
+              message: "Login successful",
+              data: cleanUser
+            });
           });
         });
       })(req, res, next);
@@ -630,8 +640,12 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ success: false, message: 'studentId and face_embeddings are required' });
       }
 
-      console.log(`Enrolling face for student ID: ${studentId}`);
+      console.log(`Enrolling face for student identifier: ${studentId}`);
       
+      // Robust identifier handling (covert to number if numeric string)
+      const numericId = parseInt(studentId, 10);
+      const identifier = !isNaN(numericId) && String(numericId) === String(studentId) ? numericId : studentId;
+
       const { data, error } = await storage.supabase
         .from('users')
         .update({
@@ -641,20 +655,30 @@ export async function registerRoutes(app: Express): Promise<void> {
           face_images_count: face_images_count || 0,
           face_quality_score: face_quality_score || 0
         })
-        .eq('id', studentId)
+        .eq('id', identifier)
         .select()
         .single();
 
       if (error) {
         console.error('Database error during face enrollment:', error);
-        throw error;
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Database error during face enrollment. This might be due to RLS policies or missing columns.',
+          debug: error.message,
+          error_code: error.code
+        });
+      }
+
+      if (!data) {
+        console.warn(`No user found with ID: ${identifier}`);
+        return res.status(404).json({ success: false, message: `Student with ID ${identifier} not found in database.` });
       }
       
-      console.log(`Face enrollment successful for student ID: ${studentId}`);
+      console.log(`Face enrollment successful for student ID: ${identifier}`);
       res.json({ success: true, message: 'Face enrolled successfully', user: data });
     } catch (error: any) {
       console.error('Face enrollment exception:', error);
-      res.status(500).json({ success: false, message: error.message || 'Enrollment failed' });
+      res.status(500).json({ success: false, message: error.message || 'Enrollment failed due to an internal server error.' });
     }
   });
 
