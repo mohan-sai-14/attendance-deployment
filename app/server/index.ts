@@ -9,6 +9,7 @@ dotenv.config(); // Also check cwd .env
 const express = require('express');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
+const MemoryStore = require('memorystore')(session);
 const pg = require('pg');
 const passport = require('passport');
 const cors = require('cors');
@@ -21,24 +22,39 @@ const app = express();
 let sessionStore: any = undefined; 
 
 if (process.env.DATABASE_URL) {
+  console.log('Attempting to initialize PostgreSQL session store...');
+  // Check if it's a Supabase URL and warn about IPv6/Port 5432
+  if (process.env.DATABASE_URL.includes('supabase.co') && process.env.DATABASE_URL.includes(':5432')) {
+    console.warn('[Session] WARNING: Using standard Supabase port 5432 on Render may cause IPv6 ENETUNREACH errors.');
+    console.warn('[Session] TIP: Use the Transaction Pooler (port 6543) connection string instead.');
+  }
+
   try {
     const pgPool = new pg.Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 5000 // Don't hang forever
     });
     
     sessionStore = new pgSession({
       pool: pgPool,
       tableName: 'session',
-      createTableIfMissing: true // Tries to create the table if it's not there
+      createTableIfMissing: true
     });
-    console.log('Using PostgreSQL for persistent sessions');
+    
+    // We can't easily sync-test the pool here without async, 
+    // but the store will handle errors internally.
+    console.log('PostgreSQL session store configured.');
   } catch (err) {
-    console.error('Failed to initialize PostgreSQL session store:', err);
-    console.log('Falling back to MemoryStore');
+    console.error('Failed to configure PostgreSQL session store:', err);
   }
-} else {
-  console.log('No DATABASE_URL found. Using MemoryStore for sessions.');
+}
+
+if (!sessionStore) {
+  console.log('Using MemoryStore (with persistence-like behavior) for sessions.');
+  sessionStore = new MemoryStore({
+    checkPeriod: 86400000 // prune expired entries every 24h
+  });
 }
 
 
@@ -101,9 +117,29 @@ app.use(passport.session());
 // API routes
 registerRoutes(app);
 
-// Serve static files from client build directory if available
-// When running from dist/server.js, static files are in dist/public (aligned with Vite outDir)
-const clientBuildPath = path.join(__dirname, 'public');
+// Robust static file path discovery
+let clientBuildPath = path.join(__dirname, 'public');
+const fs = require('fs');
+
+if (!fs.existsSync(path.join(clientBuildPath, 'index.html'))) {
+  console.log('Static files not found in default path, trying alternatives...');
+  const alternatives = [
+    path.join(__dirname, '../client/dist'),
+    path.join(__dirname, '../../client/dist'),
+    path.join(process.cwd(), 'client/dist'),
+    path.join(process.cwd(), 'app/client/dist'),
+    path.join(process.cwd(), 'dist/public')
+  ];
+  
+  for (const alt of alternatives) {
+    if (fs.existsSync(path.join(alt, 'index.html'))) {
+      clientBuildPath = alt;
+      console.log('Found static files at:', alt);
+      break;
+    }
+  }
+}
+
 console.log('Serving static files from:', clientBuildPath);
 app.use(express.static(clientBuildPath));
 
