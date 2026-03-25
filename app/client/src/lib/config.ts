@@ -1,8 +1,13 @@
 export const getApiUrl = (path: string = '') => {
-  if (import.meta.env.PROD) {
-    return path; // Use relative path in production (Vercel proxies to Render)
+  // Always use relative paths when deployed (e.g., vercel.app), forcing same-origin proxy
+  if (typeof window !== 'undefined' && 
+      window.location.hostname !== 'localhost' && 
+      window.location.hostname !== '127.0.0.1') {
+    return path;
   }
-  const baseUrl = import.meta.env.VITE_API_URL || 'https://attendance-backend-00pc.onrender.com';
+  
+  // Local development fallback
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
   return `${baseUrl}${path}`;
 };
 

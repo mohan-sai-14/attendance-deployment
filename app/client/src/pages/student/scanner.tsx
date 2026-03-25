@@ -1137,9 +1137,9 @@ const StudentScannerPage: React.FC = () => {
                       <div className={cn(
                         "absolute -inset-1 rounded-[3rem] transition-all duration-700",
                         livenessPassed
-                          ? "bg-gradient-to-br from-green-400 to-emerald-500 opacity-80 blur-sm"
+                          ? "bg-gradient-to-br from-green-400 to-emerald-500 opacity-80"
                           : isCameraActive
-                          ? "bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-400 opacity-40 blur-sm animate-pulse"
+                          ? "bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-400 opacity-40 animate-pulse"
                           : "opacity-0"
                       )} />
                       <div className="relative aspect-square rounded-[2.8rem] overflow-hidden shadow-2xl border-2 border-white/10 dark:border-[#1F2937]">
