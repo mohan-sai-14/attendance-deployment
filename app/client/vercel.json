@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://attendance-backend-00pc.onrender.com/api/$1"
+      "destination": "/api/proxy"
     },
     {
       "source": "/(.*)",
