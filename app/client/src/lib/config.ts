@@ -1,4 +1,7 @@
 export const getApiUrl = (path: string = '') => {
+  if (import.meta.env.PROD) {
+    return path; // Use relative path in production (Vercel proxies to Render)
+  }
   const baseUrl = import.meta.env.VITE_API_URL || 'https://attendance-backend-00pc.onrender.com';
   return `${baseUrl}${path}`;
 };
