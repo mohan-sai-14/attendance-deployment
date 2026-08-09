@@ -1,0 +1,11 @@
+create table public.subjects (
+  id uuid not null default gen_random_uuid (),
+  name text not null,
+  code text not null,
+  department text not null,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  class_id text null,
+  section text null,
+  constraint subjects_pkey primary key (id)
+) TABLESPACE pg_default;

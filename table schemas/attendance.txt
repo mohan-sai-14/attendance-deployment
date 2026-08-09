@@ -1,0 +1,33 @@
+create table public.attendance (
+  id text not null default gen_random_uuid (),
+  username text not null,
+  session_id character varying not null,
+  check_in_time timestamp without time zone not null,
+  status text not null,
+  name text not null,
+  date date null,
+  session_name text null,
+  role text not null default '''student''::text'::text,
+  enroll_no text not null,
+  registered_no text not null,
+  department text null,
+  program text null,
+  section text null,
+  year text null,
+  face_verified boolean null default false,
+  verification_confidence numeric(5, 4) null,
+  distance_from_teacher_meters text null,
+  location_verified text null,
+  student_lat text null,
+  student_lng text null,
+  class_id text null,
+  edit_reason text null,
+  last_edited_at text null,
+  period_number text null,
+  student_id text null,
+  constraint attendance_pkey1 primary key (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_attendance_face_verified on public.attendance using btree (face_verified) TABLESPACE pg_default;
+
+create index IF not exists idx_attendance_confidence_score on public.attendance using btree (verification_confidence) TABLESPACE pg_default;

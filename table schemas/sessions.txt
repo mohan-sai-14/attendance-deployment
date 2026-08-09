@@ -1,0 +1,21 @@
+create table public.sessions (
+  id serial not null,
+  name text not null,
+  date text not null,
+  time text not null,
+  duration integer not null,
+  qr_code text not null,
+  expires_at timestamp with time zone not null,
+  is_active boolean not null default false,
+  created_at timestamp with time zone null default now(),
+  timezone text null default 'Asia/Kolkata'::text,
+  allowed_radius_meters text null,
+  teacher_lat text null,
+  teacher_lng text null,
+  section text null,
+  class_id text null,
+  qr_secret text null,
+  teacher_ip text null,
+  created_by text null,
+  constraint sessions_pkey primary key (id)
+) TABLESPACE pg_default;

@@ -1,0 +1,12 @@
+create table public.classes (
+  id uuid not null default gen_random_uuid (),
+  department text not null,
+  program text not null,
+  year text not null,
+  section text not null,
+  batch text not null,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  class_id text null,
+  constraint classes_pkey primary key (id)
+) TABLESPACE pg_default;

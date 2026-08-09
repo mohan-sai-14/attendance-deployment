@@ -1,0 +1,28 @@
+create table public.users (
+  id serial not null,
+  username text not null,
+  password text not null,
+  name text not null,
+  email text not null,
+  role text not null default 'student'::text,
+  status text not null default 'active'::text,
+  enroll_no text null,
+  registered_no text null,
+  department text null,
+  section text null,
+  program text null,
+  year text null,
+  face_images_count text null,
+  face_embeddings jsonb null,
+  face_enrollment_date timestamp with time zone null,
+  face_enrollment_status text null,
+  face_quality_score text null,
+  constraint users_pkey primary key (id),
+  constraint users_enroll_no_key unique (enroll_no),
+  constraint users_registered_no_key unique (registered_no),
+  constraint users_username_key unique (username)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_users_face_embedding on public.users using gin (face_embeddings) TABLESPACE pg_default;
+
+create index IF not exists idx_users_face_verified on public.users using btree (face_enrollment_status) TABLESPACE pg_default;
